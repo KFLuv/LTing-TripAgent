@@ -1,6 +1,6 @@
 {
   "name": "aitravelguide-desktop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "AI旅游助手 本地桌面端（Electron 外壳 + 内嵌浏览器）",
   "main": "main.js",
   "scripts": {
@@ -17,7 +17,8 @@
     "files": [
       "main.js",
       "preload.js",
-      "package.json"
+      "package.json",
+      "build/icon.png"
     ],
     "extraResources": [
       {
@@ -27,14 +28,25 @@
     ],
     "win": {
       "target": [
-        "portable"
-      ]
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "AI旅游助手-${version}-免安装版.${ext}"
     },
     "electronDownload": {
       "mirror": "https://npmmirror.com/mirrors/electron/"
     },
     "directories": {
-      "output": "release"
+      "output": "release_app",
+      "buildResources": "build"
+    },
+    "portable": {
+      "artifactName": "AI旅游助手-${version}-免安装版.${ext}"
     }
   },
   "devDependencies": {

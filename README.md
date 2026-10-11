@@ -183,7 +183,8 @@ ai-travel-assistant/
 │   └── style.css
 ├── desktop/                    Electron 桌面端
 │   ├── main.js                 自动拉起后端 + webview 承载地图
-│   └── package.json
+│   ├── package.json            打包配置（图标 / portable 免安装版）
+│   └── build/                  应用图标（多尺寸 PNG + ICO）
 └── docs/
     ├── 产品文档.md              做什么 + 6 个核心产品决策
     ├── 设计文档.md              怎么实现 + 4 个必须记住的坑
@@ -279,6 +280,30 @@ manager.setSaveOnRestart(true); // 关闭时存下来
 
 > `docs/analysis/` 里是改造过程的原始记录。**一个只展示成品的仓库看不出工程判断的过程**，
 > 所以把「问题是怎么被定位的」也一并留下。
+
+---
+
+---
+
+## 打包免安装版（Windows）
+
+```bash
+cd desktop
+npm install
+npm run dist          # → release_app/AI旅游助手-<版本>-免安装版.exe
+```
+
+**产物是单文件免安装版**：不用装、不用解压，双击即用；首次运行会自解压到临时目录，所以第一次稍慢。
+
+**打包配置要点**（`desktop/package.json`）：
+
+| 项 | 值 | 说明 |
+|---|---|---|
+| `win.icon` | `build/icon.ico` | 应用图标（含 256/128/64/48/32/16 六个尺寸） |
+| `win.target` | `portable` | 单文件免安装 |
+| `extraResources` | `../backend/target/chat-gpt.jar` | 后端 jar 一起打进去，**启动时自动 spawn** |
+
+> 图标是代码生成的（渐变圆角底 + 定位针 + 航线），源文件在 `desktop/build/`。
 
 ---
 
