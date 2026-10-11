@@ -13,10 +13,32 @@ import java.sql.Statement;
  */
 public class MySQLUtil {
     // 数据库连接参数
-    private static String driver = "com.mysql.jdbc.Driver";
-    private static String url = "jdbc:mysql://localhost:3306/user-mannager?useSSL=false&allowPublicKeyRetrieval=true";
-    private static String username = "root";
-    private static String password = "123456";
+    //
+    // 读取顺序：环境变量 → JVM 系统属性 → 默认值。
+    // 这样仓库里不出现字面口令，部署时也用同一种方式覆盖：
+    //   DB_URL / DB_USER / DB_PASSWORD / DB_DRIVER
+    //
+    // 说明：原来这里是写死的常量（url / root / 123456），
+    // 公开仓库里不该挂字面口令，也难在部署时改名改密。
+    private static String driver = cfg("DB_DRIVER", "com.mysql.jdbc.Driver", "db.driver");
+
+    private static String url = cfg("DB_URL",
+            "jdbc:mysql://localhost:3306/user-mannager?useSSL=false&allowPublicKeyRetrieval=true",
+            "db.url");
+
+    private static String username = cfg("DB_USER", "root", "db.username");
+
+    /** 默认留空 —— 需要口令时用环境变量 DB_PASSWORD 或 -Ddb.password=xxx 提供 */
+    private static String password = cfg("DB_PASSWORD", "", "db.password");
+
+    /** 环境变量优先，其次 JVM 系统属性，最后默认值 */
+    private static String cfg(String envKey, String fallback, String propKey) {
+        String v = System.getenv(envKey);
+        if (v == null || v.trim().isEmpty()) {
+            v = System.getProperty(propKey);
+        }
+        return (v == null || v.trim().isEmpty()) ? fallback : v;
+    }
 
     static {
         try {

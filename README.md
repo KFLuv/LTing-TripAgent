@@ -113,13 +113,27 @@ map.js-security-code=
 
 > ⚠️ **本仓库所有 Key 字段均为空**，运行前请填自己的。
 
-数据库连接在 `util/MySQLUtil.java`：
+### 3 填数据库连接（可选）
 
-```java
-private static String url      = "jdbc:mysql://localhost:3306/user-mannager?useSSL=false&allowPublicKeyRetrieval=true";
-private static String username = "root";
-private static String password = "";
+连接参数**不需要改代码** —— 按「环境变量 → JVM 系统属性 → 默认值」的顺序读取：
+
+| 环境变量 | 系统属性 | 默认值 |
+|---|---|---|
+| `DB_URL` | `-Ddb.url=` | `jdbc:mysql://localhost:3306/user-mannager?...` |
+| `DB_USER` | `-Ddb.username=` | `root` |
+| **`DB_PASSWORD`** | `-Ddb.password=` | **空** |
+| `DB_DRIVER` | `-Ddb.driver=` | `com.mysql.jdbc.Driver` |
+
+```bash
+# 例：用环境变量指定口令后启动
+DB_PASSWORD=你的密码 java -jar chat-gpt.jar
+
+# 或者用 JVM 参数
+java -Ddb.password=你的密码 -jar chat-gpt.jar
 ```
+
+> 默认口令为空，所以**多数本地 MySQL 需要显式提供 `DB_PASSWORD`**。
+> 这样设计是因为公开仓库里不该出现字面口令。
 
 ### 3 运行
 
@@ -171,9 +185,17 @@ ai-travel-assistant/
 │   ├── main.js                 自动拉起后端 + webview 承载地图
 │   └── package.json
 └── docs/
-    ├── 产品文档.md
-    ├── 设计文档.md
-    ├── 技术提炼.md              471 行 · Agent 接入与踩坑清单
+    ├── 产品文档.md              做什么 + 6 个核心产品决策
+    ├── 设计文档.md              怎么实现 + 4 个必须记住的坑
+    ├── 产品决策记录.md          为什么这么定 + 代价
+    ├── 技术提炼.md              471 行 Agent 接入指南 + 8 条踩坑清单
+    ├── LLM-Agent-Harness-MCP-教学.md  四层概念关系与正确用法
+    ├── analysis/                开发过程记录
+    │   ├── 01-诊断与决策.md      四条断链（含实测数据）
+    │   ├── 02-改造前问题记录.md   改造前基线 + 四个 P0 问题的代码位置
+    │   ├── 03-UI优化规范.md      设计令牌体系 + 8 批执行顺序
+    │   ├── 04-UI分析与取舍.md    界面的真实问题是信息架构而非样式
+    │   └── 05-修复任务指令.md    A/B/C/D 四组可执行改动
     └── sql/spot_guide_seed.sql
 ```
 
@@ -239,6 +261,24 @@ manager.setSaveOnRestart(true); // 关闭时存下来
 | 不接 MCP | 工具全在自建库里，直接写 Java 方法更简单 |
 | 不用 ORM | 原生 JDBC + PreparedStatement，SQL 可控且防注入 |
 | 不引前端框架构建 | 单页 + Vue CDN，改完刷新即生效，省掉整套工具链 |
+
+---
+
+---
+
+## 文档导航
+
+| 想了解 | 看这份 |
+|---|---|
+| **这个项目做什么** | [docs/产品文档.md](docs/产品文档.md) |
+| **怎么实现** | [docs/设计文档.md](docs/设计文档.md) |
+| **为什么这么设计**（含代价） | [docs/产品决策记录.md](docs/产品决策记录.md) |
+| **Agent 怎么接、坑在哪** | [docs/技术提炼.md](docs/技术提炼.md) |
+| **LLM / Agent / Harness / MCP 的关系** | [docs/LLM-Agent-Harness-MCP-教学.md](docs/LLM-Agent-Harness-MCP-教学.md) |
+| **开发过程中发现了什么问题、怎么改的** | [docs/analysis/](docs/analysis/) |
+
+> `docs/analysis/` 里是改造过程的原始记录。**一个只展示成品的仓库看不出工程判断的过程**，
+> 所以把「问题是怎么被定位的」也一并留下。
 
 ---
 

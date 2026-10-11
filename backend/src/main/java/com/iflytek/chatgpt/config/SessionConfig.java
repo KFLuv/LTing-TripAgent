@@ -28,12 +28,24 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SessionConfig {
 
-    /** 与 util.MySQLUtil 保持一致的连接参数 */
-    private static final String DB_URL =
-            "jdbc:mysql://localhost:3306/user-mannager?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8";
-    private static final String DB_DRIVER = "com.mysql.jdbc.Driver";
-    private static final String DB_USER = "root";
-    private static final String DB_PASSWORD = "123456";
+    // 与 util.MySQLUtil 保持一致的连接参数读取方式：
+    // 环境变量 → JVM 系统属性 → 默认值。仓库里不出现字面口令。
+    private static final String DB_URL = cfg("DB_URL",
+            "jdbc:mysql://localhost:3306/user-mannager?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8",
+            "db.url");
+    private static final String DB_DRIVER = cfg("DB_DRIVER", "com.mysql.jdbc.Driver", "db.driver");
+    private static final String DB_USER = cfg("DB_USER", "root", "db.username");
+    /** 默认留空 —— 需要口令时用环境变量 DB_PASSWORD 或 -Ddb.password=xxx 提供 */
+    private static final String DB_PASSWORD = cfg("DB_PASSWORD", "", "db.password");
+
+    /** 环境变量优先，其次 JVM 系统属性，最后默认值 */
+    private static String cfg(String envKey, String fallback, String propKey) {
+        String v = System.getenv(envKey);
+        if (v == null || v.trim().isEmpty()) {
+            v = System.getProperty(propKey);
+        }
+        return (v == null || v.trim().isEmpty()) ? fallback : v;
+    }
 
     private static final String TABLE = "tomcat_sessions";
 
