@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户登录</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="form-container">
+    <h2>用户登录</h2>
+    <p class="form-subtitle">欢迎回来，请登录你的账号</p>
+
+    <form id="loginForm" autocomplete="off">
+        <div class="form-group">
+            <label for="username">账号</label>
+            <input type="text" id="username" name="username" placeholder="请输入账号" autocomplete="off">
+            <div class="error-message" id="usernameError">账号不能为空</div>
+        </div>
+        <div class="form-group">
+            <label for="password">密码</label>
+            <input type="password" id="password" name="password" placeholder="请输入密码" autocomplete="new-password">
+            <div class="error-message" id="passwordError">密码不能为空</div>
+        </div>
+        <div class="option-row">
+            <label><input type="checkbox" name="rememberPassword" id="remember">记住密码</label>
+            <label><input type="checkbox" name="auto" id="autofill">自动登录</label>
+        </div>
+        <button type="submit" id="loginBtn">登录</button>
+        <button type="button" id="guestBtn" class="guest-btn">游客登录（免注册直达）</button>
+        <p class="link-row">没有账号？<a href="reg.html">去注册</a></p>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const usernameError = document.getElementById('usernameError');
+        const passwordError = document.getElementById('passwordError');
+        const loginBtn = document.getElementById('loginBtn');
+        const rememberInput = document.getElementById('remember'); // 记住密码
+        const autofillInput = document.getElementById('autofill'); // 自动登录
+
+        // 表单提交处理
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault(); // 阻止表单默认提交
+
+            // 重置错误信息
+            usernameError.style.display = 'none';
+            passwordError.style.display = 'none';
+
+            // 获取输入值
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+            const remember = rememberInput.value.trim();
+            const autofill = autofillInput.value.trim();
+
+            // 验证输入
+            let isValid = true;
+
+            if (!username) {
+                usernameError.style.display = 'block';
+                isValid = false;
+            }
+
+            if (!password) {
+                passwordError.style.display = 'block';
+                isValid = false;
+            }
+
+            if (!isValid) {
+                return;
+            }
+
+            // 禁用登录按钮防止重复提交
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+
+            // 发送登录请求
+            fetch('/chat/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    username: username,
+                    password: password,
+                    remember: remember,
+                    auto: autofill
+                }).toString()
+            })
+                .then(response => {
+                    if (response.redirected) {// 是否重定向
+                        //alert(response.url);
+                        window.location.href = response.url;
+                    } else {
+                        return response.text();
+                    }
+                })
+                .then(data => { // 这里的data 是上面的response.text() 内容
+                    if (data) {
+                        alert('登录失败: ' + data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('登录过程中发生错误');
+                })
+                .finally(() => {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = '登录';
+                });
+        });
+
+        // 游客登录：不校验账号密码，一键进入
+        const guestBtn = document.getElementById('guestBtn');
+        guestBtn.addEventListener('click', function() {
+            guestBtn.disabled = true;
+            guestBtn.textContent = '进入中...';
+
+            fetch('/chat/guest', {
+                method: 'POST',
+                credentials: 'include'
+            })
+                .then(response => {
+                    if (response.redirected) {// 登录成功会重定向到首页
+                        window.location.href = response.url;
+                    } else {
+                        return response.text().then(text => alert('游客登录失败：' + text));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('游客登录失败，请检查网络后重试');
+                })
+                .finally(() => {
+                    guestBtn.disabled = false;
+                    guestBtn.textContent = '游客登录（免注册直达）';
+                });
+        });
+
+        // 输入框实时验证
+        usernameInput.addEventListener('input', function() {
+            if (this.value.trim()) {
+                usernameError.style.display = 'none';
+            }
+        });
+
+        passwordInput.addEventListener('input', function() {
+            if (this.value.trim()) {
+                passwordError.style.display = 'none';
+            }
+        });
+    });
+</script>
+</body>
+</html>

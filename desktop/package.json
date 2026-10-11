@@ -1,0 +1,44 @@
+{
+  "name": "aitravelguide-desktop",
+  "version": "1.0.0",
+  "description": "AI旅游助手 本地桌面端（Electron 外壳 + 内嵌浏览器）",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "private": true,
+  "build": {
+    "appId": "com.aitravelguide.desktop",
+    "productName": "AITravelGuide",
+    "artifactName": "AI旅游助手-${version}-便携版.${ext}",
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend/target/chat-gpt.jar",
+        "to": "backend/chat-gpt.jar"
+      }
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ]
+    },
+    "electronDownload": {
+      "mirror": "https://npmmirror.com/mirrors/electron/"
+    },
+    "directories": {
+      "output": "release"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  }
+}

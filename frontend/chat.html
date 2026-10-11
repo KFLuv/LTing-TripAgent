@@ -1,0 +1,4513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+            "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Source Han Sans SC",
+            "Noto Sans SC", sans-serif;
+            --ink: #22303f;
+            --ink-soft: #5b6b7c;
+            --ink-mute: #8a99a8;
+            --line: #e3ecf4;
+            --brand: #4a90c2;
+            --brand-2: #5ab6d0;
+            --radius: 20px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        [v-cloak] {
+            display: none;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            font-size: 15px;
+            line-height: 1.75;
+            color: var(--ink);
+            letter-spacing: 0.2px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            background: linear-gradient(135deg, #6a9eda 0%, #85c4ed 30%, #a3d9c8 100%);
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+
+        /* ===== 动态背景 ===== */
+        .travel-bg {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .bg-element {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.55;
+            animation: float 26s infinite linear;
+        }
+
+        .bg-element:nth-child(1) {
+            width: 120px; height: 120px; top: 15%; left: 8%;
+            background: linear-gradient(45deg, #ffdd94, #ffbb6e);
+        }
+
+        .bg-element:nth-child(2) {
+            width: 90px; height: 90px; top: 66%; left: 86%; animation-delay: 5s;
+            background: linear-gradient(45deg, #91c5ff, #4d8fdc);
+        }
+
+        .bg-element:nth-child(3) {
+            width: 150px; height: 150px; top: 30%; left: 82%; animation-delay: 10s;
+            background: linear-gradient(45deg, #a5e8c9, #5ab6a9);
+        }
+
+        .bg-element:nth-child(4) {
+            width: 70px; height: 70px; top: 78%; left: 14%; animation-delay: 15s;
+            background: linear-gradient(45deg, #ffb6c1, #ff6b87);
+        }
+
+        .bg-element:nth-child(5) {
+            width: 104px; height: 104px; top: 46%; left: 28%; animation-delay: 20s;
+            background: linear-gradient(45deg, #d4a5ff, #a96bfd);
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(36px, -46px) rotate(90deg); }
+            50% { transform: translate(72px, 0) rotate(180deg); }
+            75% { transform: translate(36px, 46px) rotate(270deg); }
+            100% { transform: translate(0, 0) rotate(360deg); }
+        }
+
+        /* ===== 整体框架 ===== */
+        .chat-container {
+            max-width: 1180px;
+            margin: 24px auto;
+            height: calc(100vh - 48px);
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: auto 1fr auto;
+            grid-template-areas:
+                "header header"
+                "sidebar main"
+                "sidebar input";
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: var(--radius);
+            box-shadow: 0 16px 44px rgba(24, 58, 96, 0.18);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        /* ===== 顶栏 ===== */
+        .chat-header {
+            grid-area: header;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 22px;
+            background: linear-gradient(90deg, #4f9ec4, #6ba8da);
+            color: #fff;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .brand-logo {
+            width: 44px;
+            height: 44px;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            background: #fff;
+            color: var(--brand-2);
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+        }
+
+        .brand-text {
+            min-width: 0;
+        }
+
+        .brand-title {
+            font-size: 19px;
+            font-weight: 700;
+            line-height: 1.3;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+            white-space: nowrap;
+        }
+
+        .brand-sub {
+            font-size: 12.5px;
+            line-height: 1.4;
+            color: rgba(255, 255, 255, 0.88);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .current-time {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.92);
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.12);
+            white-space: nowrap;
+        }
+
+        .pill-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #fff;
+            padding: 7px 14px;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.22);
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .pill-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.34);
+            transform: translateY(-1px);
+        }
+
+        .pill-btn:disabled {
+            cursor: progress;
+            opacity: 0.85;
+        }
+
+        .pill-btn.ghost {
+            background: rgba(0, 0, 0, 0.16);
+        }
+
+        .pill-btn.logout {
+            background: rgba(0, 0, 0, 0.16);
+        }
+
+        /* ===== 侧边栏 ===== */
+        .chat-sidebar {
+            grid-area: sidebar;
+            padding: 14px 12px 20px;
+            background: #f6f9fc;
+            border-right: 1px solid var(--line);
+            overflow-y: auto;
+        }
+
+        /* ==================== 我的旅行资产 ==================== */
+        .asset-block {
+            margin-bottom: 14px;
+        }
+
+        .asset-head {
+            padding: 0 4px;
+            margin-bottom: 8px;
+        }
+
+        .asset-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #24405c;
+        }
+
+        .asset-title i {
+            color: var(--brand);
+            font-size: 13px;
+        }
+
+        .asset-sub {
+            margin-top: 2px;
+            font-size: 11.5px;
+            color: #9aa9b8;
+            line-height: 1.5;
+        }
+
+        .asset-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .asset-item {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 9px 11px;
+            cursor: pointer;
+            border-bottom: 1px solid #eef2f7;
+            transition: background 0.15s;
+        }
+
+        .asset-item:last-child {
+            border-bottom: none;
+        }
+
+        .asset-item:hover {
+            background: #f2f8fd;
+        }
+
+        .asset-ico {
+            flex: 0 0 auto;
+            width: 22px;
+            text-align: center;
+            color: #8fa8bd;
+            font-size: 12.5px;
+        }
+
+        .asset-item:hover .asset-ico {
+            color: var(--brand);
+        }
+
+        .asset-name {
+            flex: 1;
+            font-size: 13px;
+            color: #33475b;
+        }
+
+        .asset-count {
+            flex: 0 0 auto;
+            min-width: 20px;
+            text-align: center;
+            padding: 1px 7px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #a9b7c4;
+            background: #f2f5f8;
+        }
+
+        /* 有内容时高亮，让「已积累」看得见 */
+        .asset-count.on {
+            color: #fff;
+            background: var(--brand);
+        }
+
+        .asset-count.money {
+            min-width: 52px;
+        }
+
+        .asset-sep {
+            height: 1px;
+            margin: 8px 4px;
+            background: #e8eef4;
+        }
+
+        /* ==================== 对话会话（多会话） ==================== */
+        .session-block {
+            margin-bottom: 14px;
+        }
+
+        .session-new {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: 9px 11px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--brand), #5aa9ff);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(61, 139, 255, 0.28);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .session-new:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(61, 139, 255, 0.36);
+        }
+
+        .session-new:active {
+            transform: translateY(0) scale(0.99);
+        }
+
+        .session-list {
+            list-style: none;
+            margin: 8px 0 0;
+            padding: 0;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            overflow-y: auto;
+            max-height: 240px;
+        }
+
+        .session-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eef2f7;
+            transition: background 0.15s;
+        }
+
+        .session-item:last-child {
+            border-bottom: none;
+        }
+
+        .session-item:hover {
+            background: #f2f8fd;
+        }
+
+        .session-item.active {
+            background: #eaf3ff;
+            box-shadow: inset 3px 0 0 var(--brand);
+        }
+
+        .session-ico {
+            flex: 0 0 auto;
+            color: #8fa8bd;
+            font-size: 12px;
+        }
+
+        .session-item.active .session-ico {
+            color: var(--brand);
+        }
+
+        .session-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .session-name {
+            font-size: 13px;
+            color: #33475b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .session-item.active .session-name {
+            font-weight: 600;
+            color: #1d3a5c;
+        }
+
+        .session-time {
+            font-size: 10.5px;
+            color: #a9b7c4;
+            margin-top: 1px;
+        }
+
+        .session-ops {
+            flex: 0 0 auto;
+            display: flex;
+            gap: 2px;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .session-item:hover .session-ops {
+            opacity: 1;
+        }
+
+        .session-op {
+            border: none;
+            background: transparent;
+            color: #9aa9b8;
+            cursor: pointer;
+            font-size: 11.5px;
+            padding: 2px 5px;
+            border-radius: 5px;
+        }
+
+        .session-op:hover {
+            background: #e3edf7;
+            color: var(--brand);
+        }
+
+        .session-op.danger:hover {
+            background: #ffe9e9;
+            color: #e05555;
+        }
+
+        .session-input {
+            flex: 1;
+            min-width: 0;
+            border: 1px solid var(--brand);
+            border-radius: 6px;
+            padding: 3px 6px;
+            font-size: 12.5px;
+            outline: none;
+        }
+
+        .session-empty {
+            padding: 10px 11px;
+            font-size: 12px;
+            color: #a9b7c4;
+            text-align: center;
+        }
+
+        /* 最近行程 */
+        .recent-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .recent-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 11px;
+            cursor: pointer;
+            border-bottom: 1px solid #eef2f7;
+        }
+
+        .recent-item:last-child {
+            border-bottom: none;
+        }
+
+        .recent-item:hover {
+            background: #f2f8fd;
+        }
+
+        .recent-title {
+            flex: 1;
+            font-size: 12.5px;
+            color: #33475b;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .recent-time {
+            flex: 0 0 auto;
+            font-size: 11px;
+            color: #a9b7c4;
+        }
+
+        .dest-block .destination-list {
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .sidebar-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #24405c;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .sidebar-title i {
+            color: #ff9c43;
+        }
+
+        .dest-search {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .dest-search i {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--ink-mute);
+            font-size: 13px;
+        }
+
+        .dest-search input {
+            width: 100%;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--ink);
+            padding: 10px 12px 10px 34px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fff;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .dest-search input:focus {
+            border-color: #9ccbe0;
+            box-shadow: 0 0 0 3px rgba(90, 182, 208, 0.16);
+        }
+
+        .hot-topic {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 14px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .hot-topic:hover {
+            transform: translateY(-1px);
+            border-color: #bcdcee;
+            box-shadow: 0 8px 18px rgba(75, 126, 214, 0.13);
+        }
+
+        .icon-wrapper {
+            flex: 0 0 auto;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            background: linear-gradient(135deg, var(--brand), var(--brand-2));
+            font-size: 15px;
+        }
+
+        .hot-topic-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #24405c;
+            line-height: 1.5;
+        }
+
+        .hot-topic-desc {
+            font-size: 12.5px;
+            line-height: 1.6;
+            color: var(--ink-soft);
+            margin-top: 2px;
+        }
+
+        .dest-empty {
+            font-size: 13.5px;
+            color: var(--ink-mute);
+            padding: 18px 6px;
+            text-align: center;
+        }
+
+        /* ===== 聊天区 ===== */
+        .chat-messages {
+            grid-area: main;
+            padding: 24px 26px;
+            overflow-y: auto;
+            background: #f8fbfe;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 100%;
+            animation: fadeIn 0.35s ease;
+        }
+
+        .user-message {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            flex: 0 0 auto;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0;
+        }
+
+        .ai-message .message-avatar {
+            background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        }
+
+        .user-message .message-avatar {
+            background: linear-gradient(135deg, #ffc46e, #ff9c43);
+        }
+
+        .message-content-wrap {
+            min-width: 0;
+            max-width: 78%;
+        }
+
+        .user-message .message-content-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .message-name {
+            font-size: 12.5px;
+            color: var(--ink-mute);
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .message-content {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 4px 16px 16px 16px;
+            padding: 14px 18px;
+            font-size: 15px;
+            line-height: 1.78;
+            color: var(--ink);
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            box-shadow: 0 4px 14px rgba(35, 76, 118, 0.06);
+        }
+
+        .user-message .message-content {
+            background: linear-gradient(135deg, #5a9fd4, #4a90c2);
+            border: 0;
+            color: #fff;
+            border-radius: 16px 4px 16px 16px;
+            box-shadow: 0 4px 14px rgba(74, 144, 194, 0.25);
+        }
+
+        /* 消息正文内部排版 */
+        .message-content p {
+            margin: 0 0 10px;
+        }
+
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-content h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1f4e79;
+            margin: 16px 0 8px;
+            padding-left: 10px;
+            border-left: 3px solid var(--brand-2);
+            line-height: 1.5;
+        }
+
+        .message-content h4:first-child {
+            margin-top: 0;
+        }
+
+        .message-content ul,
+        .message-content ol {
+            margin: 6px 0 10px;
+            padding-left: 22px;
+        }
+
+        .message-content li {
+            margin: 5px 0;
+        }
+
+        .message-content strong {
+            font-weight: 600;
+            color: #1f4e79;
+        }
+
+        .user-message .message-content strong {
+            color: #fff;
+        }
+
+        .message-content .md-table {
+            border-collapse: collapse;
+            margin: 8px 0 12px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            width: 100%;
+            overflow-x: auto;
+            display: block;
+        }
+
+        .message-content .md-table th,
+        .message-content .md-table td {
+            border: 1px solid var(--line);
+            padding: 7px 11px;
+            text-align: left;
+            word-break: break-word;
+            white-space: normal;
+        }
+
+        .message-content .md-table th {
+            background: #eef6fc;
+            color: #1f4e79;
+            font-weight: 600;
+        }
+
+        .user-message .message-content .md-table th {
+            background: rgba(255, 255, 255, 0.22);
+            color: #fff;
+        }
+
+        .user-message .message-content .md-table td {
+            border-color: rgba(255, 255, 255, 0.35);
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            margin: 4px 2px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 13.5px;
+            font-weight: 500;
+            text-decoration: none;
+            color: #fff;
+            background: linear-gradient(135deg, var(--brand), var(--brand-2));
+            box-shadow: 0 2px 8px rgba(74, 144, 194, 0.35);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .nav-link:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 14px rgba(74, 144, 194, 0.45);
+        }
+
+        .message-actions {
+            margin-top: 8px;
+        }
+
+        .save-trip-btn {
+            font-family: inherit;
+            font-size: 12.5px;
+            color: var(--brand);
+            background: #eef6fc;
+            border: 1px solid #d5e8f5;
+            border-radius: 999px;
+            padding: 5px 12px;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .save-trip-btn:hover {
+            background: #e2f0fa;
+        }
+
+        .save-trip-btn.saved {
+            color: #2e9e6b;
+            background: rgba(46, 158, 107, 0.12);
+            border-color: rgba(46, 158, 107, 0.25);
+            cursor: default;
+        }
+
+        /* 系统提示（定位等）在聊天区里居中显示，不与对话气泡混淆 */
+        .sys-note {
+            align-self: center;
+            max-width: 92%;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #5b7288;
+            background: rgba(90, 182, 208, 0.12);
+            border: 1px dashed rgba(90, 182, 208, 0.45);
+            border-radius: 12px;
+            padding: 8px 16px;
+            word-break: break-word;
+        }
+
+        .typing {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--ink-soft);
+            font-size: 14px;
+        }
+
+        .typing .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--brand-2);
+            animation: blink 1.2s infinite ease-in-out;
+        }
+
+        .typing .dot:nth-child(2) { animation-delay: 0.18s; }
+        .typing .dot:nth-child(3) { animation-delay: 0.36s; }
+
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+            40% { opacity: 1; transform: translateY(-3px); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== 输入区 ===== */
+        .chat-input-container {
+            grid-area: input;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 12px 20px 18px;
+            background: #fff;
+            border-top: 1px solid var(--line);
+        }
+
+        /* 常驻能力按钮条：始终可见，点完不消失 */
+        .quick-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .quick-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            color: #3a6b8f;
+            padding: 7px 13px;
+            border: 1px solid #d5e8f5;
+            border-radius: 999px;
+            background: #f0f7fc;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.18s, border-color 0.18s, transform 0.18s;
+        }
+
+        .quick-chip:hover {
+            background: #e2f0fa;
+            border-color: #a9d2ea;
+            transform: translateY(-1px);
+        }
+
+        .quick-chip i {
+            color: #5ab6d0;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            font-family: inherit;
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--ink);
+            padding: 12px 16px;
+            max-height: 140px;
+            min-height: 46px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #f8fbfe;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: #9ccbe0;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(90, 182, 208, 0.16);
+        }
+
+        .send-button {
+            flex: 0 0 auto;
+            font-family: inherit;
+            font-size: 14.5px;
+            font-weight: 500;
+            color: #fff;
+            padding: 12px 22px;
+            height: 46px;
+            border: 0;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--brand), var(--brand-2));
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(74, 144, 194, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(74, 144, 194, 0.4);
+        }
+
+        .send-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+        }
+
+        /* ===== 弹窗 ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: rgba(24, 46, 70, 0.45);
+            backdrop-filter: blur(3px);
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            position: relative;
+            width: 100%;
+            max-width: 460px;
+            max-height: 86vh;
+            overflow-y: auto;
+            background: #fff;
+            border-radius: 18px;
+            padding: 26px 26px 22px;
+            box-shadow: 0 24px 60px rgba(16, 42, 70, 0.3);
+            animation: fadeIn 0.25s ease;
+        }
+
+        .modal-content.wide {
+            max-width: 640px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 14px;
+            right: 18px;
+            font-size: 22px;
+            line-height: 1;
+            color: var(--ink-mute);
+            cursor: pointer;
+            background: none;
+            border: 0;
+        }
+
+        .modal-close:hover {
+            color: #ff6b6b;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #24405c;
+        }
+
+        .modal-subtitle {
+            font-size: 13px;
+            color: var(--ink-mute);
+            margin: 6px 0 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--ink-soft);
+            margin-bottom: 7px;
+        }
+
+        .pwd-field {
+            position: relative;
+        }
+
+        .form-control {
+            width: 100%;
+            font-family: inherit;
+            font-size: 14.5px;
+            color: var(--ink);
+            padding: 11px 42px 11px 14px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #f8fbfe;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: #9ccbe0;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(90, 182, 208, 0.16);
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--ink-mute);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .password-toggle:hover {
+            color: var(--brand);
+        }
+
+        .form-msg {
+            font-size: 13px;
+            border-radius: 10px;
+            padding: 9px 13px;
+            margin-bottom: 14px;
+            line-height: 1.6;
+        }
+
+        .form-msg.error {
+            color: #c0392b;
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .form-msg.success {
+            color: #1e8f5f;
+            background: rgba(46, 158, 107, 0.12);
+        }
+
+        .save-button {
+            width: 100%;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 500;
+            color: #fff;
+            padding: 12px;
+            border: 0;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--brand), var(--brand-2));
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(74, 144, 194, 0.28);
+        }
+
+        .save-button:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        .security-info {
+            margin-top: 18px;
+            padding: 13px 15px;
+            border-radius: 12px;
+            background: #f5f9fd;
+            border: 1px solid var(--line);
+        }
+
+        .security-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #24405c;
+            margin-bottom: 7px;
+        }
+
+        .security-content {
+            font-size: 12.5px;
+            line-height: 1.85;
+            color: var(--ink-soft);
+        }
+
+        .security-content i.fa-circle {
+            font-size: 5px;
+            vertical-align: middle;
+            margin-right: 7px;
+            color: var(--brand-2);
+        }
+
+        /* 行程本 */
+        .trips-list {
+            display: flex;
+            flex-direction: column;
+            gap: 11px;
+            max-height: 52vh;
+            overflow-y: auto;
+        }
+
+        .trip-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 15px;
+            border: 1px solid var(--line);
+            border-radius: 13px;
+            background: #fbfdff;
+        }
+
+        .trip-item-main {
+            flex: 1;
+            min-width: 0;
+            cursor: pointer;
+        }
+
+        .trip-item-title {
+            font-size: 14.5px;
+            font-weight: 600;
+            color: #24405c;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .trip-item-time {
+            font-size: 12.5px;
+            color: var(--ink-mute);
+            margin-top: 3px;
+        }
+
+        .trip-item-actions {
+            flex: 0 0 auto;
+            display: flex;
+            gap: 8px;
+        }
+
+        .trip-open-btn,
+        .trip-del-btn {
+            font-family: inherit;
+            font-size: 12.5px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            cursor: pointer;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--brand);
+        }
+
+        .trip-del-btn:hover {
+            color: #ff6b6b;
+            border-color: rgba(255, 107, 107, 0.4);
+        }
+
+        .trip-detail-content {
+            font-size: 14.5px;
+            line-height: 1.85;
+            color: var(--ink);
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 14px 16px;
+            background: #f8fbfe;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+        }
+
+        /* 窄屏 */
+        @media (max-width: 900px) {
+            .chat-container {
+                grid-template-columns: 1fr;
+                grid-template-areas: "header" "main" "input";
+                height: calc(100vh - 24px);
+                margin: 12px;
+            }
+
+            .chat-sidebar {
+                display: none;
+            }
+
+            .brand-title {
+                font-size: 16px;
+            }
+
+            .current-time {
+                display: none;
+            }
+
+            .message-content-wrap {
+                max-width: 88%;
+            }
+        }
+        /* ===== 内嵌浏览器（地图导航）面板 ===== */
+        .embed-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            /* 宽度由 --embed-w 统一驱动：面板与左侧对话区留白共用同一个值，
+               改一处两边同步，否则面板一宽就会盖住/挤扁对话区 */
+            width: var(--embed-w, min(720px, 52vw));
+            height: 100vh;
+            background: #fff;
+            box-shadow: -8px 0 30px rgba(0, 0, 0, .18);
+            display: flex;
+            flex-direction: column;
+            z-index: 1200;
+            transform: translateX(102%);
+            transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        .embed-panel.show {
+            transform: translateX(0);
+        }
+
+        /* 左边缘拖拽条：面板太宽会挤扁对话区，这里让用户自己拉一个舒服的比例 */
+        .embed-resizer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 7px;
+            cursor: ew-resize;
+            z-index: 6;
+            background: transparent;
+            transition: background .18s;
+        }
+
+        .embed-resizer:hover,
+        .embed-resizer.dragging {
+            background: rgba(26, 115, 232, .22);
+        }
+
+        .embed-resizer::after {
+            content: '';
+            position: absolute;
+            left: 2px;
+            top: 50%;
+            width: 3px;
+            height: 46px;
+            transform: translateY(-50%);
+            border-radius: 3px;
+            background: rgba(120, 130, 140, .55);
+            opacity: 0;
+            transition: opacity .18s;
+        }
+
+        .embed-resizer:hover::after,
+        .embed-resizer.dragging::after {
+            opacity: 1;
+        }
+
+        .embed-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            background: linear-gradient(135deg, #1677ff, #36a3ff);
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .embed-head .embed-title {
+            font-size: 14px;
+            font-weight: 600;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .embed-head .embed-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .embed-head button {
+            border: 0;
+            background: rgba(255, 255, 255, .2);
+            color: #fff;
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .embed-head button:hover {
+            background: rgba(255, 255, 255, .34);
+        }
+
+        .embed-body {
+            flex: 1;
+            background: #f2f4f7;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .embed-body iframe,
+        .embed-body webview {
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .embed-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: #6b7280;
+            font-size: 13px;
+            text-align: center;
+            padding: 24px;
+        }
+
+        /* 地图打开时：对话框整体左移收窄，地图靠右停靠，不再遮挡对话内容 */
+        .chat-container {
+            transition: margin-right .28s cubic-bezier(.4, 0, .2, 1),
+                        max-width .28s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        .chat-container.embed-open {
+            margin-right: calc(var(--embed-w, min(720px, 52vw)) + 16px);
+            max-width: calc(100vw - var(--embed-w, min(720px, 52vw)) - 48px);
+        }
+
+        /* 窗口不够宽时，地图开着就把左侧目的地栏收起来，保证对话区不被挤没 */
+        @media (max-width: 1360px) {
+            .chat-container.embed-open {
+                grid-template-columns: 1fr;
+                grid-template-areas: "header" "main" "input";
+            }
+
+            .chat-container.embed-open .chat-sidebar {
+                display: none;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .embed-panel {
+                width: 100vw;
+            }
+
+            .chat-container.embed-open {
+                margin-right: 24px;
+                max-width: calc(100vw - 24px);
+            }
+        }
+
+        /* ==================== 动作卡片：让"AI 做了什么"可见 ==================== */
+        .action-card {
+            margin-top: 8px;
+            padding: 10px 14px;
+            background: #f0f7ff;
+            border-left: 3px solid var(--brand);
+            border-radius: 8px;
+            font-size: 13px;
+            color: #24405c;
+            line-height: 1.6;
+        }
+
+        .action-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .action-title i {
+            color: var(--brand);
+            margin-right: 4px;
+        }
+
+        .action-card ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .action-card li {
+            margin: 2px 0;
+        }
+
+        /* ==================== 我的偏好面板 ==================== */
+        .pref-list {
+            list-style: none;
+            margin: 14px 0 0;
+            padding: 0;
+            max-height: 46vh;
+            overflow-y: auto;
+        }
+
+        .pref-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 10px;
+            border-bottom: 1px solid var(--line);
+            font-size: 13.5px;
+        }
+
+        .pref-row:last-child {
+            border-bottom: none;
+        }
+
+        .pref-tag {
+            flex: 0 0 96px;
+            font-weight: 600;
+            color: #24405c;
+        }
+
+        .pref-value {
+            flex: 1;
+            color: var(--ink-soft);
+            word-break: break-all;
+        }
+
+        .pref-time {
+            flex: 0 0 auto;
+            font-size: 12px;
+            color: #9aa9b8;
+        }
+
+        .pref-ops {
+            flex: 0 0 auto;
+            display: flex;
+            gap: 4px;
+        }
+
+        .pref-ops button {
+            border: none;
+            background: transparent;
+            color: #7d8d9d;
+            cursor: pointer;
+            padding: 3px 5px;
+            border-radius: 6px;
+        }
+
+        .pref-ops button:hover {
+            background: #eef4fb;
+            color: var(--brand);
+        }
+
+        .pref-add {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .pref-add input {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .pref-add input:focus {
+            outline: none;
+            border-color: var(--brand);
+        }
+
+        .pref-hint {
+            margin-top: 10px;
+            font-size: 12.5px;
+            color: #7d8d9d;
+        }
+
+        .pref-error {
+            color: #d9534f;
+        }
+
+        .pref-empty {
+            padding: 26px 10px 8px;
+            text-align: center;
+            color: #8a99a8;
+        }
+
+        .pref-empty i {
+            font-size: 26px;
+            color: #cfe0ee;
+        }
+
+        .pref-empty-title {
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #24405c;
+        }
+
+        .pref-empty-desc {
+            margin-top: 6px;
+            font-size: 12.5px;
+            line-height: 1.7;
+        }
+
+        .btn-primary {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            background: var(--brand);
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .btn-primary:disabled {
+            background: #b9d0e4;
+            cursor: default;
+        }
+
+        .btn-ghost {
+            padding: 8px 14px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: #5b6b7c;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        /* ==================== 通用资产列表弹窗 ==================== */
+        .list-rows {
+            list-style: none;
+            margin: 14px 0 0;
+            padding: 0;
+            max-height: 52vh;
+            overflow-y: auto;
+        }
+
+        .list-row {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .list-row:last-child {
+            border-bottom: none;
+        }
+
+        .list-row-main {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #24405c;
+        }
+
+        .list-row-sub {
+            margin-top: 3px;
+            font-size: 12px;
+            color: #8a99a8;
+            line-height: 1.6;
+            word-break: break-all;
+        }
+
+        /* 列表行：左内容 + 右删除（配合上面 .list-row 使用） */
+        .list-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: fadeIn .22s ease;
+        }
+
+        .list-row-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .list-row-del {
+            flex: none;
+            width: 30px;
+            height: 30px;
+            border: 0;
+            border-radius: 8px;
+            background: #f3f7fb;
+            color: #98a7b6;
+            cursor: pointer;
+            transition: background .18s ease, color .18s ease, transform .18s ease;
+        }
+
+        .list-row-del:hover {
+            background: #ffe9e9;
+            color: #e05555;
+            transform: scale(1.06);
+        }
+
+        /* 手动新增表单（通用列表 / 预算） */
+        .list-add {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px dashed var(--line);
+        }
+
+        .list-add input {
+            flex: 1 1 180px;
+            min-width: 0;
+            padding: 9px 11px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            font-size: 13px;
+            transition: border-color .18s ease, box-shadow .18s ease;
+        }
+
+        .list-add input:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(74, 144, 194, 0.12);
+        }
+
+        /* 行程本手动新建 */
+        .trip-add {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px dashed var(--line);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .trip-add-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #24405c;
+        }
+
+        .trip-add input,
+        .trip-add textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 9px 11px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        .trip-add input:focus,
+        .trip-add textarea:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(74, 144, 194, 0.12);
+        }
+
+        /* 预算 */
+        .budget-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .budget-trip {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            font-size: 13px;
+            background: #fff;
+            color: #24405c;
+        }
+
+        .budget-total {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--brand);
+            white-space: nowrap;
+        }
+
+        .budget-amt {
+            margin-left: 8px;
+            color: #e08a3c;
+            font-weight: 700;
+        }
+
+        /* ===== UI 微动效：交互更灵动，不做花哨装饰 ===== */
+        .asset-item,
+        .trip-item,
+        .pref-row {
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+
+        .asset-item:hover {
+            transform: translateX(3px);
+            background: #f4f9fd;
+        }
+
+        .trip-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 42, 70, 0.10);
+        }
+
+        .btn-primary {
+            transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+        }
+
+        .btn-primary:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(74, 144, 194, 0.28);
+        }
+
+        /* 弹窗改用更轻快的 popIn 取代默认 fadeIn */
+        .modal-content {
+            animation: popIn .26s cubic-bezier(.2, .8, .3, 1);
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: translateY(10px) scale(.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* ==========================================================================
+           PathPilot 主题层：Apple HIG + 液态玻璃
+           以下均为「追加覆盖」，不修改上方任何原始规则，选择器与 DOM 结构保持不变。
+           ========================================================================== */
+        :root {
+            --canvas: #f5f5f7;
+            --surface: #ffffff;
+            --surface-muted: #f0f0f3;
+            --ink: #1d1d1f;
+            --ink-soft: #6e6e73;
+            --ink-mute: #86868b;
+            --line: rgba(0, 0, 0, 0.08);
+            --line-strong: rgba(0, 0, 0, 0.16);
+            --brand: #0071e3;
+            --brand-2: #0077ed;
+            --brand-soft: rgba(0, 113, 227, 0.08);
+            --radius: 18px;
+            --radius-sm: 12px;
+            --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04);
+            --shadow-lg: 0 32px 80px rgba(0, 0, 0, 0.18), 0 8px 24px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.08);
+            --spring: cubic-bezier(0.16, 1, 0.3, 1);
+            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+                "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: var(--canvas);
+            color: var(--ink);
+            font-size: 14px;
+            line-height: 1.6;
+            letter-spacing: -0.01em;
+        }
+
+        /* 壁纸：边界较紧的饱和光斑，玻璃才有东西可折射 */
+        .bg-element {
+            opacity: 0.5;
+            filter: blur(8px);
+            animation-duration: 34s;
+        }
+
+        /* ===== 整体框架：一块悬浮的液态玻璃工作台 ===== */
+        .chat-container {
+            max-width: 1240px;
+            margin: 20px auto;
+            height: calc(100vh - 40px);
+            grid-template-columns: 272px 1fr;
+            border-radius: 24px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.72);
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.14), 0 8px 24px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            backdrop-filter: blur(40px) saturate(180%);
+        }
+
+        /* ===== 顶栏：玻璃条（保持可换行，窄屏不裁切） ===== */
+        .chat-header {
+            min-height: 62px;
+            padding: 11px 22px;
+            background: rgba(255, 255, 255, 0.88);
+            -webkit-backdrop-filter: blur(28px) saturate(190%);
+            backdrop-filter: blur(28px) saturate(190%);
+            color: var(--ink);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .brand-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #0071e3, #5ac8fa);
+            color: #fff;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0, 113, 227, 0.28);
+        }
+
+        .brand-title {
+            font-size: 16px;
+            font-weight: 650;
+            letter-spacing: -0.03em;
+            color: var(--ink);
+            text-shadow: none;
+        }
+
+        .brand-sub {
+            color: var(--ink-mute);
+            font-size: 12px;
+        }
+
+        .current-time {
+            color: var(--ink-soft);
+            background: rgba(0, 0, 0, 0.04);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+        }
+
+        /* ===== 按钮：Apple 次要按钮 ===== */
+        .pill-btn {
+            color: var(--ink);
+            background: rgba(120, 120, 128, 0.12);
+            border-radius: 980px;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 13px;
+            transition: background 0.28s var(--spring), transform 0.28s var(--spring);
+        }
+
+        .pill-btn:hover:not(:disabled) {
+            background: rgba(120, 120, 128, 0.2);
+            transform: none;
+        }
+
+        .pill-btn:active:not(:disabled) {
+            transform: scale(0.975);
+        }
+
+        .pill-btn.ghost {
+            background: rgba(120, 120, 128, 0.12);
+            color: var(--ink);
+        }
+
+        .pill-btn.ghost:hover:not(:disabled) {
+            background: rgba(120, 120, 128, 0.2);
+        }
+
+        .pill-btn.logout {
+            background: rgba(255, 59, 48, 0.12);
+            color: #d70015;
+        }
+
+        .pill-btn.logout:hover {
+            background: rgba(255, 59, 48, 0.2);
+        }
+
+        /* ===== 侧栏：玻璃面板 ===== */
+        .chat-sidebar {
+            padding: 16px 12px 22px;
+            background: rgba(249, 249, 251, 0.72);
+            border-right: 1px solid var(--line);
+        }
+
+        .asset-block {
+            margin-bottom: 16px;
+        }
+
+        .asset-title {
+            font-size: 13px;
+            font-weight: 650;
+            letter-spacing: -0.02em;
+            color: var(--ink);
+        }
+
+        .asset-sub {
+            color: var(--ink-mute);
+            font-size: 12px;
+        }
+
+        /* 资产 / 会话 / 最近：macOS 导航项 */
+        .asset-item,
+        .session-item,
+        .recent-item,
+        .hot-topic {
+            border-radius: var(--radius-sm);
+            transition: background 0.2s var(--spring), transform 0.2s var(--spring), box-shadow 0.2s var(--spring);
+        }
+
+        .asset-item:hover,
+        .recent-item:hover {
+            background: rgba(0, 0, 0, 0.045);
+            transform: none;
+        }
+
+        .session-item:hover {
+            background: rgba(0, 0, 0, 0.045);
+        }
+
+        .session-item.active {
+            background: rgba(0, 113, 227, 0.1);
+        }
+
+        .asset-count {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--ink-mute);
+            border-radius: 980px;
+        }
+
+        .asset-count.on {
+            background: rgba(0, 113, 227, 0.12);
+            color: var(--brand);
+        }
+
+        .asset-count.money {
+            background: rgba(255, 149, 0, 0.12);
+            color: #b36b00;
+        }
+
+        .session-new {
+            background: rgba(0, 113, 227, 0.1);
+            color: var(--brand);
+            border-radius: var(--radius-sm);
+            font-weight: 550;
+            transition: background 0.24s var(--spring), transform 0.24s var(--spring);
+        }
+
+        .session-new:hover {
+            background: rgba(0, 113, 227, 0.18);
+        }
+
+        .session-new:active {
+            transform: scale(0.98);
+        }
+
+        /* 搜索框 */
+        .dest-search {
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            transition: background 0.24s var(--spring), border-color 0.24s var(--spring), box-shadow 0.24s var(--spring);
+        }
+
+        .dest-search:focus-within {
+            background: #fff;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18);
+        }
+
+        .dest-search input {
+            background: transparent;
+        }
+
+        /* ===== 消息区：干净画布 + 更透气的留白 ===== */
+        .chat-messages {
+            padding: 28px 32px;
+            background: transparent;
+            gap: 20px;
+        }
+
+        .message-avatar {
+            width: 34px;
+            height: 34px;
+            font-size: 13px;
+        }
+
+        .ai-message .message-avatar {
+            background: linear-gradient(135deg, #0071e3, #5ac8fa);
+        }
+
+        .user-message .message-avatar {
+            background: linear-gradient(135deg, #ff9f0a, #ff7a00);
+        }
+
+        .message-name {
+            font-size: 12px;
+            color: var(--ink-mute);
+        }
+
+        .message-content-wrap {
+            max-width: 74%;
+        }
+
+        .message-content {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 4px 18px 18px 18px;
+            padding: 14px 18px;
+            font-size: 14px;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message .message-content {
+            background: linear-gradient(135deg, #0a84ff, #0071e3);
+            color: #fff;
+            border: 0;
+            border-radius: 18px 4px 18px 18px;
+            box-shadow: 0 6px 18px rgba(0, 113, 227, 0.28);
+        }
+
+        .message-content h4 {
+            color: var(--ink);
+            border-left-color: var(--brand);
+            font-weight: 650;
+            letter-spacing: -0.02em;
+        }
+
+        .message-content strong {
+            color: var(--ink);
+        }
+
+        .user-message .message-content strong {
+            color: #fff;
+        }
+
+        .sys-note {
+            background: rgba(0, 0, 0, 0.04);
+            color: var(--ink-mute);
+            border-radius: 980px;
+        }
+
+        .action-card {
+            background: var(--brand-soft);
+            border: 1px solid rgba(0, 113, 227, 0.16);
+            border-radius: var(--radius-sm);
+        }
+
+        .save-trip-btn {
+            background: rgba(120, 120, 128, 0.12);
+            color: var(--ink);
+            border-radius: 980px;
+            transition: background 0.24s var(--spring);
+        }
+
+        .save-trip-btn:hover:not(:disabled) {
+            background: rgba(0, 113, 227, 0.12);
+            color: var(--brand);
+        }
+
+        /* ===== 输入区：玻璃底板 ===== */
+        .chat-input-container {
+            padding: 12px 20px 16px;
+            background: rgba(255, 255, 255, 0.9);
+            border-top: 1px solid var(--line);
+        }
+
+        .quick-chip {
+            background: rgba(0, 0, 0, 0.045);
+            border: 1px solid transparent;
+            border-radius: 980px;
+            transition: background 0.24s var(--spring), color 0.24s var(--spring), border-color 0.24s var(--spring);
+        }
+
+        .quick-chip:hover {
+            background: rgba(0, 113, 227, 0.1);
+            border-color: rgba(0, 113, 227, 0.2);
+            color: var(--brand);
+        }
+
+        .chat-input {
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid transparent;
+            border-radius: 14px;
+            transition: background 0.24s var(--spring), border-color 0.24s var(--spring), box-shadow 0.24s var(--spring);
+        }
+
+        .chat-input:focus {
+            background: #fff;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18);
+        }
+
+        .send-button {
+            background: var(--brand);
+            border-radius: 12px;
+            box-shadow: 0 6px 16px rgba(0, 113, 227, 0.28);
+            transition: background 0.24s var(--spring), transform 0.24s var(--spring);
+        }
+
+        .send-button:hover:not(:disabled) {
+            background: var(--brand-2);
+            transform: translateY(-1px);
+        }
+
+        .send-button:active:not(:disabled) {
+            transform: scale(0.975);
+        }
+
+        /* ===== 弹窗：遮罩模糊 + 白色玻璃卡 ===== */
+        .modal {
+            background: rgba(41, 41, 58, 0.23);
+            -webkit-backdrop-filter: blur(14px) saturate(1.5);
+            backdrop-filter: blur(14px) saturate(1.5);
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 26px;
+            box-shadow: var(--shadow-lg);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            backdrop-filter: blur(30px) saturate(180%);
+            animation: popIn 0.3s var(--spring);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 650;
+            letter-spacing: -0.03em;
+            color: var(--ink);
+        }
+
+        .modal-subtitle {
+            color: var(--ink-mute);
+            font-size: 13px;
+        }
+
+        .modal-close {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--ink-soft);
+            border-radius: 980px;
+            transition: background 0.2s var(--spring), color 0.2s var(--spring);
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: var(--ink);
+        }
+
+        /* ===== 表单控件 ===== */
+        .form-control,
+        .list-add input,
+        .trip-add input,
+        .trip-add textarea,
+        .pref-add input,
+        .budget-trip {
+            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            transition: background 0.24s var(--spring), border-color 0.24s var(--spring), box-shadow 0.24s var(--spring);
+        }
+
+        .form-control:focus,
+        .list-add input:focus,
+        .trip-add input:focus,
+        .trip-add textarea:focus,
+        .pref-add input:focus {
+            background: #fff;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18);
+        }
+
+        .btn-primary,
+        .save-button {
+            background: var(--brand);
+            border-radius: var(--radius-sm);
+            box-shadow: 0 6px 16px rgba(0, 113, 227, 0.24);
+            transition: background 0.24s var(--spring), transform 0.24s var(--spring), box-shadow 0.24s var(--spring);
+        }
+
+        .btn-primary:hover:not(:disabled),
+        .save-button:hover:not(:disabled) {
+            background: var(--brand-2);
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: rgba(120, 120, 128, 0.12);
+            color: var(--ink);
+            border-radius: var(--radius-sm);
+        }
+
+        /* 卡片：连续圆角 + 分层环境阴影 */
+        .trip-item,
+        .pref-row,
+        .list-row {
+            border-radius: var(--radius-sm);
+            transition: box-shadow 0.2s var(--spring), background 0.2s var(--spring);
+        }
+
+        .trip-item:hover {
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+        }
+
+        .hot-topic {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--line);
+        }
+
+        .hot-topic:hover {
+            background: #fff;
+            border-color: var(--line-strong);
+        }
+
+        /* 细腻滚动条 */
+        .chat-sidebar::-webkit-scrollbar,
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-sidebar::-webkit-scrollbar-track,
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-sidebar::-webkit-scrollbar-thumb,
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.14);
+            border-radius: 980px;
+        }
+
+        .chat-sidebar::-webkit-scrollbar-thumb:hover,
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.24);
+        }
+
+        /* ===== 顶栏响应式：窄屏不换行、不堆叠 ===== */
+        .brand {
+            flex: 0 1 auto;
+            min-width: 0;
+        }
+
+        .brand-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .header-actions {
+            flex-wrap: nowrap;
+        }
+
+        @media (max-width: 1200px) {
+            .current-time {
+                display: none;
+            }
+        }
+
+        @media (max-width: 1040px) {
+            .brand-sub {
+                display: none;
+            }
+        }
+
+        @media (max-width: 880px) {
+            .pill-btn {
+                font-size: 12px;
+                padding: 5px 10px;
+            }
+
+            .chat-messages {
+                padding: 20px 18px;
+            }
+
+            .message-content-wrap {
+                max-width: 88%;
+            }
+        }
+
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <!-- 动态背景 -->
+    <div class="travel-bg">
+        <div class="bg-element"></div>
+        <div class="bg-element"></div>
+        <div class="bg-element"></div>
+        <div class="bg-element"></div>
+        <div class="bg-element"></div>
+    </div>
+
+    <div class="chat-container" :class="{'embed-open': embedOpen}">
+        <!-- 顶栏 -->
+        <header class="chat-header">
+            <div class="brand">
+                <div class="brand-logo">AI</div>
+                <div class="brand-text">
+                    <div class="brand-title">AI旅游助手</div>
+                    <div class="brand-sub">
+                        <i class="fas fa-user"></i> {{ me.name || '游客' }} · 行程规划
+                    </div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span class="current-time">{{ timeText }}</span>
+                <button class="pill-btn" :disabled="locState === 'locating'" @click="locateNow">
+                    <i class="fas" :class="locState === 'locating' ? 'fa-spinner fa-spin' : 'fa-location-dot'"></i>
+                    {{ locState === 'locating' ? '定位中…' : '我的位置' }}
+                </button>
+                <button class="pill-btn ghost" @click="openMyLocation">
+                    <i class="fas fa-map"></i> 内嵌地图
+                </button>
+                <button class="pill-btn ghost" @click="openTrips">我的行程</button>
+                <button class="pill-btn ghost" @click="openEdit">编辑信息</button>
+                <a class="pill-btn logout" href="login.html">退出</a>
+            </div>
+        </header>
+
+        <!-- 侧边栏 -->
+        <aside class="chat-sidebar">
+            <!-- 对话会话（多会话） -->
+            <div class="session-block">
+                <div class="asset-head">
+                    <div class="asset-title"><i class="fas fa-comments"></i> 对话</div>
+                    <div class="asset-sub">上一个对话会保留，随时切换</div>
+                </div>
+                <button type="button" class="session-new" @click="newSession()">
+                    <i class="fas fa-plus"></i> 新建对话
+                </button>
+                <ul class="session-list">
+                    <li v-if="!sessions.length" class="session-empty">还没有对话，点上面开一个</li>
+                    <li v-for="s in sessions" :key="s.id"
+                        class="session-item" :class="{active: s.id === currentSessionId}"
+                        @click="switchSession(s.id)">
+                        <span class="session-ico">
+                            <i class="fas" :class="s.id === currentSessionId ? 'fa-comment-dots' : 'fa-comment'"></i>
+                        </span>
+                        <template v-if="sessionEditId === s.id">
+                            <input class="session-input" v-model="sessionEditText"
+                                   @keyup.enter="confirmRenameSession()"
+                                   @keyup.esc="sessionEditId = 0"
+                                   @click.stop ref="sessionInput">
+                        </template>
+                        <template v-else>
+                            <div class="session-body">
+                                <div class="session-name">{{ s.title || '新对话' }}</div>
+                                <div class="session-time">
+                                    {{ (s.updateTime || '').slice(5, 16) }} · {{ s.messageCount }} 条
+                                </div>
+                            </div>
+                            <span class="session-ops">
+                                <button type="button" class="session-op" title="重命名" @click.stop="beginRenameSession(s)">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <button type="button" class="session-op danger" title="删除" @click.stop="deleteSession(s)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </span>
+                        </template>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 搜索 -->
+            <div class="dest-search">
+                <i class="fas fa-search"></i>
+                <input type="text" v-model="spotKeyword" @input="onSpotInput"
+                       placeholder="搜索目的地 / 城市 / 分类" autocomplete="off" name="spot-search">
+            </div>
+
+            <!-- 我的旅行资产 -->
+            <div class="asset-block">
+                <div class="asset-head">
+                    <div class="asset-title"><i class="fas fa-suitcase-rolling"></i> 我的旅行资产</div>
+                    <div class="asset-sub">管家记住的一切都在这里</div>
+                </div>
+
+                <ul class="asset-list">
+                    <li class="asset-item" @click="openTrips()">
+                        <span class="asset-ico"><i class="fas fa-book"></i></span>
+                        <span class="asset-name">行程本</span>
+                        <span class="asset-count" :class="{on: assetCounts.trips > 0}">{{ assetCounts.trips }}</span>
+                    </li>
+                    <li class="asset-item" @click="openPref()">
+                        <span class="asset-ico"><i class="fas fa-heart"></i></span>
+                        <span class="asset-name">偏好档案</span>
+                        <span class="asset-count" :class="{on: assetCounts.prefs > 0}">{{ assetCounts.prefs }}</span>
+                    </li>
+                    <li class="asset-item" @click="openLogs()">
+                        <span class="asset-ico"><i class="fas fa-location-dot"></i></span>
+                        <span class="asset-name">打卡日志</span>
+                        <span class="asset-count" :class="{on: assetCounts.logs > 0}">{{ assetCounts.logs }}</span>
+                    </li>
+                    <li class="asset-item" @click="openFavs()">
+                        <span class="asset-ico"><i class="fas fa-star"></i></span>
+                        <span class="asset-name">灵感收藏</span>
+                        <span class="asset-count" :class="{on: assetCounts.favs > 0}">{{ assetCounts.favs }}</span>
+                    </li>
+                </ul>
+
+                <div class="asset-sep"></div>
+
+                <ul class="asset-list">
+                    <li class="asset-item" @click="openBudget()">
+                        <span class="asset-ico"><i class="fas fa-wallet"></i></span>
+                        <span class="asset-name">预算</span>
+                        <span class="asset-count money" :class="{on: assetCounts.budget > 0}">
+                            ¥{{ assetCounts.budget.toLocaleString() }}
+                        </span>
+                    </li>
+                    <li class="asset-item" @click="openPacking()">
+                        <span class="asset-ico"><i class="fas fa-suitcase"></i></span>
+                        <span class="asset-name">行李清单</span>
+                        <span class="asset-count" :class="{on: assetCounts.packing > 0}">{{ assetCounts.packing }}</span>
+                    </li>
+                    <li class="asset-item" @click="openDocs()">
+                        <span class="asset-ico"><i class="fas fa-id-card"></i></span>
+                        <span class="asset-name">证件</span>
+                        <span class="asset-count" :class="{on: assetCounts.docs > 0}">{{ assetCounts.docs }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 最近行程 -->
+            <div class="asset-block" v-if="recentTrips.length">
+                <div class="asset-head">
+                    <div class="asset-title"><i class="fas fa-clock-rotate-left"></i> 最近</div>
+                </div>
+                <ul class="recent-list">
+                    <li class="recent-item" v-for="t in recentTrips" :key="t.id" @click="openTrip(t.id)">
+                        <span class="recent-title">{{ t.title }}</span>
+                        <span class="recent-time">{{ (t.createTime || '').slice(5, 16) }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 热门目的地（降级到底部） -->
+            <div class="asset-block dest-block">
+                <div class="asset-head">
+                    <div class="asset-title"><i class="fas fa-fire"></i> 热门目的地</div>
+                    <div class="asset-sub">点一个让管家排行程</div>
+                </div>
+                <div class="destination-list">
+                    <div v-if="spotsLoading" class="dest-empty">正在加载…</div>
+                    <div v-else-if="spotsError" class="dest-empty">{{ spotsError }}</div>
+                    <div v-else-if="!spots.length" class="dest-empty">没有找到匹配的目的地</div>
+                    <template v-else>
+                        <div class="hot-topic" v-for="spot in spots" :key="spot.name + spot.city"
+                             @click="planSpot(spot)">
+                            <div class="icon-wrapper">
+                                <i class="fas" :class="spot.icon || 'fa-map-marker-alt'"></i>
+                            </div>
+                            <div class="hot-topic-text">
+                                <div class="hot-topic-title">{{ spot.name }} · {{ spot.city }}</div>
+                                <div class="hot-topic-desc">{{ spot.description }}</div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 消息区 -->
+        <main class="chat-messages" ref="msgBox" @click="onMessagesClick">
+            <template v-for="msg in messages" :key="msg.id">
+                <div v-if="msg.role === 'system'" class="sys-note">{{ msg.text }}</div>
+                <div v-else class="message" :class="msg.role === 'user' ? 'user-message' : 'ai-message'">
+                    <div class="message-avatar">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
+                    <div class="message-content-wrap">
+                        <div class="message-name">
+                            <i class="fas" :class="msg.role === 'user' ? 'fa-user' : 'fa-robot'"></i>
+                            {{ msg.role === 'user' ? (me.name || '我') : '行程规划助手' }}
+                        </div>
+                        <div class="message-content" v-html="renderBody(msg)"></div>
+                        <!-- 本次真正写库的操作：让"它到底做了什么"可见 -->
+                        <div v-if="msg.actions && msg.actions.length" class="action-card">
+                            <div class="action-title">
+                                <i class="fas fa-screwdriver-wrench"></i>
+                                本次为你做了 {{ msg.actions.length }} 件事
+                            </div>
+                            <ul>
+                                <li v-for="(a, i) in msg.actions" :key="i">{{ a.summary }}</li>
+                            </ul>
+                        </div>
+                        <div v-if="msg.role === 'ai'" class="message-actions">
+                            <button class="save-trip-btn" :class="{saved: msg.saved}"
+                                    :disabled="msg.saved" @click="saveTrip(msg)">
+                                <i class="fas" :class="msg.saved ? 'fa-check' : 'fa-bookmark'"></i>
+                                {{ msg.saved ? '已保存到行程本' : '保存到行程本' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <div v-if="sending" class="message ai-message">
+                <div class="message-avatar">AI</div>
+                <div class="message-content-wrap">
+                    <div class="message-name"><i class="fas fa-robot"></i> 行程规划助手</div>
+                    <div class="message-content">
+                        <div class="typing">
+                            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                            <span>正在规划你的旅程，请稍等…</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 输入区 -->
+        <div class="chat-input-container">
+            <!-- 常驻能力按钮条 -->
+            <div class="quick-bar">
+                <button class="quick-chip" v-for="cap in capabilities" :key="cap.id" @click="runCapability(cap)">
+                    <i class="fas" :class="cap.icon"></i> {{ cap.title }}
+                </button>
+            </div>
+            <form class="input-row" @submit.prevent="send">
+                <textarea class="chat-input" v-model="input" rows="1" ref="inputBox"
+                          placeholder="您想去哪里旅行？回车发送，Shift+回车换行" @keydown="onKeydown"></textarea>
+                <button type="submit" class="send-button" :disabled="sending">
+                    <i class="fas fa-paper-plane"></i> 发送
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 内嵌浏览器（地图导航）：点导航时自动划出，不用跳转到外部浏览器 -->
+    <div class="embed-panel" :class="{show: embedOpen}">
+        <div class="embed-resizer" :class="{dragging: embedResizing}" @mousedown="startResize"
+             title="拖动调整地图宽度"></div>
+        <div class="embed-head">
+            <i class="fas fa-map-location-dot"></i>
+            <span class="embed-title">{{ embedTitle }}</span>
+            <div class="embed-actions">
+                <button @click="openEmbedExternal">
+                    <i class="fas fa-arrow-up-right-from-square"></i> 在浏览器打开
+                </button>
+                <button @click="closeEmbed"><i class="fas fa-times"></i> 关闭</button>
+            </div>
+        </div>
+        <div class="embed-body" ref="embedHost"></div>
+    </div>
+
+    <!-- 编辑信息 -->
+    <div class="modal" :class="{show: editOpen}" @click.self="editOpen = false">
+        <div class="modal-content">
+            <button class="modal-close" @click="editOpen = false">&times;</button>
+            <div class="modal-title">编辑个人信息</div>
+            <div class="modal-subtitle">更新您的账户安全信息和旅行偏好设置</div>
+
+            <div v-if="editErr" class="form-msg error">{{ editErr }}</div>
+            <div v-if="editOk" class="form-msg success">{{ editOk }}</div>
+
+            <div class="form-group">
+                <label><i class="fas fa-lock"></i> 当前密码</label>
+                <div class="pwd-field">
+                    <input class="form-control" :type="showPwd.cur ? 'text' : 'password'" autocomplete="new-password"
+                           v-model="editForm.currentPassword" placeholder="请输入当前密码">
+                    <span class="password-toggle" @click="showPwd.cur = !showPwd.cur">
+                        <i class="fas" :class="showPwd.cur ? 'fa-eye-slash' : 'fa-eye'"></i>
+                    </span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-key"></i> 新密码</label>
+                <div class="pwd-field">
+                    <input class="form-control" :type="showPwd.nw ? 'text' : 'password'" autocomplete="new-password"
+                           v-model="editForm.newPassword" placeholder="8位以上，包含字母和数字">
+                    <span class="password-toggle" @click="showPwd.nw = !showPwd.nw">
+                        <i class="fas" :class="showPwd.nw ? 'fa-eye-slash' : 'fa-eye'"></i>
+                    </span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-key"></i> 确认新密码</label>
+                <div class="pwd-field">
+                    <input class="form-control" :type="showPwd.cf ? 'text' : 'password'" autocomplete="new-password"
+                           v-model="editForm.confirmPassword" placeholder="请再次输入新密码">
+                    <span class="password-toggle" @click="showPwd.cf = !showPwd.cf">
+                        <i class="fas" :class="showPwd.cf ? 'fa-eye-slash' : 'fa-eye'"></i>
+                    </span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-envelope"></i> 新邮箱</label>
+                <div class="pwd-field">
+                    <input class="form-control" type="email" v-model="editForm.newEmail"
+                           placeholder="请输入新的邮箱地址">
+                </div>
+            </div>
+
+            <button class="save-button" :disabled="editSaving" @click="updateProfile">
+                {{ editSaving ? '更新中…' : '保存更改' }}
+            </button>
+
+            <div class="security-info">
+                <div class="security-title"><i class="fas fa-shield-alt"></i> 安全提示</div>
+                <div class="security-content">
+                    <i class="fas fa-circle"></i> 请使用强密码，包含字母、数字或特殊字符<br>
+                    <i class="fas fa-circle"></i> 修改密码后，请用新密码重新登录<br>
+                    <i class="fas fa-circle"></i> 确保邮箱地址有效以便接收旅行更新
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 我的行程本 -->
+    <div class="modal" :class="{show: tripsOpen}" @click.self="tripsOpen = false">
+        <div class="modal-content wide">
+            <button class="modal-close" @click="tripsOpen = false">&times;</button>
+            <div class="modal-title">我的行程本</div>
+            <div class="modal-subtitle">AI 生成的行程会自动存进这里，也可以自己新建一条</div>
+            <div class="trips-list">
+                <div v-if="tripsLoading" class="dest-empty">正在加载…</div>
+                <div v-else-if="tripsError" class="dest-empty">{{ tripsError }}</div>
+                <div v-else-if="!trips.length" class="dest-empty">还没有保存任何行程，先在下面新建一条吧～</div>
+                <template v-else>
+                    <div class="trip-item" v-for="trip in trips" :key="trip.id">
+                        <div class="trip-item-main" @click="openTrip(trip.id)">
+                            <div class="trip-item-title">{{ trip.title }}</div>
+                            <div class="trip-item-time"><i class="far fa-clock"></i> {{ trip.createTime }}</div>
+                        </div>
+                        <div class="trip-item-actions">
+                            <button class="trip-open-btn" @click="openTrip(trip.id)">查看</button>
+                            <button class="trip-del-btn" @click="deleteTrip(trip)">删除</button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <div class="trip-add">
+                <div class="trip-add-title"><i class="fas fa-plus"></i> 手动新建行程</div>
+                <input v-model="tripForm.title" placeholder="行程标题，如：汕头 4 天美食之旅" maxlength="120">
+                <textarea v-model="tripForm.content" rows="4"
+                          placeholder="行程内容：天数、想去的地方、每天的安排…（可留空）"></textarea>
+                <button class="btn-primary" :disabled="tripSaving" @click="saveTripManual()">
+                    {{ tripSaving ? '保存中…' : '新建行程' }}
+                </button>
+                <div v-if="tripMsg" class="pref-hint">{{ tripMsg }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 行程详情 -->
+    <div class="modal" :class="{show: detailOpen}" @click.self="detailOpen = false">
+        <div class="modal-content wide">
+            <button class="modal-close" @click="detailOpen = false">&times;</button>
+            <div class="modal-title">{{ detail.title }}</div>
+            <div class="modal-subtitle">{{ detail.createTime ? '创建于 ' + detail.createTime : '' }}</div>
+            <div class="trip-detail-content">{{ detail.content }}</div>
+        </div>
+    </div>
+
+    <!-- 我的偏好：把 AI 记住的画像摊开给用户看（原先只有写入口，界面上看不见） -->
+    <div class="modal" :class="{show: prefOpen}" @click.self="prefOpen = false">
+        <div class="modal-content">
+            <button class="modal-close" @click="prefOpen = false">&times;</button>
+            <div class="modal-title">我的偏好</div>
+            <div class="modal-subtitle">管家在对话中记住的旅行习惯，会长期用于安排行程</div>
+
+            <div v-if="prefLoading" class="pref-hint">正在读取…</div>
+            <div v-else-if="prefError" class="pref-hint pref-error">{{ prefError }}</div>
+            <div v-else-if="!prefItems.length" class="pref-empty">
+                <i class="fas fa-heart"></i>
+                <div class="pref-empty-title">还没有记住任何偏好</div>
+                <div class="pref-empty-desc">
+                    在对话里直接说，例如「我不吃辣」「我走不了太久」「预算每人 2000 以内」，
+                    管家会自动记下来并显示在这里。
+                </div>
+            </div>
+            <ul v-else class="pref-list">
+                <li v-for="item in prefItems" :key="item.tag" class="pref-row">
+                    <span class="pref-tag">{{ item.tag }}</span>
+                    <span class="pref-value">{{ item.value || '（空）' }}</span>
+                    <span class="pref-time">{{ item.updateTime }}</span>
+                    <span class="pref-ops">
+                        <button title="编辑" @click="startEditPref(item)"><i class="fas fa-pen"></i></button>
+                        <button title="删除" @click="removePref(item)"><i class="fas fa-trash"></i></button>
+                    </span>
+                </li>
+            </ul>
+
+            <div class="pref-add">
+                <input v-model="prefForm.tag" placeholder="维度，如 饮食忌口" maxlength="64">
+                <input v-model="prefForm.value" placeholder="取值，如 不吃辣" maxlength="500">
+                <button class="btn-primary" :disabled="prefSaving" @click="savePref()">
+                    {{ prefSaving ? '保存中…' : (prefForm.editing ? '更新' : '添加') }}
+                </button>
+                <button v-if="prefForm.editing" class="btn-ghost" @click="cancelEditPref()">取消</button>
+            </div>
+            <div v-if="prefMsg" class="pref-hint">{{ prefMsg }}</div>
+        </div>
+    </div>
+
+    <!-- 通用资产列表弹窗（打卡日志 / 收藏 / 行李 / 证件） -->
+    <div class="modal" :class="{show: listOpen}" @click.self="listOpen = false">
+        <div class="modal-content wide">
+            <button class="modal-close" @click="listOpen = false">&times;</button>
+            <div class="modal-title"><i class="fas" :class="listIcon"></i> {{ listTitle }}</div>
+            <div class="modal-subtitle">由管家在对话中自动记录，也可以在下面手动添加</div>
+
+            <div v-if="listLoading" class="pref-hint">正在读取…</div>
+            <div v-else-if="listError" class="pref-hint pref-error">{{ listError }}</div>
+            <div v-else-if="!listItems.length" class="pref-empty">
+                <i class="fas" :class="listIcon"></i>
+                <div class="pref-empty-title">这里还是空的</div>
+                <div class="pref-empty-desc">
+                    在对话里说一句就行，或者用下面的表单手动添加一条。
+                </div>
+            </div>
+            <ul v-else class="list-rows">
+                <li v-for="(it, i) in listItems" :key="i" class="list-row">
+                    <div class="list-row-body">
+                        <div class="list-row-main">{{ it.main }}</div>
+                        <div v-if="it.sub" class="list-row-sub">{{ it.sub }}</div>
+                    </div>
+                    <button v-if="listOpts && listOpts.del" class="list-row-del" title="删除"
+                            @click="removeListItem(it)"><i class="fas fa-trash"></i></button>
+                </li>
+            </ul>
+
+            <div v-if="listOpts && listOpts.add" class="list-add">
+                <input v-for="f in listOpts.add.fields" :key="f.key" v-model="listForm[f.key]"
+                       :placeholder="f.ph" maxlength="500">
+                <button class="btn-primary" :disabled="listSaving" @click="saveListItem()">
+                    {{ listSaving ? '保存中…' : '添加' }}
+                </button>
+            </div>
+            <div v-if="listMsg" class="pref-hint">{{ listMsg }}</div>
+        </div>
+    </div>
+
+    <!-- 预算（按行程记账） -->
+    <div class="modal" :class="{show: budgetOpen}" @click.self="budgetOpen = false">
+        <div class="modal-content wide">
+            <button class="modal-close" @click="budgetOpen = false">&times;</button>
+            <div class="modal-title"><i class="fas fa-wallet"></i> 预算</div>
+            <div class="modal-subtitle">选择一个行程记账，随时看这趟的总花销</div>
+
+            <div class="budget-head">
+                <select v-model.number="budgetTripId" @change="loadBudget()" class="budget-trip">
+                    <option :value="-1">全部花销</option>
+                    <option v-for="t in budgetTrips" :key="t.id" :value="t.id">{{ t.title }}</option>
+                </select>
+                <span class="budget-total">合计 ¥{{ Number(budgetSummary.total || 0).toLocaleString() }}</span>
+            </div>
+
+            <div v-if="budgetLoading" class="pref-hint">正在读取…</div>
+            <div v-else-if="!budgetEntries.length" class="pref-empty">
+                <i class="fas fa-wallet"></i>
+                <div class="pref-empty-title">还没有花销记录</div>
+                <div class="pref-empty-desc">在下面记一笔，比如「交通 · 高铁票 · 320 · 2026-10-01」。</div>
+            </div>
+            <ul v-else class="list-rows">
+                <li v-for="e in budgetEntries" :key="e.id" class="list-row">
+                    <div class="list-row-body">
+                        <div class="list-row-main">{{ e.item || e.category || '(未命名)' }}
+                            <span class="budget-amt">¥{{ e.amount }}</span></div>
+                        <div class="list-row-sub">{{ [e.category, e.entryDate].filter(Boolean).join(' · ') }}</div>
+                    </div>
+                    <button class="list-row-del" title="删除" @click="deleteBudgetEntry(e)">
+                        <i class="fas fa-trash"></i></button>
+                </li>
+            </ul>
+
+            <div class="list-add budget-add">
+                <input v-model="budgetForm.category" placeholder="类别（交通 / 住宿 / 餐饮）" maxlength="64">
+                <input v-model="budgetForm.item" placeholder="项目（如：高铁票）" maxlength="128">
+                <input v-model="budgetForm.amount" placeholder="金额" type="number" step="0.01">
+                <input v-model="budgetForm.entryDate" placeholder="日期 2026-10-01" maxlength="20">
+                <button class="btn-primary" :disabled="budgetSaving" @click="saveBudgetEntry()">
+                    {{ budgetSaving ? '保存中…' : '记一笔' }}
+                </button>
+            </div>
+            <div v-if="budgetMsg" class="pref-hint">{{ budgetMsg }}</div>
+        </div>
+    </div>
+
+    </div>
+</div>
+
+<script src="vendor/vue.global.prod.js"></script>
+<script>
+    const {createApp} = Vue;
+
+    /**
+     * 注入进内嵌的高德网页版：隐藏它自带的顶部工具条控件（测距/地铁/全屏/更多/下载APP），
+     * 只保留「城市天气」和「搜索框」两块。
+     * <p>
+     * 这些控件是高德自己用 JS 渲染的，没有稳定 class 可依赖，所以按「文字完全相等 + 位于页面顶部」
+     * 定位，再往上找一层小容器一起隐藏；再用 MutationObserver 兜住之后重新渲染出来的节点。
+     * 只对桌面端 webview 生效——浏览器里的跨域 iframe 不允许我们改它的页面。
+     */
+    const AMAP_CHROME_HIDE_JS = `(function () {
+        var LABELS = ['测距', '地铁', '全屏', '更多', '下载APP'];
+        function norm(s) { return (s || '').replace(/\\s+/g, ''); }
+        function hide() {
+            var nodes = document.querySelectorAll('a,button,span,div,li,p,em,i');
+            for (var idx = 0; idx < nodes.length; idx++) {
+                var el = nodes[idx];
+                if (el.dataset && el.dataset.aitvHidden) { continue; }
+                if (el.children.length > 0) { continue; }
+                if (LABELS.indexOf(norm(el.textContent)) === -1) { continue; }
+                var r = el.getBoundingClientRect();
+                if (r.height === 0) { continue; }
+                if (r.top > 260) { continue; }
+                var item = el;
+                for (var k = 0; k < 2 && item.parentElement; k++) {
+                    var p = item.parentElement;
+                    if (p.children.length >= 2 && p.children.length <= 4) { item = p; } else { break; }
+                }
+                item.style.setProperty('display', 'none', 'important');
+                if (item.dataset) { item.dataset.aitvHidden = '1'; }
+            }
+        }
+        hide();
+        if (!window.__aitvAmapChromeObserver) {
+            var last = 0;
+            window.__aitvAmapChromeObserver = new MutationObserver(function () {
+                var now = Date.now();
+                if (now - last < 700) { return; }
+                last = now;
+                hide();
+            });
+            window.__aitvAmapChromeObserver.observe(document.documentElement, { childList: true, subtree: true });
+        }
+        return true;
+    })();`;
+
+    createApp({
+        data() {
+            return {
+                me: {name: '', email: ''},
+                timeText: '',
+                timeTimer: null,
+
+                messages: [],
+                msgSeq: 0,
+                input: '',
+                sending: false,
+
+                // 多会话：会话列表 / 当前会话 / 正在改名的会话
+                sessions: [],
+                currentSessionId: null,
+                sessionEditId: 0,
+                sessionEditText: '',
+
+                spots: [],
+                spotKeyword: '',
+                spotsLoading: false,
+                spotsError: '',
+                spotTimer: null,
+
+                // 定位相关
+                locState: 'idle',      // idle / locating / ok / error
+                geoWatchId: null,
+                lastReport: null,
+
+                // 弹窗
+                editOpen: false,
+                tripsOpen: false,
+                detailOpen: false,
+
+                editForm: {currentPassword: '', newPassword: '', confirmPassword: '', newEmail: ''},
+                showPwd: {cur: false, nw: false, cf: false},
+                editErr: '',
+                editOk: '',
+                editSaving: false,
+
+                trips: [],
+                tripsLoading: false,
+                tripsError: '',
+                tripForm: {title: '', content: ''},   // 手动新建行程
+                tripSaving: false,
+                tripMsg: '',
+
+                detail: {title: '', createTime: '', content: ''},
+
+                // 我的偏好（当前生效画像）
+                prefOpen: false,
+                prefItems: [],
+                prefLoading: false,
+                prefError: '',
+                prefSaving: false,
+                prefMsg: '',
+                prefForm: {tag: '', value: '', editing: false},
+
+                // ── 左侧「我的旅行资产」──
+                assetCounts: {trips: 0, prefs: 0, logs: 0, favs: 0, budget: 0, packing: 0, docs: 0},
+                recentTrips: [],          // 最近行程（最多显示 3 条）
+
+                // 轻量列表弹窗（打卡日志 / 收藏 / 行李 / 证件），支持手动新增与删除
+                listOpen: false,
+                listLoading: false,
+                listTitle: '',
+                listIcon: 'fa-list',
+                listItems: [],
+                listError: '',
+                listOpts: null,          // 当前弹窗配置（新增/删除后据此刷新）
+                listForm: {},            // 手动新增表单的输入值
+                listSaving: false,
+                listMsg: '',
+
+                // 预算（按行程）
+                budgetOpen: false,
+                budgetTrips: [],
+                budgetTripId: -1,        // -1 = 全部花销
+                budgetEntries: [],
+                budgetSummary: {total: 0, byCategory: {}},
+                budgetLoading: false,
+                budgetSaving: false,
+                budgetMsg: '',
+                budgetForm: {category: '交通', item: '', amount: '', entryDate: ''},
+
+                agentReady: false,
+
+                // 内嵌浏览器（地图导航）
+                embedOpen: false,
+                embedUrl: '',
+                embedTitle: '地图导航',
+                embedMode: '',
+                // iframe 模式下的虚拟渲染宽度：跨域页面读不到真实宽度，
+                // 统一按桌面宽度渲染再等比缩小，避免被窄面板裁掉
+                embedBaseWidth: 1000,
+                // 当前内嵌的是否为站内页面（相对路径）：站内页自适应，不缩放
+                embedLocal: false,
+                // 内嵌面板宽度（px）：打开时取用户上次拖动的值，没有则按窗口算默认值
+                embedWidth: 0,
+                // 用户是否手动拖过宽度：拖过就尊重其选择，没拖过则随窗口自适应
+                embedWidthCustom: false,
+                embedResizing: false,
+
+                // 能力快捷按钮（常驻输入框上方，始终可点）
+                capabilities: [
+                    {id: 'plan', icon: 'fa-route', title: '定制行程', action: 'plan'},
+                    {id: 'nearby', icon: 'fa-location-dot', title: '周边吃喝玩乐', action: 'nearby'},
+                    {id: 'nav', icon: 'fa-car', title: '一键导航', action: 'nav'},
+                    {id: 'spot', icon: 'fa-map-location-dot', title: '目的地推荐', action: 'spot'},
+                    {id: 'pref', icon: 'fa-heart', title: '我的偏好', action: 'pref'},
+                    {id: 'trip', icon: 'fa-book', title: '我的行程本', action: 'trip'}
+                ]
+            };
+        },
+
+        mounted() {
+            this.tickTime();
+            this.timeTimer = setInterval(this.tickTime, 1000);
+            window.addEventListener('keydown', this.onGlobalKey);
+            window.addEventListener('resize', this.refitEmbed);
+            this.loadSpots('');
+            this.loadUser().then(loggedIn => {
+                if (loggedIn) {
+                    // 进入系统后自动识别定位并输出现场指引
+                    this.autoLocate();
+                }
+            });
+            // 多会话：载入会话列表并接上上次的会话（无历史时才显示欢迎语）
+            this.initSessions();
+            // 左栏「我的旅行资产」计数
+            this.loadAssets();
+        },
+
+        beforeUnmount() {
+            clearInterval(this.timeTimer);
+            clearTimeout(this.spotTimer);
+            window.removeEventListener('keydown', this.onGlobalKey);
+            window.removeEventListener('resize', this.refitEmbed);
+            if (this.geoWatchId !== null && navigator.geolocation) {
+                navigator.geolocation.clearWatch(this.geoWatchId);
+            }
+        },
+
+        methods: {
+            /* ==================== 基础工具 ==================== */
+            escapeHtml(text) {
+                return String(text == null ? '' : text)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            },
+
+            tickTime() {
+                const now = new Date();
+                this.timeText = now.toLocaleString('zh-CN', {
+                    month: 'long', day: 'numeric', weekday: 'short',
+                    hour: '2-digit', minute: '2-digit', hour12: false
+                });
+            },
+
+            addMsg(role, text, opts) {
+                const o = opts || {};
+                this.messages.push({
+                    id: ++this.msgSeq,
+                    role: role,
+                    text: text == null ? '' : String(text),
+                    saved: false,
+                    // 本轮真正写库的操作（后端 actions）；历史回放时为 []
+                    actions: o.actions || []
+                });
+                // silent：渲染历史时不要每次都滚到底部，由调用方统一滚一次
+                if (!o.silent) {
+                    this.scrollToBottom();
+                }
+                return this.messages[this.messages.length - 1];
+            },
+
+            /* ==================== 多会话 ==================== */
+            /** 欢迎语：会话没有任何消息时出现 */
+            welcomeIfEmpty() {
+                this.messages = [];
+                this.msgSeq = 0;
+                this.addMsg('ai', '您好，我是您的旅行管家。\n\n我可以帮你**定制行程**、**一键导航**、**推荐目的地**、**定位后找周边吃喝玩乐**、**记住你的旅行偏好**，还能**管理行程本**。\n\n直接点上方「能力」或对话区里的卡片，就能发起对应功能；也可以直接告诉我你想去哪。');
+            },
+
+            /** 进页面：拉会话列表 → 接上上次会话，没有就新建 */
+            async initSessions() {
+                await this.loadSessions();
+                let want = null;
+                try { want = Number(localStorage.getItem('aitvSessionId')) || null; } catch (e) {}
+                if (want && !this.sessions.some(s => s.id === want)) want = null;
+                if (!want && this.sessions.length) want = this.sessions[0].id;
+                if (want) {
+                    await this.switchSession(want);
+                } else {
+                    await this.newSession(true);
+                }
+            },
+
+            /** 拉会话列表 */
+            async loadSessions() {
+                try {
+                    const res = await fetch('agent/session/list', {method: 'POST', credentials: 'include'});
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    this.sessions = (data && data.sessions) ? data.sessions : [];
+                } catch (e) {
+                    console.warn('读取会话列表失败:', e);
+                }
+            },
+
+            /** 新建会话并切过去（silent：初始化时不额外提示） */
+            async newSession(silent) {
+                try {
+                    const res = await fetch('agent/session/new', {method: 'POST', credentials: 'include'});
+                    const data = await res.json();
+                    if (!data || data.status !== 'success') throw new Error((data && data.message) || '新建失败');
+                    this.currentSessionId = data.sessionId;
+                    try { localStorage.setItem('aitvSessionId', String(data.sessionId)); } catch (e) {}
+                    this.welcomeIfEmpty();
+                    await this.loadSessions();
+                } catch (e) {
+                    console.error('新建会话失败:', e);
+                    if (!silent) this.addMsg('system', '新建对话失败：' + e.message);
+                }
+            },
+
+            /** 切换到某个会话：清空当前气泡并回放该会话历史 */
+            async switchSession(id) {
+                if (id === this.currentSessionId && this.messages.length) return;
+                this.currentSessionId = id;
+                try { localStorage.setItem('aitvSessionId', String(id)); } catch (e) {}
+                this.messages = [];
+                this.msgSeq = 0;
+                await this.loadHistory(id);
+            },
+
+            /** 重命名：进入编辑态 */
+            beginRenameSession(s) {
+                this.sessionEditId = s.id;
+                this.sessionEditText = s.title || '';
+                this.$nextTick(() => {
+                    const el = this.$refs.sessionInput;
+                    const input = Array.isArray(el) ? el[0] : el;
+                    if (input) { input.focus(); if (input.select) input.select(); }
+                });
+            },
+
+            /** 重命名：提交 */
+            async confirmRenameSession() {
+                const id = this.sessionEditId;
+                const title = (this.sessionEditText || '').trim();
+                this.sessionEditId = 0;
+                if (!id || !title) return;
+                try {
+                    await fetch('agent/session/rename', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({id: String(id), title: title}).toString()
+                    });
+                    await this.loadSessions();
+                } catch (e) {
+                    console.error('重命名失败:', e);
+                }
+            },
+
+            /** 删除会话；删的是当前会话则切到最近一个（或新建） */
+            async deleteSession(s) {
+                try {
+                    await fetch('agent/session/delete', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({id: String(s.id)}).toString()
+                    });
+                    await this.loadSessions();
+                    if (s.id === this.currentSessionId) {
+                        if (this.sessions.length) {
+                            await this.switchSession(this.sessions[0].id);
+                        } else {
+                            await this.newSession(true);
+                        }
+                    }
+                } catch (e) {
+                    console.error('删除会话失败:', e);
+                }
+            },
+
+            /**
+             * 回放某会话的历史；没有历史时显示欢迎语。
+             */
+            async loadHistory(sessionId) {
+                try {
+                    const url = 'agent/history?limit=20' + (sessionId ? '&sessionId=' + sessionId : '');
+                    const res = await fetch(url, {method: 'POST', credentials: 'include'});
+                    if (!res.ok) { this.welcomeIfEmpty(); return; }
+                    const data = await res.json();
+                    if (!data || !data.login) { this.welcomeIfEmpty(); return; }
+                    const past = data.messages || [];
+                    if (!past.length) { this.welcomeIfEmpty(); return; }
+                    this.messages = [];
+                    this.msgSeq = 0;
+                    past.forEach(m => {
+                        this.addMsg(m.role === 'user' ? 'user' : 'ai', m.content, {silent: true});
+                    });
+                    this.scrollToBottom();
+                } catch (e) {
+                    // 拉历史失败不影响正常对话
+                    console.warn('读取历史对话失败:', e);
+                    this.welcomeIfEmpty();
+                }
+            },
+
+            scrollToBottom() {
+                this.$nextTick(() => {
+                    const box = this.$refs.msgBox;
+                    if (box) box.scrollTop = box.scrollHeight;
+                });
+            },
+
+            renderBody(msg) {
+                if (msg.role === 'system') {
+                    return this.escapeHtml(msg.text).replace(/\n/g, '<br>');
+                }
+                return this.renderMarkdown(msg.text);
+            },
+
+            /**
+             * 轻量 Markdown 渲染：先转义保证安全，再处理表格（| 与 || 两种）、标题【】、
+             * 有序/无序列表、加粗、Markdown 链接与裸链接。
+             * 目的是把模型输出的长文本变成有层次的排版，而不是一大坨纯文字。
+             */
+            renderMarkdown(text) {
+                let src = this.escapeHtml(text);
+
+                // 1. 先把 Markdown 链接抽出来占位，避免后续正则互相干扰
+                const links = [];
+                src = src.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
+                    links.push({label: label, url: url});
+                    return '\u0000L' + (links.length - 1) + '\u0000';
+                });
+
+                // 2. 裸链接（模型直接贴的 http 地址）也转成可点
+                src = src.replace(/(https?:\/\/[^\s<>"']+)/g, url => {
+                    const clean = url.replace(/[，。！？、；：)）\]】},;:.!?]+$/, '');
+                    return '<a class="nav-link" href="' + clean + '" target="_blank" rel="noopener noreferrer">'
+                        + clean + '</a>';
+                });
+
+                // 3. 加粗
+                src = src.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+
+                const lines = src.split('\n');
+                const out = [];
+                let listType = null;
+                let paragraph = [];
+
+                const flushParagraph = () => {
+                    if (paragraph.length) {
+                        out.push('<p>' + paragraph.join('<br>') + '</p>');
+                        paragraph = [];
+                    }
+                };
+                const closeList = () => {
+                    if (listType) {
+                        out.push('</' + listType + '>');
+                        listType = null;
+                    }
+                };
+                // 表格行：含有 | 分隔符即视为表格行（兼容模型输出的 || 与 | 两种）
+                const isTableRow = s => /\|/.test(s.trim());
+                const buildTable = rows => {
+                    const parse = row => row.replace(/^\|+/, '').replace(/\|+$/, '')
+                        .split(/\|{1,}/).map(c => c.trim());
+                    const parts = ['<table class="md-table"><tbody>'];
+                    rows.forEach((row, idx) => {
+                        const cells = parse(row);
+                        const tag = idx === 0 ? 'th' : 'td';
+                        parts.push('<tr>' + cells.map(c => '<' + tag + '>' + c + '</' + tag + '>').join('') + '</tr>');
+                    });
+                    parts.push('</tbody></table>');
+                    return parts.join('');
+                };
+
+                for (let i = 0; i < lines.length; i++) {
+                    const rawLine = lines[i];
+                    const line = rawLine.replace(/\s+$/, '');
+                    if (!line.trim()) {
+                        flushParagraph();
+                        closeList();
+                        continue;
+                    }
+
+                    // 连续若干行都是表格行时，整体渲染成一张表格
+                    if (isTableRow(line)) {
+                        flushParagraph();
+                        closeList();
+                        const rows = [];
+                        while (i < lines.length && isTableRow(lines[i])) {
+                            rows.push(lines[i].trim());
+                            i++;
+                        }
+                        i--;
+                        out.push(buildTable(rows));
+                        continue;
+                    }
+
+                    let m = line.match(/^\s*[-•*]\s+(.*)$/);
+                    if (m) {
+                        flushParagraph();
+                        if (listType !== 'ul') {
+                            closeList();
+                            out.push('<ul>');
+                            listType = 'ul';
+                        }
+                        out.push('<li>' + m[1] + '</li>');
+                        continue;
+                    }
+
+                    m = line.match(/^\s*\d+[.、)]\s+(.*)$/);
+                    if (m) {
+                        flushParagraph();
+                        if (listType !== 'ol') {
+                            closeList();
+                            out.push('<ol>');
+                            listType = 'ol';
+                        }
+                        out.push('<li>' + m[1] + '</li>');
+                        continue;
+                    }
+
+                    m = line.match(/^\s*【(.+)】\s*$/);
+                    if (m) {
+                        flushParagraph();
+                        closeList();
+                        out.push('<h4>' + m[1] + '</h4>');
+                        continue;
+                    }
+
+                    closeList();
+                    paragraph.push(line);
+                }
+                flushParagraph();
+                closeList();
+
+                // 4. 还原链接为可点按钮
+                return out.join('').replace(/\u0000L(\d+)\u0000/g, (match, idx) => {
+                    const link = links[Number(idx)];
+                    return '<a class="nav-link" href="' + link.url + '" target="_blank" rel="noopener noreferrer">'
+                        + link.label + '</a>';
+                });
+            },
+
+            /* ==================== 登录态 / 目的地 ==================== */
+            async loadUser() {
+                try {
+                    const res = await fetch('myinfo', {method: 'POST', credentials: 'include'});
+                    const data = await res.json();
+                    if (data.login !== 'true') {
+                        window.location.href = 'login.html';
+                        return false;
+                    }
+                    this.me.name = data.name || '';
+                    this.me.email = data.email || '';
+                    sessionStorage.setItem('username', this.me.name);
+                    return true;
+                } catch (e) {
+                    console.error('获取用户信息失败:', e);
+                    this.addMsg('system', '无法获取登录状态，请刷新页面重试。');
+                    return false;
+                }
+            },
+
+            loadSpots(keyword) {
+                this.spotsLoading = true;
+                this.spotsError = '';
+                fetch('destinations', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({keyword: keyword || ''}).toString()
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status !== 'success') {
+                            throw new Error(data.message || '加载失败');
+                        }
+                        this.spots = data.spots || [];
+                    })
+                    .catch(err => {
+                        console.error('目的地加载失败:', err);
+                        this.spotsError = '目的地加载失败，请稍后重试';
+                    })
+                    .finally(() => {
+                        this.spotsLoading = false;
+                    });
+            },
+
+            onSpotInput() {
+                clearTimeout(this.spotTimer);
+                this.spotTimer = setTimeout(() => this.loadSpots(this.spotKeyword.trim()), 300);
+            },
+
+            planSpot(spot) {
+                this.sendText('请帮我规划一下「' + spot.name + '」（' + spot.city + '）的旅行行程');
+            },
+
+            /* ==================== 能力卡片 ==================== */
+            // 点能力卡片 = 直接发起对应功能，而不是让用户自己猜该怎么问
+            runCapability(cap) {
+                switch (cap.action) {
+                    case 'nearby':
+                        // 一键定位：定位成功后会自动推周边吃喝玩乐
+                        this.locateNow();
+                        break;
+                    case 'trip':
+                        this.openTrips();
+                        break;
+                    case 'nav':
+                        // 导航需要目的地，聚焦输入框让用户补一句；出行后会直接在右侧内嵌地图里显示路线
+                        this.input = '';
+                        this.addMsg('system', '请告诉我要去哪里，例如「导航到广州塔」。路线会直接显示在右侧内嵌地图里，无需跳转浏览器。');
+                        this.$nextTick(() => this.$refs.inputBox && this.$refs.inputBox.focus());
+                        break;
+                    case 'plan':
+                        this.sendText('帮我定制一个旅行行程');
+                        break;
+                    case 'spot':
+                        this.sendText('给我推荐几个值得去的目的地');
+                        break;
+                    case 'pref':
+                        // 打开画像面板，而不是发一句"我想设置偏好"——用户要看的是已经记住了什么
+                        this.openPref();
+                        break;
+                }
+            },
+
+            /* ==================== 内嵌浏览器（地图导航） ==================== */
+            // 是否运行在 Electron 桌面端（桌面端才认识 webview，可真正把地图嵌进来）
+            isDesktop() {
+                return !!(window.desktopBridge && window.desktopBridge.isDesktop)
+                    || /Electron/i.test(navigator.userAgent);
+            },
+
+            // 只有 Electron 提供 <webview>；普通浏览器里退化为 iframe
+            supportsWebview() {
+                try {
+                    return typeof document.createElement('webview').loadURL === 'function';
+                } catch (e) {
+                    return false;
+                }
+            },
+
+            // 从模型回答里挑出第一个高德链接，用于自动触发内嵌导航
+            findMapUrl(text) {
+                const matches = String(text == null ? '' : text).match(/https?:\/\/[^\s<>"'|)】]+/g) || [];
+                for (const raw of matches) {
+                    const url = raw.replace(/[，。！？、；：)）\]】},;:.!?]+$/, '');
+                    if (/(uri\.amap\.com|ditu\.amap\.com|www\.amap\.com|\/\/amap\.com)/i.test(url)) {
+                        return url;
+                    }
+                }
+                return '';
+            },
+
+            // 划出内嵌浏览器并加载目标地址
+            openEmbedded(url, title) {
+                if (!url) return;
+                // 直接内嵌高德网页版原页面：功能（搜索/路线/图层/周边等）全部由高德自己提供
+                this.embedUrl = url;
+                this.embedTitle = title || '地图导航';
+                // 用上次拖好的宽度（有的话），否则按当前窗口算默认宽度
+                const saved = this.savedEmbedWidth();
+                this.embedWidthCustom = saved > 0;
+                this.applyEmbedWidth(saved || this.defaultEmbedWidth());
+                this.embedOpen = true;
+                this.$nextTick(() => this.mountEmbed());
+            },
+
+            /**
+             * 打开内嵌高德网页版。
+             * <p>
+             * 注意：内嵌页是跨域页面，浏览器定位权限归 amap.com，本页只是通过 iframe 的
+             * allow="geolocation" 把权限委托过去；能否拿到「我的位置」取决于浏览器与高德自身，
+             * 拿不到时可点右上角「在新窗口打开」用系统浏览器看。
+             */
+            openMyLocation() {
+                this.openEmbedded('https://www.amap.com/', '我的位置');
+            },
+
+            /** 面板默认宽度：约占窗口一半、上限 720px，保证左侧对话区仍留有可读宽度 */
+            defaultEmbedWidth() {
+                return Math.max(380, Math.min(720, Math.round(window.innerWidth * 0.52)));
+            },
+
+            /** 读取用户上次拖好的宽度 */
+            savedEmbedWidth() {
+                try {
+                    const w = parseInt(localStorage.getItem('embedWidth') || '', 10);
+                    return w > 0 ? w : 0;
+                } catch (e) {
+                    return 0;
+                }
+            },
+
+            /** 统一改宽度：面板与对话区留白都读 --embed-w，所以只改这一个变量即可同步 */
+            applyEmbedWidth(w) {
+                this.embedWidth = Math.round(w);
+                document.documentElement.style.setProperty('--embed-w', this.embedWidth + 'px');
+                this.$nextTick(() => this.fitEmbed());
+            },
+
+            /** 拖左边缘调宽度：越往左拖面板越宽；下限 380px，上限给对话区留 320px */
+            startResize(e) {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startW = this.embedWidth || this.defaultEmbedWidth();
+                const min = 380;
+                const max = Math.max(min + 40, Math.min(1400, window.innerWidth - 320));
+                this.embedResizing = true;
+                const onMove = ev => {
+                    const w = Math.min(max, Math.max(min, startW + (startX - ev.clientX)));
+                    this.applyEmbedWidth(w);
+                };
+                const onUp = () => {
+                    this.embedResizing = false;
+                    this.embedWidthCustom = true;
+                    window.removeEventListener('mousemove', onMove);
+                    window.removeEventListener('mouseup', onUp);
+                    document.body.style.userSelect = '';
+                    try {
+                        localStorage.setItem('embedWidth', String(this.embedWidth));
+                    } catch (err) {
+                        /* 隐私模式写不了就算了 */
+                    }
+                    this.fitEmbed();
+                };
+                document.body.style.userSelect = 'none';
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+            },
+
+            mountEmbed() {
+                const host = this.$refs.embedHost;
+                if (!host) return;
+                host.innerHTML = '';
+                if (this.isDesktop() && this.supportsWebview()) {
+                    const wv = document.createElement('webview');
+                    wv.style.width = '100%';
+                    wv.style.height = '100%';
+                    wv.setAttribute('allowpopups', '');
+                    // 不覆盖 UA：内嵌的就是高德网页版本身（PC 版），保持原样才能「一模一样」
+                    // 先挂到 DOM 再设 src：Electron 的 webview 只有在文档中才会真正加载
+                    host.appendChild(wv);
+                    this.embedView = wv;
+                    // 页面加载后按面板宽度自动缩放：宽版页面（高德 PC 页最小宽度近千像素）
+                    // 缩到刚好铺满面板，否则右边会被裁掉
+                    wv.addEventListener('dom-ready', () => {
+                        this.fitEmbed();
+                        setTimeout(() => this.fitEmbed(), 1500);
+                        // 高德页面是 JS 渲染的，工具条可能晚于 dom-ready 出现，多补几次
+                        this.cleanAmapChrome(wv);
+                        setTimeout(() => this.cleanAmapChrome(wv), 1500);
+                        setTimeout(() => this.cleanAmapChrome(wv), 4000);
+                    });
+                    // webview 的 src 必须是绝对地址（站内相对路径如 map.html 要补全）
+                    wv.setAttribute('src', new URL(this.embedUrl, location.href).href);
+                    this.embedMode = 'webview';
+                    this.embedLocal = false;
+                } else {
+                    const fr = document.createElement('iframe');
+                    fr.setAttribute('referrerpolicy', 'no-referrer');
+                    // 跨域内嵌页默认无权定位 → 高德画不出「我的位置」；这里显式把定位权限委托给它
+                    fr.setAttribute('allow', 'geolocation');
+                    fr.style.border = '0';
+                    fr.style.position = 'absolute';
+                    fr.style.top = '0';
+                    fr.style.left = '0';
+                    fr.style.transformOrigin = '0 0';
+                    // 站内页面（相对路径，如自建 map.html）本身自适应宽度，按面板原尺寸渲染即可；
+                    // 跨域页面（高德 PC 页最小宽度近千像素）才需要先按桌面宽度渲染再等比缩小
+                    this.embedLocal = this.embedUrl.indexOf('://') === -1;
+                    fr.style.width = this.embedLocal ? '100%' : (this.embedBaseWidth + 'px');
+                    host.appendChild(fr);
+                    fr.setAttribute('src', this.embedUrl);
+                    this.embedMode = 'iframe';
+                    this.embedView = null;
+                    this.fitEmbed();
+                }
+            },
+
+            // 让被嵌页面完整铺进面板：webview 用 setZoomFactor，跨域 iframe 用 CSS transform
+            fitEmbed() {
+                const host = this.$refs.embedHost;
+                if (!host) return;
+                const width = host.clientWidth;
+                const height = host.clientHeight;
+                if (!width || !height) return;
+
+                // 浏览器端退化为 iframe
+                if (this.embedMode === 'iframe') {
+                    const fr = host.querySelector('iframe');
+                    if (!fr) return;
+                    // 站内页：铺满即可，不做缩放
+                    if (this.embedLocal) {
+                        fr.style.transform = '';
+                        fr.style.width = '100%';
+                        fr.style.height = '100%';
+                        return;
+                    }
+                    // 面板已经够宽（≥ 桌面宽度）：按面板原生渲染，不再缩放（放大反而更糊）
+                    if (width >= this.embedBaseWidth) {
+                        fr.style.transform = '';
+                        fr.style.width = width + 'px';
+                        fr.style.height = height + 'px';
+                        return;
+                    }
+                    // 面板比桌面宽度窄：按固定桌面宽度渲染后等比缩小，避免右侧被裁
+                    const scale = width / this.embedBaseWidth;
+                    fr.style.width = this.embedBaseWidth + 'px';
+                    fr.style.transform = 'scale(' + scale + ')';
+                    fr.style.height = Math.round(height / scale) + 'px';
+                    return;
+                }
+
+                // 桌面端 webview：按页面实际宽度等比缩放
+                const wv = this.embedView;
+                if (!wv || !wv.setZoomFactor) return;
+                wv.executeJavaScript(
+                    'Math.max(document.documentElement.scrollWidth || 0, (document.body && document.body.scrollWidth) || 0)'
+                ).then(scrollWidth => {
+                    if (!scrollWidth) return;
+                    const zoom = Math.min(1, Math.max(width / scrollWidth, 0.2));
+                    try {
+                        wv.setZoomFactor(zoom);
+                    } catch (e) {
+                        /* 页面未就绪时忽略 */
+                    }
+                }).catch(() => {
+                    /* 拿不到宽度就不缩放，保持原样 */
+                });
+            },
+
+            /**
+             * 清理内嵌高德页自带的顶部工具条（只保留城市天气与搜索框）。
+             * 仅桌面端 webview 可用：webview 有 executeJavaScript 能往访客页注入，
+             * 浏览器里的跨域 iframe 没有这个能力，所以那边保持原样。
+             */
+            cleanAmapChrome(wv) {
+                if (!wv || !wv.executeJavaScript) return;
+                if (!/amap\.com/i.test(this.embedUrl)) return;
+                wv.executeJavaScript(AMAP_CHROME_HIDE_JS).catch(() => {
+                    /* 页面还没就绪时忽略，后面还有几次重试 */
+                });
+            },
+
+            refitEmbed() {
+                if (!this.embedOpen) return;
+                if (this.embedWidthCustom) {
+                    // 用户拖过：尊重其选择，只在窗口变小时收敛到可用上限
+                    const max = Math.max(420, Math.min(1400, window.innerWidth - 320));
+                    if (this.embedWidth > max) this.applyEmbedWidth(max);
+                    else this.fitEmbed();
+                } else {
+                    // 没拖过：宽度跟着窗口走
+                    this.applyEmbedWidth(this.defaultEmbedWidth());
+                }
+            },
+
+            closeEmbed() {
+                this.embedOpen = false;
+                this.embedUrl = '';
+                this.embedView = null;
+                this.embedMode = '';
+                this.embedLocal = false;
+                const host = this.$refs.embedHost;
+                if (host) host.innerHTML = '';
+            },
+
+            openEmbedExternal() {
+                if (!this.embedUrl) return;
+                // 站内相对路径（如 map.html）要补成绝对地址，外部浏览器才打得开
+                const url = new URL(this.embedUrl, location.href).href;
+                if (window.desktopBridge && window.desktopBridge.openExternal) {
+                    window.desktopBridge.openExternal(url);
+                } else {
+                    window.open(url, '_blank', 'noopener');
+                }
+            },
+
+            // 点对话里渲染出的高德链接 → 直接内嵌打开，不跳外部浏览器
+            onMessagesClick(e) {
+                const a = e.target && e.target.closest ? e.target.closest('a.nav-link') : null;
+                if (!a) return;
+                const href = a.getAttribute('href') || '';
+                if (/amap\.com/i.test(href)) {
+                    e.preventDefault();
+                    this.openEmbedded(href, '地图导航');
+                }
+            },
+
+            onGlobalKey(e) {
+                if (e.key === 'Escape' && this.embedOpen) {
+                    this.closeEmbed();
+                }
+            },
+
+            /* ==================== 对话 ==================== */
+            onKeydown(e) {
+                // 中文输入法组词中的回车不能当成发送
+                if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                    e.preventDefault();
+                    this.send();
+                }
+            },
+
+            send() {
+                this.sendText(this.input.trim());
+            },
+
+            async sendText(text) {
+                if (!text || this.sending) return;
+                this.addMsg('user', text);
+                this.input = '';
+                this.sending = true;
+
+                try {
+                    const ready = await this.isAgentAvailable();
+                    // 请求体是纯文本（后端用 @RequestBody String 接），
+                    // 但 agent/chat 现在返回 JSON，所以必须显式声明 Accept，否则内容协商可能失败
+                    // 多会话：把当前会话 id 挂在 query 上，后端据此把消息落进对应会话
+                    const chatUrl = (ready ? 'agent/chat' : 'Aichat')
+                        + (ready && this.currentSessionId ? '?sessionId=' + this.currentSessionId : '');
+                    const res = await fetch(chatUrl, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=UTF-8',
+                            'Accept': ready ? 'application/json' : 'text/plain'
+                        },
+                        body: text
+                    });
+                    if (!res.ok) throw new Error('网络请求失败');
+
+                    // Agent 返回 JSON（answer + actions）；普通 /Aichat 仍是纯文本
+                    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+                    let answer, actions = [];
+                    if (contentType.indexOf('application/json') >= 0) {
+                        const data = await res.json();
+                        answer = data && data.answer ? data.answer : '';
+                        actions = (data && data.actions) ? data.actions : [];
+                        // 兜底：后端若回传了权威 sessionId（前端未开会话时会新建），就采用它
+                        if (data && data.sessionId) {
+                            this.currentSessionId = data.sessionId;
+                            try { localStorage.setItem('aitvSessionId', String(data.sessionId)); } catch (e) {}
+                        }
+                    } else {
+                        answer = await res.text();
+                    }
+
+                    this.addMsg('ai', answer, {actions: actions});
+                    // 首条消息后会话标题可能自动改成摘要，刷新列表让侧栏同步
+                    this.loadSessions();
+                    // 回答里若带高德导航链接，自动划出内嵌地图（点导航即触发）
+                    const mapUrl = this.findMapUrl(answer);
+                    if (mapUrl) {
+                        this.openEmbedded(mapUrl, '地图导航');
+                    }
+                } catch (e) {
+                    console.error('请求失败:', e);
+                    this.addMsg('system', '抱歉，查询时遇到问题，请检查网络连接后重试。');
+                } finally {
+                    this.sending = false;
+                    this.scrollToBottom();
+                }
+            },
+
+            async isAgentAvailable() {
+                if (this.agentReady) return true;
+                try {
+                    const res = await fetch('agent/available', {method: 'POST', credentials: 'include'});
+                    const data = await res.json();
+                    this.agentReady = !!data.available;
+                } catch (e) {
+                    this.agentReady = false;
+                }
+                return this.agentReady;
+            },
+
+            /* ==================== 我的偏好（当前生效画像） ==================== */
+
+            /** 打开面板并拉取最新画像 */
+            openPref() {
+                this.prefOpen = true;
+                this.prefMsg = '';
+                this.cancelEditPref();
+                this.loadPrefs();
+                this.loadAssets();   // 打开时顺带刷新左栏计数
+            },
+
+            async loadPrefs() {
+                this.prefLoading = true;
+                this.prefError = '';
+                try {
+                    const res = await fetch('preference/list', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') {
+                        this.prefError = data.message || '读取偏好失败';
+                        this.prefItems = [];
+                    } else {
+                        this.prefItems = data.items || [];
+                    }
+                } catch (e) {
+                    this.prefError = '读取偏好失败，请检查网络后重试';
+                    this.prefItems = [];
+                } finally {
+                    this.prefLoading = false;
+                }
+            },
+
+            /** 新增或更新一条画像 */
+            async savePref() {
+                const tag = (this.prefForm.tag || '').trim();
+                const value = (this.prefForm.value || '').trim();
+                if (!tag) {
+                    this.prefMsg = '请先填写维度，例如「饮食忌口」';
+                    return;
+                }
+                this.prefSaving = true;
+                this.prefMsg = '';
+                try {
+                    const body = new URLSearchParams({tag: tag, value: value});
+                    const res = await fetch('preference/item/save-current', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: body
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') {
+                        this.prefMsg = data.message || '保存失败';
+                    } else {
+                        this.prefMsg = '已保存：' + tag + ' = ' + (value || '（空）');
+                        this.cancelEditPref();
+                        await this.loadPrefs();
+                        this.loadAssets();   // 左栏计数同步刷新
+                    }
+                } catch (e) {
+                    this.prefMsg = '保存失败，请检查网络后重试';
+                } finally {
+                    this.prefSaving = false;
+                }
+            },
+
+            /** 删除一条画像 */
+            async removePref(item) {
+                if (!item || !item.tag) return;
+                try {
+                    const body = new URLSearchParams({tag: item.tag});
+                    const res = await fetch('preference/item/delete-current', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: body
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') {
+                        this.prefMsg = data.message || '删除失败';
+                    } else {
+                        this.prefMsg = '已删除：' + item.tag;
+                        await this.loadPrefs();
+                    }
+                } catch (e) {
+                    this.prefMsg = '删除失败，请检查网络后重试';
+                }
+            },
+
+            startEditPref(item) {
+                this.prefForm = {tag: item.tag, value: item.value || '', editing: true};
+                this.prefMsg = '';
+            },
+
+            cancelEditPref() {
+                this.prefForm = {tag: '', value: '', editing: false};
+            },
+
+            /* ==================== 我的旅行资产（左栏） ==================== */
+
+            /**
+             * 拉取五大资产的计数与最近行程，填进左栏。
+             * <p>
+             * 每个接口独立 try-catch：某一个不可用（例如未登录）不能拖垮整栏，
+             * 最多是那一项计数显示 0。
+             */
+            async loadAssets() {
+                const post = (path, body) => fetch(path, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: body ? {'Content-Type': 'application/x-www-form-urlencoded'} : undefined,
+                    body: body ? new URLSearchParams(body).toString() : undefined
+                }).then(r => r.json()).catch(() => null);
+
+                const [trips, prefs, logs, favs, budget, packing, docs] = await Promise.all([
+                    post('trips/list'),
+                    post('preference/list'),
+                    post('travel-log/list'),
+                    post('favorites/item/list'),
+                    post('toolbox/budget/summary'),
+                    post('toolbox/packing/list'),
+                    post('toolbox/document/list')
+                ]);
+
+                const n = (d, key) => (d && Array.isArray(d[key])) ? d[key].length : 0;
+
+                this.assetCounts = {
+                    trips: n(trips, 'trips'),
+                    prefs: n(prefs, 'items'),
+                    logs: n(logs, 'logs'),
+                    favs: n(favs, 'items'),
+                    budget: (budget && typeof budget.total === 'number') ? Math.round(budget.total) : 0,
+                    packing: n(packing, 'templates'),
+                    docs: n(docs, 'documents')
+                };
+
+                // 最近 3 条行程，给「最近」区块用
+                const list = (trips && Array.isArray(trips.trips)) ? trips.trips.slice() : [];
+                list.sort((a, b) => String(b.createTime || '').localeCompare(String(a.createTime || '')));
+                this.recentTrips = list.slice(0, 3);
+            },
+
+            /** 通用轻量列表弹窗：打卡日志 / 收藏 / 行李 / 证件 都用它（支持手动新增与删除） */
+            async openList(opts) {
+                this.listOpts = opts;
+                this.listOpen = true;
+                this.listTitle = opts.title;
+                this.listIcon = opts.icon || 'fa-list';
+                this.listMsg = '';
+                // 初始化手动新增表单
+                this.listForm = {};
+                if (opts.add && opts.add.fields) {
+                    opts.add.fields.forEach(f => { this.listForm[f.key] = ''; });
+                }
+                await this.reloadList();
+                this.loadAssets();
+            },
+
+            /** 按当前配置重新拉取列表 */
+            async reloadList() {
+                const opts = this.listOpts;
+                if (!opts) return;
+                this.listLoading = true;
+                this.listError = '';
+                this.listItems = [];
+                try {
+                    const res = await fetch(opts.path, {method: 'POST', credentials: 'include'});
+                    const data = await res.json();
+                    if (data.status !== 'success') {
+                        this.listError = data.message || '读取失败';
+                    } else {
+                        // 保留原始 id，供删除用
+                        this.listItems = (data[opts.key] || []).map(r =>
+                            Object.assign({}, opts.map(r), {_id: r.id}));
+                    }
+                } catch (e) {
+                    this.listError = '读取失败，请检查网络后重试';
+                } finally {
+                    this.listLoading = false;
+                }
+            },
+
+            /** 提交当前弹窗的手动新增表单 */
+            async saveListItem() {
+                const opts = this.listOpts;
+                if (!opts || !opts.add) return;
+                const body = new URLSearchParams();
+                for (const f of (opts.add.fields || [])) {
+                    const v = (this.listForm[f.key] || '').trim();
+                    if (f.required && !v) { this.listMsg = '请先填写「' + f.ph + '」'; return; }
+                    body.append(f.key, v);
+                }
+                Object.keys(opts.add.fixed || {}).forEach(k => body.append(k, opts.add.fixed[k]));
+                this.listSaving = true;
+                this.listMsg = '';
+                try {
+                    const res = await fetch(opts.add.path, {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: body.toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') {
+                        this.listMsg = data.message || '保存失败';
+                    } else {
+                        this.listMsg = opts.add.okMsg || '已保存';
+                        (opts.add.fields || []).forEach(f => { this.listForm[f.key] = ''; });
+                        await this.reloadList();
+                        this.loadAssets();
+                    }
+                } catch (e) {
+                    this.listMsg = '保存失败，请检查网络后重试';
+                } finally {
+                    this.listSaving = false;
+                }
+            },
+
+            /** 删除当前列表中的一条 */
+            async removeListItem(it) {
+                const opts = this.listOpts;
+                if (!opts || !opts.del || !it || !it._id) return;
+                try {
+                    const res = await fetch(opts.del.path, {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({id: it._id}).toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') {
+                        this.listMsg = data.message || '删除失败';
+                    } else {
+                        await this.reloadList();
+                        this.loadAssets();
+                    }
+                } catch (e) {
+                    this.listMsg = '删除失败，请检查网络后重试';
+                }
+            },
+
+            openLogs() {
+                return this.openList({
+                    title: '打卡日志', icon: 'fa-location-dot', path: 'travel-log/list', key: 'logs',
+                    map: r => ({
+                        main: r.place || '(未记录地点)',
+                        sub: [r.rating ? '评分 ' + r.rating : '', r.note || '',
+                              r.createTime ? String(r.createTime).slice(0, 16) : ''].filter(Boolean).join(' · ')
+                    }),
+                    add: {
+                        path: 'travel-log/save',
+                        okMsg: '已加入打卡日志',
+                        fields: [
+                            {key: 'place', ph: '打卡地点（景点 / 店铺，必填）', required: true},
+                            {key: 'note', ph: '感受或备注（可选）'},
+                            {key: 'rating', ph: '评分 1-5（可选）'}
+                        ]
+                    },
+                    del: {path: 'travel-log/delete'}
+                });
+            },
+
+            openFavs() {
+                return this.openList({
+                    title: '灵感收藏', icon: 'fa-star', path: 'favorites/item/list', key: 'items',
+                    map: r => ({
+                        main: r.name || '(未命名)',
+                        sub: [r.listType || '', r.category || '', r.note || ''].filter(Boolean).join(' · ')
+                    }),
+                    add: {
+                        path: 'favorites/item/save',
+                        okMsg: '已加入灵感收藏',
+                        fixed: {listType: '灵感'},
+                        fields: [
+                            {key: 'name', ph: '景点 / 地点名称（必填）', required: true},
+                            {key: 'note', ph: '它的特点（如：日落很出片）'}
+                        ]
+                    },
+                    del: {path: 'favorites/item/delete'}
+                });
+            },
+
+            openPacking() {
+                return this.openList({
+                    title: '行李清单', icon: 'fa-suitcase', path: 'toolbox/packing/list', key: 'templates',
+                    map: r => ({
+                        main: r.name || '(未命名清单)',
+                        sub: r.items ? String(r.items).replace(/\n/g, ' / ').slice(0, 80) : ''
+                    }),
+                    add: {
+                        path: 'toolbox/packing/save',
+                        okMsg: '清单已保存',
+                        fields: [
+                            {key: 'name', ph: '清单名（如：行李一 / 行李二，必填）', required: true},
+                            {key: 'items', ph: '物品名称，用逗号或换行分隔'}
+                        ]
+                    },
+                    del: {path: 'toolbox/packing/delete'}
+                });
+            },
+
+            openDocs() {
+                return this.openList({
+                    title: '证件', icon: 'fa-id-card', path: 'toolbox/document/list', key: 'documents',
+                    map: r => ({
+                        main: [r.docType || '', r.title || ''].filter(Boolean).join(' · ') || '(未命名)',
+                        sub: [r.docNo || '', r.expireTime ? '有效期至 ' + r.expireTime : ''].filter(Boolean).join(' · ')
+                    }),
+                    add: {
+                        path: 'toolbox/document/save',
+                        okMsg: '证件已保存',
+                        fields: [
+                            {key: 'docType', ph: '证件类型（如：护照 / 身份证，必填）', required: true},
+                            {key: 'title', ph: '名称 / 持证人（必填）', required: true},
+                            {key: 'docNo', ph: '证件号码（可选）'},
+                            {key: 'expireTime', ph: '有效期至（如 2030-01-01，可选）'}
+                        ]
+                    },
+                    del: {path: 'toolbox/document/delete'}
+                });
+            },
+
+            /* ==================== 预算（按行程） ==================== */
+            async openBudget() {
+                this.budgetOpen = true;
+                this.budgetMsg = '';
+                try {
+                    const res = await fetch('trips/list', {method: 'POST', credentials: 'include'});
+                    const data = await res.json();
+                    this.budgetTrips = (data.status === 'success' && Array.isArray(data.trips)) ? data.trips : [];
+                } catch (e) {
+                    this.budgetTrips = [];
+                }
+                await this.loadBudget();
+            },
+
+            async loadBudget() {
+                this.budgetLoading = true;
+                this.budgetMsg = '';
+                const tid = this.budgetTripId;
+                const post = (path) => fetch(path, {
+                    method: 'POST', credentials: 'include',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({tripId: String(tid)}).toString()
+                }).then(r => r.json()).catch(() => null);
+                const [list, sum] = await Promise.all([
+                    post('toolbox/budget/list'),
+                    post('toolbox/budget/summary')
+                ]);
+                this.budgetEntries = (list && list.status === 'success' && Array.isArray(list.entries)) ? list.entries : [];
+                this.budgetSummary = (sum && sum.status === 'success')
+                    ? {total: sum.total || 0, byCategory: sum.byCategory || {}}
+                    : {total: 0, byCategory: {}};
+                this.budgetLoading = false;
+            },
+
+            async saveBudgetEntry() {
+                const item = (this.budgetForm.item || '').trim();
+                const amount = parseFloat(this.budgetForm.amount);
+                if (!item) { this.budgetMsg = '请填写项目名称'; return; }
+                if (isNaN(amount)) { this.budgetMsg = '请填写金额'; return; }
+                this.budgetSaving = true;
+                this.budgetMsg = '';
+                try {
+                    const body = new URLSearchParams({
+                        tripId: String(this.budgetTripId > 0 ? this.budgetTripId : 0),
+                        category: (this.budgetForm.category || '').trim(),
+                        item: item,
+                        amount: String(amount),
+                        entryDate: (this.budgetForm.entryDate || '').trim()
+                    });
+                    const res = await fetch('toolbox/budget/save', {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: body.toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') {
+                        this.budgetMsg = data.message || '保存失败';
+                    } else {
+                        this.budgetForm = {category: this.budgetForm.category, item: '', amount: '', entryDate: ''};
+                        this.budgetMsg = '已记录';
+                        await this.loadBudget();
+                        this.loadAssets();
+                    }
+                } catch (e) {
+                    this.budgetMsg = '保存失败，请检查网络后重试';
+                } finally {
+                    this.budgetSaving = false;
+                }
+            },
+
+            async deleteBudgetEntry(e) {
+                if (!e || !e.id) return;
+                try {
+                    const res = await fetch('toolbox/budget/delete', {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({id: String(e.id)}).toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') {
+                        this.budgetMsg = data.message || '删除失败';
+                    } else {
+                        await this.loadBudget();
+                        this.loadAssets();
+                    }
+                } catch (err) {
+                    this.budgetMsg = '删除失败，请检查网络后重试';
+                }
+            },
+
+            /* ==================== 行程本 ==================== */
+            async saveTripManual() {
+                const title = (this.tripForm.title || '').trim();
+                const content = (this.tripForm.content || '').trim();
+                if (!title) { this.tripMsg = '请先填写行程标题'; return; }
+                this.tripSaving = true;
+                this.tripMsg = '';
+                try {
+                    const res = await fetch('trips/save', {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({title: title, content: content}).toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') {
+                        this.tripMsg = data.message || '保存失败';
+                    } else {
+                        this.tripMsg = '已创建：' + title;
+                        this.tripForm = {title: '', content: ''};
+                        await this.loadTrips();
+                        this.loadAssets();
+                    }
+                } catch (e) {
+                    this.tripMsg = '保存失败，请检查网络后重试';
+                } finally {
+                    this.tripSaving = false;
+                }
+            },
+
+            async saveTrip(msg) {
+                if (msg.saved) return;
+                const title = msg.text.replace(/\s+/g, ' ').trim().substring(0, 30);
+                try {
+                    const res = await fetch('trips/save', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({title: title, content: msg.text}).toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') throw new Error(data.message || '保存失败');
+                    msg.saved = true;
+                    this.addMsg('system', '已保存到「我的行程」。');
+                    this.loadAssets();   // 左栏计数同步刷新
+                } catch (e) {
+                    console.error('保存行程失败:', e);
+                    this.addMsg('system', '保存失败：' + e.message);
+                }
+            },
+
+            openTrips() {
+                this.tripsOpen = true;
+                this.tripMsg = '';
+                this.loadTrips();
+                this.loadAssets();
+            },
+
+            async loadTrips() {
+                this.tripsLoading = true;
+                this.tripsError = '';
+                try {
+                    const res = await fetch('trips/list', {method: 'POST', credentials: 'include'});
+                    const data = await res.json();
+                    if (data.status !== 'success') throw new Error(data.message || '读取失败');
+                    this.trips = data.trips || [];
+                } catch (e) {
+                    this.tripsError = e.message;
+                } finally {
+                    this.tripsLoading = false;
+                }
+            },
+
+            async openTrip(id) {
+                try {
+                    const res = await fetch('trips/get', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({id: id}).toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') throw new Error(data.message || '读取失败');
+                    this.detail = data.trip;
+                    this.detailOpen = true;
+                } catch (e) {
+                    this.addMsg('system', '行程读取失败：' + e.message);
+                }
+            },
+
+            async deleteTrip(trip) {
+                if (!confirm('确定要删除「' + trip.title + '」吗？')) return;
+                try {
+                    const res = await fetch('trips/delete', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({id: trip.id}).toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') throw new Error(data.message || '删除失败');
+                    this.loadTrips();
+                    this.loadAssets();
+                } catch (e) {
+                    this.addMsg('system', '删除失败：' + e.message);
+                }
+            },
+
+            /* ==================== 编辑信息 ==================== */
+            openEdit() {
+                this.editErr = '';
+                this.editOk = '';
+                this.editForm = {currentPassword: '', newPassword: '', confirmPassword: '', newEmail: ''};
+                this.showPwd = {cur: false, nw: false, cf: false};
+                this.editOpen = true;
+            },
+
+            async updateProfile() {
+                this.editErr = '';
+                this.editOk = '';
+
+                if (!this.editForm.currentPassword) {
+                    this.editErr = '请输入当前密码';
+                    return;
+                }
+                if (this.editForm.newPassword && this.editForm.newPassword !== this.editForm.confirmPassword) {
+                    this.editErr = '新密码和确认密码不匹配';
+                    return;
+                }
+                if (!this.editForm.newPassword && !this.editForm.newEmail) {
+                    this.editErr = '没有需要修改的内容';
+                    return;
+                }
+
+                const body = new URLSearchParams();
+                body.append('currentPassword', this.editForm.currentPassword);
+                if (this.editForm.newPassword) {
+                    body.append('newPassword', this.editForm.newPassword);
+                    body.append('confirmPassword', this.editForm.confirmPassword);
+                }
+                if (this.editForm.newEmail) {
+                    body.append('newEmail', this.editForm.newEmail);
+                }
+
+                try {
+                    this.editSaving = true;
+                    const res = await fetch('updateUserInfo', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: body.toString()
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok && data.status === 'success') {
+                        this.editOk = '✓ 更新成功';
+                        setTimeout(() => {
+                            this.editOpen = false;
+                        }, 1100);
+                    } else {
+                        this.editErr = data.message || '更新失败';
+                    }
+                } catch (e) {
+                    this.editErr = '网络异常，更新失败';
+                } finally {
+                    this.editSaving = false;
+                }
+            },
+
+            /* ==================== 定位 ==================== */
+            locateNow() {
+                this.requestLocation(true);
+            },
+
+            /**
+             * 进入系统后自动识别定位：先看权限状态，被拒绝过就不再骚扰；
+             * 否则直接请求一次定位（会弹系统授权框），拿到位置后自动输出地址与现场指引。
+             */
+            async autoLocate() {
+                if (!navigator.geolocation) return;
+                if (window.isSecureContext === false) {
+                    this.addMsg('system', '当前页面不是 HTTPS / localhost，浏览器禁止网页定位。'
+                        + '请用 http://localhost:8078/chat/ 打开，或改用 HTTPS 访问。');
+                    return;
+                }
+                try {
+                    if (navigator.permissions && navigator.permissions.query) {
+                        const status = await navigator.permissions.query({name: 'geolocation'});
+                        if (status.state === 'denied') {
+                            this.addMsg('system', '浏览器已禁止本页定位：点地址栏左侧的锁形图标 → 把「位置」改为「允许」，'
+                                + '再点右上角「我的位置」即可。');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    // 个别浏览器不支持 permissions，忽略，直接尝试定位
+                }
+                this.requestLocation(false);
+            },
+
+            requestLocation(manual) {
+                if (this.locState === 'locating') return;
+
+                // 任何一次点击都要有反馈：先把按钮切到「定位中…」，再逐条把失败原因说清楚
+                if (!navigator.geolocation) {
+                    this.locState = 'error';
+                    this.addMsg('system', '当前浏览器不支持定位功能，无法自动识别你的位置。');
+                    return;
+                }
+                if (window.isSecureContext === false) {
+                    this.locState = 'error';
+                    this.addMsg('system', '当前页面不是 HTTPS / localhost，浏览器禁止网页定位。'
+                        + '请用 http://localhost:8078/chat/ 打开，或改用 HTTPS 访问。');
+                    return;
+                }
+
+                this.locState = 'locating';
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        this.locState = 'ok';
+                        this.handlePosition(pos, manual);
+                        this.startWatch();
+                    },
+                    err => {
+                        this.locState = 'error';
+                        this.addMsg('system', this.geoErrorMessage(err));
+                    },
+                    // 必须开高精度：关掉时浏览器只做 WiFi/基站粗定位，桌面上落点会偏 100~300 米；
+                    // 缓存也取最短，避免复用到旧位置（人走动后旧点会明显不对）。
+                    {enableHighAccuracy: true, maximumAge: 5000, timeout: 25000}
+                );
+            },
+
+            geoErrorMessage(err) {
+                const code = err && err.code;
+                if (code === 1) {
+                    return '定位权限被拒绝：点浏览器地址栏左侧的锁形图标 → 把「位置」设为「允许」，再点一次「我的位置」。';
+                }
+                if (code === 2) {
+                    return '定位暂时不可用：可能是系统「定位服务」被关闭，或当前网络的位置服务不可用。'
+                        + '请开启系统定位后重试，或直接告诉我你在哪条路 / 哪个点。';
+                }
+                if (code === 3) {
+                    return '定位超时（20 秒内没拿到位置）：桌面浏览器多依赖 WiFi / 网络定位，信号弱时会超时。'
+                        + '请重试，或直接告诉我你在哪条路 / 哪个点。';
+                }
+                return '定位失败：' + ((err && err.message) || '未知原因') + '，可稍后重试。';
+            },
+
+            startWatch() {
+                if (this.geoWatchId !== null || !navigator.geolocation) return;
+                this.geoWatchId = navigator.geolocation.watchPosition(
+                    pos => this.handlePosition(pos, false),
+                    err => console.warn('持续定位失败:', err),
+                    {enableHighAccuracy: true, maximumAge: 5000, timeout: 25000}
+                );
+            },
+
+            handlePosition(position, manual) {
+                const {latitude, longitude, accuracy} = position.coords;
+                if (manual || this.shouldReport(latitude, longitude, accuracy)) {
+                    this.lastReport = {lat: latitude, lng: longitude, accuracy: accuracy, time: Date.now()};
+                    this.reportLocation(latitude, longitude, accuracy, manual);
+                }
+            },
+
+            /** 换了点位（>=300 米）且间隔够久，或定位精度明显变好，才上报，避免反复烧 token */
+            shouldReport(lat, lng, accuracy) {
+                if (!this.lastReport) return true;
+                const moved = this.distanceMeters(this.lastReport.lat, this.lastReport.lng, lat, lng);
+                if (moved >= 300 && (Date.now() - this.lastReport.time) >= 120000) {
+                    return true;
+                }
+                return accuracy != null && this.lastReport.accuracy != null
+                    && this.lastReport.accuracy - accuracy > 200
+                    && (Date.now() - this.lastReport.time) >= 30000;
+            },
+
+            distanceMeters(lat1, lng1, lat2, lng2) {
+                const R = 6371000;
+                const toRad = d => d * Math.PI / 180;
+                const dLat = toRad(lat2 - lat1);
+                const dLng = toRad(lng2 - lng1);
+                const a = Math.sin(dLat / 2) ** 2
+                    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+                return 2 * R * Math.asin(Math.sqrt(a));
+            },
+
+            /**
+             * 上报位置。无论后端推不推现场指引，这里都会先把「识别到的地址」输出到聊天区，
+             * 保证「自动识别定位 → 有输出」这件事一定成立。
+             * 手动点「我的位置」时 force=true，跳过后端 10 分钟去重，保证每次点击都有新鲜播报。
+             */
+            async reportLocation(lat, lng, accuracy, manual) {
+                try {
+                    const body = {lat: lat, lng: lng};
+                    if (accuracy != null) body.accuracy = accuracy;
+                    if (manual) body.force = 'true';
+
+                    const res = await fetch('agent/location', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams(body).toString()
+                    });
+                    const data = await res.json();
+
+                    // 1) 先把识别到的地址播出来
+                    const acc = typeof data.accuracy === 'number' ? Math.round(data.accuracy) : null;
+                    if (data.place) {
+                        this.addMsg('system', '📍 已识别当前位置：' + data.place
+                            + (acc ? '（定位精度约 ±' + acc + ' 米）' : ''));
+                    } else if (data.status === 'success') {
+                        this.addMsg('system', '已拿到坐标，但没能解析出具体地名。你可以直接告诉我你在哪条路 / 哪个点，'
+                            + '或点右上角「我的位置」重试。');
+                    } else if (data.message) {
+                        this.addMsg('system', data.message);
+                    }
+
+                    // 2) 后端判定是"新点位"（或手动强制）时，会附一段现场指引 + 周边吃喝玩乐
+                    if (data.pushed && data.guide) {
+                        this.addMsg('ai', data.guide);
+                    }
+                } catch (e) {
+                    console.error('定位上报失败:', e);
+                    this.addMsg('system', '定位上报失败（网络或服务异常），请稍后重试。');
+                }
+            },
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

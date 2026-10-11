@@ -1,0 +1,398 @@
+/* ==========================================================================
+   登录 / 注册页统一样式
+   配色与 chat.html 保持一致：蓝绿渐变背景 + 白色卡片
+   ========================================================================== */
+
+:root {
+    --brand: #5ab6d0;
+    --brand-light: #6ba8da;
+    --text: #2c3e50;
+    --text-sub: #5e7388;
+    --text-muted: #9db4cc;
+    --border: #d9e7f4;
+    --danger: #ff6b6b;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif;
+    color: var(--text);
+    background: linear-gradient(135deg, #6a9eda 0%, #85c4ed 30%, #a3d9c8 100%);
+    background-attachment: fixed;
+}
+
+/* ---------- 卡片 ---------- */
+.form-container {
+    width: 100%;
+    max-width: 420px;
+    padding: 40px 38px 34px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(44, 62, 80, .18);
+    animation: card-in .45s ease both;
+}
+
+@keyframes card-in {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+h2 {
+    margin-bottom: 6px;
+    font-size: 23px;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 1px;
+    color: var(--text);
+}
+
+.form-subtitle {
+    margin-bottom: 28px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* ---------- 表单项 ---------- */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-sub);
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    color: var(--text);
+    background: #fbfdff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: border-color .25s, box-shadow .25s, background .25s;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus {
+    outline: none;
+    background: #fff;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(90, 182, 208, .18);
+}
+
+input::placeholder {
+    color: #bccddd;
+}
+
+/* ---------- 验证码：输入框和图片并排 ---------- */
+.captcha-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.captcha-row input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.captcha-row img {
+    flex: 0 0 auto;
+    width: 120px;
+    height: 46px;
+    object-fit: cover;
+    background: #f2f8fd;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color .25s, box-shadow .25s;
+}
+
+.captcha-row img:hover {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(90, 182, 208, .15);
+}
+
+/* ---------- 错误提示 ---------- */
+/* 登录页：由 JS 控制 display，默认隐藏 */
+.error-message {
+    display: none;
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--danger);
+}
+
+/* 注册页：由文字内容驱动，有内容才占位显示 */
+.field-error {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--danger);
+}
+
+.field-error:empty {
+    display: none;
+}
+
+/* ---------- 记住密码 / 自动登录 ---------- */
+.option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 4px 0 22px;
+    font-size: 14px;
+    color: var(--text-sub);
+}
+
+.option-row label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.option-row input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--brand);
+    cursor: pointer;
+}
+
+/* ---------- 按钮 ---------- */
+button {
+    width: 100%;
+    padding: 13px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: #fff;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--brand-light), var(--brand));
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(90, 182, 208, .35);
+    transition: transform .2s, box-shadow .2s, filter .2s;
+}
+
+button:hover:not(:disabled) {
+    filter: brightness(1.06);
+    box-shadow: 0 12px 26px rgba(90, 182, 208, .45);
+    transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+button:disabled {
+    background: #c9dbe8;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* 游客登录：次要按钮，描边样式，与主登录按钮区分层级 */
+button.guest-btn {
+    margin-top: 12px;
+    color: var(--brand);
+    background: #fff;
+    border: 1.5px solid var(--brand);
+    box-shadow: none;
+}
+
+button.guest-btn:hover:not(:disabled) {
+    background: rgba(90, 182, 208, .08);
+    box-shadow: none;
+    transform: translateY(-1px);
+}
+
+button.guest-btn:disabled {
+    color: #9fb8c6;
+    background: #fff;
+    border-color: #c9dbe8;
+}
+
+/* ---------- 底部链接 ---------- */
+.link-row {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.link-row a {
+    margin-left: 2px;
+    font-weight: 600;
+    color: var(--brand);
+    text-decoration: none;
+}
+
+.link-row a:hover {
+    text-decoration: underline;
+}
+
+/* ---------- 小屏适配 ---------- */
+@media (max-width: 480px) {
+    .form-container {
+        padding: 30px 22px 26px;
+    }
+
+    .captcha-row img {
+        width: 102px;
+    }
+}
+
+/* ==========================================================================
+   PathPilot 主题层：Apple HIG + 液态玻璃（登录 / 注册页）
+   追加覆盖，不修改上方任何原始规则，与 chat.html 保持同一套视觉语言。
+   ========================================================================== */
+:root {
+    --brand: #0071e3;
+    --brand-light: #0077ed;
+    --text: #1d1d1f;
+    --text-sub: #6e6e73;
+    --text-muted: #86868b;
+    --border: rgba(0, 0, 0, 0.08);
+    --danger: #ff3b30;
+    --spring: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC",
+        "Hiragino Sans GB", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    background:
+        radial-gradient(760px 520px at 12% 8%, rgba(0, 113, 227, 0.22), transparent 60%),
+        radial-gradient(680px 480px at 88% 22%, rgba(90, 200, 250, 0.28), transparent 62%),
+        radial-gradient(720px 560px at 78% 92%, rgba(255, 149, 0, 0.16), transparent 60%),
+        radial-gradient(620px 520px at 22% 88%, rgba(175, 82, 222, 0.16), transparent 62%),
+        #f5f5f7;
+    background-attachment: fixed;
+}
+
+.form-container {
+    max-width: 400px;
+    padding: 40px 36px 32px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 26px;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.16), 0 8px 24px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    animation: card-in 0.4s var(--spring) both;
+}
+
+h2 {
+    font-size: 24px;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+}
+
+.form-subtitle {
+    color: var(--text-muted);
+}
+
+.form-group label {
+    font-weight: 550;
+    color: var(--text-sub);
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 14px;
+    transition: background 0.24s var(--spring), border-color 0.24s var(--spring), box-shadow 0.24s var(--spring);
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus {
+    background: #fff;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18);
+}
+
+input::placeholder {
+    color: var(--text-muted);
+}
+
+button {
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0;
+    background: var(--brand);
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 113, 227, 0.3);
+    transition: background 0.24s var(--spring), transform 0.24s var(--spring), box-shadow 0.24s var(--spring);
+}
+
+button:hover:not(:disabled) {
+    filter: none;
+    background: var(--brand-light);
+    box-shadow: 0 12px 26px rgba(0, 113, 227, 0.34);
+}
+
+button:active:not(:disabled) {
+    transform: scale(0.985);
+}
+
+button:disabled {
+    background: rgba(120, 120, 128, 0.2);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+button.guest-btn {
+    color: var(--brand);
+    background: rgba(0, 113, 227, 0.08);
+    border: 1px solid rgba(0, 113, 227, 0.22);
+    box-shadow: none;
+}
+
+button.guest-btn:hover:not(:disabled) {
+    background: rgba(0, 113, 227, 0.14);
+    box-shadow: none;
+}
+
+.captcha-row img {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: var(--border);
+    border-radius: 12px;
+}
+
+.option-row input[type="checkbox"] {
+    accent-color: var(--brand);
+}
+
+.link-row a {
+    color: var(--brand);
+}

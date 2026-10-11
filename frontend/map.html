@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>我的位置</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #eef1f5;
+               font-family: -apple-system, "Microsoft YaHei", Arial, sans-serif; }
+  #map { width: 100%; height: 100%; }
+
+  /* 搜索栏：仿高德白底圆角 + 阴影 */
+  #search { position: absolute; top: 12px; left: 12px; z-index: 20; display: flex; align-items: center;
+            width: 216px; height: 38px; background: #fff; border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .16); overflow: hidden; }
+  #search .icon { width: 36px; text-align: center; color: #8a949e; font-size: 15px; }
+  #search input { flex: 1; height: 100%; border: 0; outline: none; font-size: 13px;
+                  color: #20252b; background: transparent; padding-right: 6px; }
+  #search button { height: 100%; padding: 0 12px; border: 0; background: #1a73e8; color: #fff;
+                   font-size: 13px; cursor: pointer; }
+
+  /* 出行方式：白底圆角分段 */
+  #modes { position: absolute; top: 58px; left: 12px; z-index: 20; display: flex; background: #fff;
+           border-radius: 9px; box-shadow: 0 2px 8px rgba(0, 0, 0, .16); overflow: hidden; }
+  #modes button { height: 32px; padding: 0 14px; border: 0; background: #fff; color: #41474e;
+                  font-size: 13px; cursor: pointer; }
+  #modes button + button { border-left: 1px solid #eef1f5; }
+  #modes button.on { background: #1a73e8; color: #fff; }
+
+  /* 图层切换：右上角竖排小方块 */
+  #layers { position: absolute; top: 12px; right: 12px; z-index: 20; display: flex;
+            flex-direction: column; gap: 6px; }
+  #layers button { width: 40px; height: 30px; border: 0; border-radius: 7px; background: #fff;
+                   color: #41474e; font-size: 12px; cursor: pointer;
+                   box-shadow: 0 2px 8px rgba(0, 0, 0, .16); }
+  #layers button.on { background: #1a73e8; color: #fff; }
+
+  #locate { position: absolute; right: 16px; bottom: 208px; z-index: 20; width: 38px; height: 38px;
+            border: 0; border-radius: 8px; background: #fff; color: #1a73e8; font-size: 19px;
+            line-height: 1; cursor: pointer; box-shadow: 0 2px 8px rgba(0, 0, 0, .16); }
+
+  /* 底部信息条：路线摘要 */
+  #tip { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 20; min-height: 0;
+         background: #fff; color: #20252b; font-size: 12px; line-height: 1.6; padding: 9px 12px;
+         border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, .18); }
+  /* 点击地图后的地址卡片 */
+  #card { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 25; background: #fff;
+          border-radius: 10px; box-shadow: 0 4px 16px rgba(0, 0, 0, .22); padding: 12px 14px;
+          display: flex; align-items: center; gap: 10px; }
+  #card .text { flex: 1; font-size: 13px; color: #20252b; line-height: 1.5; }
+  #card .text small { color: #8a949e; }
+  #card button { border: 0; border-radius: 7px; font-size: 13px; cursor: pointer; }
+  #card .go { background: #1a73e8; color: #fff; padding: 8px 14px; }
+  #card .go[disabled] { background: #c7ced6; cursor: default; }
+  #card .close { background: #f2f4f7; color: #5b6673; padding: 8px 10px; }
+
+  #mask { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column;
+          align-items: center; justify-content: center; gap: 10px; padding: 24px;
+          background: #eef1f5; color: #5b6673; font-size: 13px; line-height: 1.7; text-align: center; }
+  #mask a { color: #1a73e8; text-decoration: none; }
+  .hide { display: none !important; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="search">
+  <span class="icon">&#128269;</span>
+  <input id="kw" type="text" placeholder="搜索地点，如：广州塔" autocomplete="off">
+  <button id="kwBtn" type="button">搜索</button>
+</div>
+
+<div id="modes" class="hide">
+  <button type="button" data-mode="driving" class="on">驾车</button>
+  <button type="button" data-mode="transit">公交</button>
+  <button type="button" data-mode="walking">步行</button>
+</div>
+
+<div id="layers">
+  <button type="button" id="lyStd" class="on">标准</button>
+  <button type="button" id="lySat">卫星</button>
+  <button type="button" id="lyTrf">路况</button>
+</div>
+
+<button id="locate" type="button" title="回到我的位置">&#9678;</button>
+
+<div id="tip" class="hide">正在定位…</div>
+<div id="card" class="hide"></div>
+<div id="mask">正在加载地图…</div>
+
+<script>
+(function () {
+  'use strict';
+  var tip = document.getElementById('tip');
+  var mask = document.getElementById('mask');
+  var card = document.getElementById('card');
+
+  function fail(html) {
+    mask.classList.remove('hide');
+    mask.innerHTML = html;
+  }
+
+  // JS API 不可用时，退回到「静态标注点」页，至少让人看到自己的位置
+  function markerFallback(ctx) {
+    if (!ctx || !ctx.hasLocation || !ctx.originLng || !ctx.originLat) return '';
+    var url = 'https://uri.amap.com/marker?position=' + ctx.originLng + ',' + ctx.originLat
+            + '&coordinate=gaode&callnative=0&src=aitravelguide&name='
+            + encodeURIComponent(ctx.place || '我的位置');
+    return '<br><br><a href="' + url + '">改用标注点查看我的位置</a>';
+  }
+
+  // 1) 取 Web端(JS API) 凭证：与页面同源，走登录态；Key 只回给已登录用户
+  fetch('agent/map-context', { method: 'POST', credentials: 'include' })
+    .then(function (r) { return r.json(); })
+    .then(function (ctx) {
+      if (!ctx || !ctx.configured || !ctx.key) {
+        fail('内嵌地图需要登录，且后端要配好「Web端(JS API)」Key。'
+            + '<br><br><a href="https://m.amap.com/" target="_blank" rel="noopener">先用高德网页版打开</a>');
+        return;
+      }
+      // 安全密钥必须在加载 JS API 之前设置，否则路径规划/搜索等"服务调用"会失败
+      if (ctx.securityCode) {
+        window._AMapSecurityConfig = { securityJsCode: ctx.securityCode };
+      }
+      var s = document.createElement('script');
+      s.src = 'https://webapi.amap.com/maps?v=2.0&key=' + encodeURIComponent(ctx.key)
+            + '&plugin=AMap.ToolBar,AMap.Scale';
+      s.onerror = function () {
+        fail('高德 JS API 加载失败：请检查网络，或该 Key 未开通「Web端(JS API)」。'
+            + markerFallback(ctx));
+      };
+      s.onload = function () { boot(ctx); };
+      document.head.appendChild(s);
+    })
+    .catch(function () {
+      fail('无法连接后端服务，请稍后重试。');
+    });
+
+  var MODE_LABEL = { driving: '驾车', transit: '公交', walking: '步行' };
+  var MODE_COLOR = { driving: '#1a73e8', transit: '#00a06d', walking: '#f2a20c' };
+
+  // 2) JS API 就绪：建图 + 实时蓝点 + 搜索 + 图层 + 路线 + 点选地址
+  function boot(ctx) {
+    if (!window.AMap || !AMap.Map) {
+      fail('高德 JS API 未初始化：Key 或安全密钥可能有误。' + markerFallback(ctx));
+      return;
+    }
+    var start = [113.264434, 23.129162]; // 兜底：广州
+    if (ctx.hasLocation && ctx.originLng && ctx.originLat) {
+      start = [ctx.originLng, ctx.originLat];
+    }
+
+    var map = new AMap.Map('map', { zoom: 15, center: start, viewMode: '2D', resizeEnable: true });
+    map.addControl(new AMap.ToolBar({ position: { right: '16px', bottom: '96px' } }));
+    map.addControl(new AMap.Scale());
+
+    // 图层：卫星底图 + 路网叠加（开启卫星时盖住标准底图）；路况单独一层
+    // 逐个 try：某个图层类在当前 JS API 版本不可用时不至于把整个地图拖崩
+    var satellite = null, roadNet = null, traffic = null;
+    try {
+      satellite = new AMap.TileLayer.Satellite();
+      roadNet = new AMap.TileLayer.RoadNet();
+    } catch (e) { satellite = null; }
+    try {
+      traffic = new AMap.TileLayer.Traffic({ autoRefresh: true, interval: 180 });
+    } catch (e) { traffic = null; }
+
+    var satOn = false, trfOn = false;
+    var lyStd = document.getElementById('lyStd');
+    var lySat = document.getElementById('lySat');
+    var lyTrf = document.getElementById('lyTrf');
+
+    function syncLayerButtons() {
+      lyStd.classList.toggle('on', !satOn);
+      lySat.classList.toggle('on', satOn);
+      lyTrf.classList.toggle('on', trfOn);
+    }
+    lyStd.addEventListener('click', function () {
+      if (satOn && satellite) { map.remove([satellite, roadNet]); satOn = false; }
+      syncLayerButtons();
+    });
+    lySat.addEventListener('click', function () {
+      if (!satellite) { return; }
+      if (satOn) {
+        map.remove([satellite, roadNet]);
+      } else {
+        map.add([satellite, roadNet]); // 卫星瓦片不透明，自然盖住标准底图
+      }
+      satOn = !satOn;
+      syncLayerButtons();
+    });
+    lyTrf.addEventListener('click', function () {
+      if (!traffic) { return; }
+      if (trfOn) { map.remove(traffic); } else { map.add(traffic); }
+      trfOn = !trfOn;
+      syncLayerButtons();
+    });
+
+    // 蓝点 + 精度圈
+    var dot = new AMap.CircleMarker({
+      center: start, radius: 8, strokeColor: '#ffffff', strokeWeight: 2,
+      fillColor: '#1a73e8', fillOpacity: 1, zIndex: 210, bubble: true
+    });
+    var halo = new AMap.Circle({
+      center: start, radius: 0, strokeColor: '#1a73e8', strokeOpacity: .35,
+      strokeWeight: 1, fillColor: '#1a73e8', fillOpacity: .15, zIndex: 200
+    });
+    var picked = null; // 点击地图落下的临时点
+    map.add([halo, dot]);
+
+    mask.classList.add('hide');
+    tip.classList.remove('hide');
+    tip.textContent = '正在定位…（浏览器会弹出定位授权，请点「允许」）';
+
+    var myWgs = null;        // 最近一次浏览器定位（WGS-84，交给后端纠偏）
+    var myGcj = null;        // 最近一次定位的 GCJ-02，用于"回到我的位置"
+    var destMarker = null, destPos = null, destName = '';
+    var routeLine = null, currentMode = 'driving';
+    var modesEl = document.getElementById('modes');
+
+    function label(name) {
+      return { content: name, direction: 'top' };
+    }
+
+    // 设置/移动目的地
+    function setDest(lng, lat, name) {
+      destPos = [lng, lat];
+      destName = name || '目的地';
+      if (!destMarker) {
+        destMarker = new AMap.Marker({
+          position: destPos, title: destName, zIndex: 180, label: label(destName)
+        });
+        map.add(destMarker);
+      } else {
+        destMarker.setPosition(destPos);
+        destMarker.setTitle(destName);
+        destMarker.setLabel(label(destName));
+      }
+      modesEl.classList.remove('hide');
+      hideCard();
+      if (myWgs) {
+        drawRoute();
+      } else {
+        map.setFitView([dot, destMarker], false, [80, 80, 80, 80]);
+        tip.textContent = '已标出目的地，定位成功后会自动规划路线';
+      }
+    }
+
+    function fmtDist(m) {
+      return m >= 1000 ? (Math.round(m / 100) / 10 + ' 公里') : (Math.round(m) + ' 米');
+    }
+    function fmtDur(s) {
+      var min = Math.round(s / 60);
+      if (min >= 60) return Math.floor(min / 60) + ' 小时 ' + (min % 60) + ' 分钟';
+      return Math.max(1, min) + ' 分钟';
+    }
+
+    // 由后端「Web 服务」Key 规划（前端 JS API 的服务调用更易受密钥限制），前端只负责画线
+    function drawRoute() {
+      if (!myWgs || !destPos) return;
+      var body = new URLSearchParams({
+        fromLat: myWgs.lat, fromLng: myWgs.lng,
+        toLat: destPos[1], toLng: destPos[0], mode: currentMode
+      });
+      fetch('agent/route', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+        body: body.toString()
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (!res || !res.ok) {
+          tip.textContent = MODE_LABEL[currentMode] + '路线获取失败：'
+              + ((res && res.error) || '未知原因') + '（已标出目的地）';
+          return;
+        }
+        if (routeLine) { map.remove(routeLine); routeLine = null; }
+        var pts = res.polyline.split(';').map(function (seg) {
+          var a = seg.split(',');
+          return [parseFloat(a[0]), parseFloat(a[1])];
+        });
+        routeLine = new AMap.Polyline({
+          path: pts, strokeColor: MODE_COLOR[currentMode] || '#1a73e8', strokeWeight: 6,
+          strokeOpacity: .88, lineJoin: 'round', showDir: true, zIndex: 150
+        });
+        map.add(routeLine);
+        var summary = '去「' + destName + '」' + MODE_LABEL[currentMode] + '约 '
+            + fmtDist(res.distanceMeters) + ' · ' + fmtDur(res.durationSeconds);
+        if (currentMode === 'transit' && res.cost) summary += ' · 票价 ' + res.cost + ' 元';
+        tip.textContent = summary;
+        map.setFitView([dot, destMarker, routeLine], false, [70, 70, 70, 70]);
+      }).catch(function () {
+        tip.textContent = '路线获取失败：无法连接后端（已标出目的地）';
+      });
+    }
+
+    // 出行方式切换
+    Array.prototype.forEach.call(modesEl.querySelectorAll('button'), function (btn) {
+      btn.addEventListener('click', function () {
+        currentMode = btn.getAttribute('data-mode') || 'driving';
+        Array.prototype.forEach.call(modesEl.querySelectorAll('button'), function (b) {
+          b.classList.toggle('on', b === btn);
+        });
+        if (destPos) drawRoute();
+      });
+    });
+
+    // 搜索地点：走后端地理编码，直接定位并规划路线
+    var kw = document.getElementById('kw');
+    function doSearch() {
+      var text = (kw.value || '').trim();
+      if (!text) return;
+      tip.textContent = '正在搜索「' + text + '」…';
+      fetch('agent/geocode', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+        body: new URLSearchParams({address: text}).toString()
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (!res || !res.ok) {
+          tip.textContent = '搜索失败：' + ((res && res.error) || '未知原因');
+          return;
+        }
+        setDest(parseFloat(res.lng), parseFloat(res.lat), res.name);
+      }).catch(function () {
+        tip.textContent = '搜索失败：无法连接后端';
+      });
+    }
+    document.getElementById('kwBtn').addEventListener('click', doSearch);
+    kw.addEventListener('keydown', function (e) { if (e.key === 'Enter') doSearch(); });
+
+    // 回到我的位置
+    document.getElementById('locate').addEventListener('click', function () {
+      if (myGcj) { map.setZoomAndCenter(16, myGcj); }
+      else { tip.textContent = '还没定位到：请允许浏览器定位后重试'; }
+    });
+
+    // 点击地图任意点 → 查地址（走后端逆地理，坐标已是 GCJ-02）
+    function hideCard() { card.classList.add('hide'); }
+    function showCard(html) {
+      card.innerHTML = html;
+      card.classList.remove('hide');
+    }
+    map.on('click', function (e) {
+      var lng = e.lnglat.getLng(), lat = e.lnglat.getLat();
+      if (picked) { map.remove(picked); }
+      picked = new AMap.Marker({ position: [lng, lat], zIndex: 170, anchor: 'bottom-center' });
+      map.add(picked);
+      showCard('<div class="text">正在查询该点地址…<br></div>'
+             + '<button type="button" class="close">关闭</button>');
+      bindCardClose();
+      fetch('agent/reverse', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+        body: new URLSearchParams({lng: lng, lat: lat}).toString()
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        var name = (res && res.ok) ? res.place : '该点附近没有解析出地址';
+        showCard('<div class="text">' + name + '<br><small>' + lng.toFixed(5) + ', '
+               + lat.toFixed(5) + '</small></div>'
+               + '<button type="button" class="go"' + (res && res.ok ? '' : ' disabled') + '>设为终点</button>'
+               + '<button type="button" class="close">关闭</button>');
+        bindCardClose();
+        var goBtn = card.querySelector('.go');
+        if (goBtn && res && res.ok) {
+          goBtn.addEventListener('click', function () { setDest(lng, lat, name); });
+        }
+      }).catch(function () {
+        showCard('<div class="text">查询失败：无法连接后端</div>'
+               + '<button type="button" class="close">关闭</button>');
+        bindCardClose();
+      });
+    });
+    function bindCardClose() {
+      var c = card.querySelector('.close');
+      if (c) {
+        c.addEventListener('click', function () {
+          hideCard();
+          if (picked) { map.remove(picked); picked = null; }
+        });
+      }
+    }
+
+    // 目的地（可选）：map.html?dest=lng,lat&name=xxx
+    var q = new URLSearchParams(location.search);
+    var dest = q.get('dest');
+    if (dest) {
+      var dp = dest.split(',');
+      if (dp.length >= 2) {
+        setDest(parseFloat(dp[0]), parseFloat(dp[1]), q.get('name') || '目的地');
+      }
+    }
+
+    if (!navigator.geolocation) {
+      tip.textContent = '当前环境不支持实时定位，已显示上报的位置';
+      return;
+    }
+
+    var got = false, fitted = false;
+    var slow = setTimeout(function () {
+      if (!got) tip.textContent = '定位较慢：请确认浏览器已允许定位；也可拖动地图或搜索地点';
+    }, 8000);
+
+    navigator.geolocation.watchPosition(function (pos) {
+      got = true;
+      clearTimeout(slow);
+      myWgs = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+      var c = wgs84ToGcj02(pos.coords.latitude, pos.coords.longitude); // [lat,lng] → GCJ-02
+      myGcj = [c[1], c[0]];
+      dot.setCenter(myGcj);
+      halo.setCenter(myGcj);
+      halo.setRadius(pos.coords.accuracy || 0);
+
+      if (destPos) {
+        // 首次定位后规划「我 → 目的地」路线；之后不抢镜头，蓝点仍实时更新
+        if (!fitted) { fitted = true; drawRoute(); }
+      } else {
+        map.setCenter(myGcj);
+        tip.textContent = '已定位 · 精度约 ' + Math.round(pos.coords.accuracy || 0) + ' 米';
+      }
+    }, function (err) {
+      got = true;
+      clearTimeout(slow);
+      var msg = err && err.code === 1 ? '定位权限被拒绝：请在浏览器地址栏允许定位后重试'
+                                      : '定位失败：' + ((err && err.message) || '未知原因');
+      tip.textContent = msg;
+    }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
+  }
+
+  // WGS-84 → GCJ-02（浏览器定位是 GPS 原始坐标，高德是火星坐标，不纠偏会偏几百米）
+  function wgs84ToGcj02(lat, lng) {
+    var a = 6378245.0, ee = 0.00669342162296594323;
+    if (lng < 72.004 || lng > 137.8347 || lat < 0.8293 || lat > 55.8271) return [lat, lng];
+    function tLat(x, y) {
+      var r = -100 + 2 * x + 3 * y + .2 * y * y + .1 * x * y + .2 * Math.sqrt(Math.abs(x));
+      r += (20 * Math.sin(6 * x * Math.PI) + 20 * Math.sin(2 * x * Math.PI)) * 2 / 3;
+      r += (20 * Math.sin(y * Math.PI) + 40 * Math.sin(y / 3 * Math.PI)) * 2 / 3;
+      r += (160 * Math.sin(y / 12 * Math.PI) + 320 * Math.sin(y * Math.PI / 30)) * 2 / 3;
+      return r;
+    }
+    function tLng(x, y) {
+      var r = 300 + x + 2 * y + .1 * x * x + .1 * x * y + .1 * Math.sqrt(Math.abs(x));
+      r += (20 * Math.sin(6 * x * Math.PI) + 20 * Math.sin(2 * x * Math.PI)) * 2 / 3;
+      r += (20 * Math.sin(x * Math.PI) + 40 * Math.sin(x / 3 * Math.PI)) * 2 / 3;
+      r += (150 * Math.sin(x / 12 * Math.PI) + 300 * Math.sin(x / 30 * Math.PI)) * 2 / 3;
+      return r;
+    }
+    var dLat = tLat(lng - 105, lat - 35), dLng = tLng(lng - 105, lat - 35);
+    var rad = lat / 180 * Math.PI, magic = Math.sin(rad);
+    magic = 1 - ee * magic * magic;
+    var sq = Math.sqrt(magic);
+    dLat = (dLat * 180) / ((a * (1 - ee)) / (magic * sq) * Math.PI);
+    dLng = (dLng * 180) / (a / sq * Math.cos(rad) * Math.PI);
+    return [lat + dLat, lng + dLng];
+  }
+})();
+</script>
+</body>
+</html>

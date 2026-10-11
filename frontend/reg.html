@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户注册</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="form-container">
+    <h2>用户注册</h2>
+    <p class="form-subtitle">创建一个新账号，开始你的 AI 之旅</p>
+
+    <form action="/chat/reg" method="post" id="regForm">
+        <!-- 用户名 -->
+        <div class="form-group">
+            <label for="username">用户名</label>
+            <input type="text" id="username" name="username" placeholder="请输入用户名（至少 6 位）">
+            <span class="field-error" id="username-error-info"></span>
+        </div>
+        <!-- 密码 -->
+        <div class="form-group">
+            <label for="password">密码</label>
+            <input type="password" id="password" name="password" placeholder="请输入密码" required>
+            <span class="field-error" id="password-error-info"></span>
+        </div>
+        <!-- 邮箱 -->
+        <div class="form-group">
+            <label for="email">电子邮箱</label>
+            <input type="email" id="email" name="email" placeholder="请输入常用邮箱" required>
+            <span class="field-error" id="email-error-info"></span>
+        </div>
+        <!-- 验证码 -->
+        <div class="form-group">
+            <label for="captcha">验证码</label>
+            <div class="captcha-row">
+                <input type="text" id="captcha" name="captcha" placeholder="请输入验证码" autocomplete="off" required>
+                <img src="/chat/captcha" id="captchaImage" onclick="refreshCaptcha()"
+                     title="看不清？点击刷新" alt="验证码">
+            </div>
+            <span class="field-error" id="captcha-error-info"></span>
+        </div>
+        <!-- 提交 -->
+        <div class="form-group">
+            <button type="submit" onclick="check()">立即注册</button>
+        </div>
+    </form>
+
+    <p class="link-row">已有账号？<a href="login.html">去登录</a></p>
+</div>
+
+<script>
+    // 校验表单，通过返回 true，不通过返回 false
+    function check() {
+        var username = document.getElementById("username").value;
+        if (username == "" || username == undefined || username.length < 6) {
+            // 获取消息提示的 span 节点，然后设置 innerText 值
+            document.getElementById("username-error-info").innerText = '用户名需大于6位';
+            return false;
+        } else {
+            document.getElementById("username-error-info").innerText = '';
+            return true;
+        }
+    }
+
+    const form = document.getElementById("regForm");
+    form.addEventListener("submit", function (e) {
+        if (!check()) {
+            e.preventDefault(); // 校验不通过，阻止提交
+            alert('校验不通过');
+        }
+    });
+
+    // 刷新验证码
+    function refreshCaptcha() {
+        document.getElementById('captchaImage').src = '/chat/captcha?t=' + new Date().getTime();
+    }
+</script>
+</body>
+</html>
