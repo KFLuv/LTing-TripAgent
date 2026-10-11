@@ -30,6 +30,10 @@ target/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
+# 例外：desktop/build 是 Electron 的打包资源目录（图标等），必须入库。
+# 上面那条 build/ 本意是忽略 Java 的 Maven 构建产物，会误伤这个目录。
+!desktop/build/
+!desktop/build/**
 
 ### VS Code ###
 .vscode/
