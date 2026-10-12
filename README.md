@@ -3,7 +3,7 @@
 > 一个**能对话规划行程、并把每一件旅行资产沉淀下来**的 AI 管家
 > Spring Boot 2.7.18 · Java 11 · MySQL 8 · 原生 HTML/JS · Electron 桌面端
 
-**规模**：后端 24 个类 7,269 行 · 前端单页 4,513 行 · 19 张表 · 65 个接口 · 30 个 Agent 工具
+**规模**：后端 24 个类 7,339 行 · 前端单页 4,549 行 · 19 张表 · 65 个接口 · 30 个 Agent 工具
 
 ---
 
@@ -115,7 +115,7 @@ map.js-security-code=
 
 ### 3 填数据库连接（可选）
 
-连接参数**不需要改代码** —— 按「环境变量 → JVM 系统属性 → 默认值」的顺序读取：
+连接参数**不需要改代码** —— 按「环境变量 → JVM 系统属性 → `application.properties` → 默认值」的顺序读取：
 
 | 环境变量 | 系统属性 | 默认值 |
 |---|---|---|
@@ -132,10 +132,18 @@ DB_PASSWORD=你的密码 java -jar chat-gpt.jar
 java -Ddb.password=你的密码 -jar chat-gpt.jar
 ```
 
-> 默认口令为空，所以**多数本地 MySQL 需要显式提供 `DB_PASSWORD`**。
+也可以直接写在 `application.properties` 里（同样生效，仍可被上面两种方式覆盖）：
+
+```properties
+db.url=jdbc:mysql://localhost:3306/user-mannager?useSSL=false&allowPublicKeyRetrieval=true
+db.username=root
+db.password=你的密码
+```
+
+> 默认口令为空，所以**多数本地 MySQL 需要显式提供 `DB_PASSWORD` 或 `db.password`**。
 > 这样设计是因为公开仓库里不该出现字面口令。
 
-### 3 运行
+### 4 运行
 
 ```bash
 # 只跑后端（浏览器访问）
@@ -177,7 +185,7 @@ ai-travel-assistant/
 │       │   └── service/AiChatService.java      118 行 · 大模型调用
 │       └── resources/application.properties
 ├── frontend/                   原生前端（零构建）
-│   ├── chat.html               4,513 行 · 主界面
+│   ├── chat.html               4,549 行 · 主界面
 │   ├── map.html                内嵌地图
 │   ├── login.html / reg.html
 │   └── style.css
@@ -318,7 +326,6 @@ npm run dist          # → release_app/AI旅游助手-<版本>-免安装版.exe
 | 3 | **自动登录功能未实现** | 「记住密码」勾选逻辑读的是 `value` 而非 `checked`，且未实现自动登录 |
 | 4 | **多处功能有后端无界面** | 游记生成、行程时间线、版本回退、同行人面板 |
 | 5 | **无单元测试** | 全靠手工验证 |
-| 6 | **数据库配置硬编码** | `MySQLUtil` / `SessionConfig` 里写死连接信息，应移到配置 |
 
 ---
 
@@ -326,4 +333,4 @@ npm run dist          # → release_app/AI旅游助手-<版本>-免安装版.exe
 
 - 本项目基础版本来自课程作业，**AI 接入、多会话、资产闭环、会话持久化、桌面端均为后续迭代**
 - 已脱敏：**无真实 API Key、无数据库凭据、无个人姓名与学号**
-- 运行前请自行填写 `application.properties` 与 `MySQLUtil.java`
+- 运行前请自行填写 `application.properties`（数据库口令用 `db.password=`，或用环境变量 `DB_PASSWORD`）
