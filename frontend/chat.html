@@ -2323,7 +2323,43 @@
             }
         }
 
+        /* ==================== 桌面端铺满 ====================
+           网页版保留 1240px 居中的"卡片"观感；但 Electron 桌面端里那圈留白
+           看起来像网页没铺开，所以桌面端去边距、去圆角、撑满整窗。
+           仅当 <html> 带 app-desktop 类时生效，不影响浏览器访问。 */
+        html.app-desktop body {
+            overflow: hidden;
+        }
+
+        html.app-desktop .chat-container {
+            max-width: 100%;
+            width: 100%;
+            margin: 0;
+            height: 100vh;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        /* 内嵌地图打开时仍要留出右侧面板宽度 */
+        html.app-desktop .chat-container.embed-open {
+            margin-right: calc(var(--embed-w, min(720px, 52vw)) + 16px);
+            max-width: calc(100vw - var(--embed-w, min(720px, 52vw)) - 16px);
+        }
+
     </style>
+
+    <script>
+        // 桌面端（Electron）立即打标记，避免先按网页版布局渲染再跳变。
+        // preload.js 在页面脚本前注入 window.desktopBridge，所以这里能直接读到。
+        (function () {
+            var isDesktop = (window.desktopBridge && window.desktopBridge.isDesktop)
+                || /Electron/i.test(navigator.userAgent);
+            if (isDesktop) {
+                document.documentElement.classList.add('app-desktop');
+            }
+        })();
+    </script>
 </head>
 <body>
 <div id="app" v-cloak>
