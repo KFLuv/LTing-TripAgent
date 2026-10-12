@@ -14,12 +14,35 @@ import java.sql.Statement;
 public class MySQLUtil {
     // 数据库连接参数
     //
-    // 读取顺序：环境变量 → JVM 系统属性 → 默认值。
-    // 这样仓库里不出现字面口令，部署时也用同一种方式覆盖：
+    // 读取顺序：环境变量 → JVM 系统属性 → application.properties → 默认值。
+    // 覆盖方式任选其一：
     //   DB_URL / DB_USER / DB_PASSWORD / DB_DRIVER
+    //   -Ddb.url=... -Ddb.password=...
+    //   application.properties 里写 db.url / db.username / db.password
     //
-    // 说明：原来这里是写死的常量（url / root / 123456），
-    // 公开仓库里不该挂字面口令，也难在部署时改名改密。
+    // ⚠️ 这里必须也读 application.properties：
+    //    本类是普通工具类（不受 Spring 管理），拿不到 Spring 的 Environment，
+    //    之前只读环境变量与 JVM 参数，导致配置文件里写的 db.password 被忽略、
+    //    打包后连不上数据库（表现为"目的地加载失败""新建会话失败"）。
+    private static final java.util.Properties FILE_PROPS = loadFileProps();
+
+    private static java.util.Properties loadFileProps() {
+        java.util.Properties p = new java.util.Properties();
+        try (java.io.InputStream in = MySQLUtil.class.getClassLoader()
+                .getResourceAsStream("application.properties")) {
+            if (in != null) {
+                p.load(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+            }
+        } catch (Exception ignored) {
+            // 读不到就当没有，后面还有默认值兜底
+        }
+        return p;
+    }
+
+    private static boolean blank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
     private static String driver = cfg("DB_DRIVER", "com.mysql.jdbc.Driver", "db.driver");
 
     private static String url = cfg("DB_URL",
@@ -28,16 +51,18 @@ public class MySQLUtil {
 
     private static String username = cfg("DB_USER", "root", "db.username");
 
-    /** 默认留空 —— 需要口令时用环境变量 DB_PASSWORD 或 -Ddb.password=xxx 提供 */
     private static String password = cfg("DB_PASSWORD", "", "db.password");
 
-    /** 环境变量优先，其次 JVM 系统属性，最后默认值 */
+    /** 环境变量优先，其次 JVM 系统属性，再次 application.properties，最后默认值 */
     private static String cfg(String envKey, String fallback, String propKey) {
         String v = System.getenv(envKey);
-        if (v == null || v.trim().isEmpty()) {
+        if (blank(v)) {
             v = System.getProperty(propKey);
         }
-        return (v == null || v.trim().isEmpty()) ? fallback : v;
+        if (blank(v)) {
+            v = FILE_PROPS.getProperty(propKey);
+        }
+        return blank(v) ? fallback : v;
     }
 
     static {
