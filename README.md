@@ -72,9 +72,8 @@
 
 ### 方式一：直接跑桌面端（不需要装 Java / MySQL）
 
-```
-desktop/release_app/AI旅游助手-1.1.0-免安装版.exe
-```
+**下载地址**：https://github.com/KFLuv/ai-travel-assistant/releases/latest
+（`AITravelGuide-1.1.1-portable.exe`，约 141 MB）
 
 内置 JRE 与内嵌 H2 数据库（落在 `%USERPROFILE%\.ai-travel-assistant\data`），双击即用。首次运行会自解压到临时目录，稍慢。
 

@@ -1,6 +1,6 @@
 {
   "name": "aitravelguide-desktop",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "AI旅游助手 本地桌面端（Electron 外壳 + 内嵌浏览器）",
   "main": "main.js",
   "scripts": {
