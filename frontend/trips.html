@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行程本 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">行程本</div>
+                    <div class="page-sub">行程的时间线、版本与预算都在这里，绑定到具体行程</div>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-plus"></i> 新建行程</div>
+                <div class="field"><input type="text" id="title" placeholder="行程标题，如：汕头 4 天美食之旅"></div>
+                <div class="field"><textarea id="content" placeholder="行程内容：每天怎么走、想去哪儿"></textarea></div>
+                <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                    <span class="hint">可见范围</span>
+                    <div class="seg" id="vis">
+                        <button data-v="public" class="on">公开</button>
+                        <button data-v="friends">仅好友</button>
+                        <button data-v="private">仅自己</button>
+                    </div>
+                    <button class="btn" id="create"><i class="fas fa-book"></i> 创建行程</button>
+                    <span class="hint" id="msg"></span>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-list"></i> 我的行程
+                    <span class="spacer"></span><span class="hint" id="count"></span></div>
+                <div id="list"><div class="hint">正在加载…</div></div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-suitcase"></i> 行李清单
+                    <span class="spacer"></span><span class="hint" id="pack-msg"></span></div>
+                <div id="pack-list" class="hint">正在加载…</div>
+                <div class="list-add" style="margin-top:10px">
+                    <input type="text" id="pack-name" placeholder="清单名（如 海岛度假）">
+                    <input type="text" id="pack-items" placeholder="物品，用逗号或换行分隔">
+                    <button class="btn" id="pack-add"><i class="fas fa-plus"></i> 保存清单</button>
+                </div>
+            </div>
+
+            <div id="detail"></div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('trips.html');
+        if (!await Shell.currentUser()) return;
+
+        let visibility = 'public';
+        let current = null;              // 当前展开的行程
+        const msg = document.getElementById('msg');
+
+        document.querySelectorAll('#vis button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#vis button').forEach(b => b.classList.remove('on'));
+                btn.classList.add('on');
+                visibility = btn.getAttribute('data-v');
+            });
+        });
+
+        const catSelect = () => '<select id="bcat">'
+            + [['transport', '交通'], ['lodging', '住宿'], ['food', '餐饮'], ['ticket', '门票'], ['other', '其他']]
+                .map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('') + '</select>';
+
+        async function loadList() {
+            const data = await Shell.api('trips/list').catch(() => null);
+            const trips = (data && data.trips) || [];
+            document.getElementById('count').textContent = trips.length ? trips.length + ' 条' : '';
+            const listEl = document.getElementById('list');
+            listEl.innerHTML = trips.length
+                ? trips.map(t => '<div class="meal-row">'
+                    + '<span style="flex:1;min-width:0">' + Shell.esc(t.title)
+                    + '<span class="hint"> · ' + Shell.esc(t.status || '') + ' · ' + Shell.esc(t.createTime || '') + '</span></span>'
+                    + '<button class="btn small ghost" data-open="' + t.id + '">'
+                    + '<i class="fas fa-eye"></i> 展开</button>'
+                    + '<button class="btn small ghost" data-del="' + t.id + '"><i class="fas fa-trash"></i></button>'
+                    + '</div>').join('')
+                : '<div class="hint">还没有行程。上面建一条，或者让 AI 管家帮你排一个。</div>';
+            listEl.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => open(parseInt(b.getAttribute('data-open'), 10))));
+            listEl.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
+                if (!confirm('删除这条行程？')) return;
+                await Shell.api('trips/delete', {id: b.getAttribute('data-del')}).catch(() => null);
+                document.getElementById('detail').innerHTML = '';
+                loadList();
+            }));
+        }
+
+        async function open(id) {
+            const data = await Shell.api('trips/get', {id: id}).catch(() => null);
+            if (!data || data.status !== 'success') return;
+            current = data.trip;
+            const t = current;
+            const host = document.getElementById('detail');
+            host.innerHTML = ''
+                + '<div class="band"><div class="band-title"><i class="fas fa-book-open"></i> ' + Shell.esc(t.title)
+                + '<span class="spacer"></span><span class="hint">' + Shell.esc(t.createTime || '') + '</span></div>'
+                + '<div class="card-body">' + Shell.esc(t.content || '') + '</div></div>'
+                + '<div class="band"><div class="band-title"><i class="fas fa-timeline"></i> 时间线</div>'
+                + ((t.nodes && t.nodes.length)
+                    ? t.nodes.map(n => '<div class="meal-row"><span class="tag plain">' + Shell.esc(n.nodeType || '') + '</span>'
+                        + '<span style="flex:1;min-width:0">' + Shell.esc(n.title || '') + '</span>'
+                        + '<span class="hint">' + Shell.esc(n.nodeTime || '') + '</span></div>').join('')
+                    : '<div class="hint">还没有节点，让 AI 管家改行程时会写进来。</div>')
+                + '</div>'
+                + '<div class="band"><div class="band-title"><i class="fas fa-clock-rotate-left"></i> 版本历史</div>'
+                + ((t.versions && t.versions.length)
+                    ? t.versions.map(v => '<div class="meal-row"><span class="tag plain">v' + v.versionNo + '</span>'
+                        + '<span style="flex:1;min-width:0">' + Shell.esc(v.changeNote || '') + '</span>'
+                        + '<span class="hint">' + Shell.esc(v.createTime || '') + '</span>'
+                        + '<button class="btn small ghost" data-rb="' + v.id + '">回退</button></div>').join('')
+                    : '<div class="hint">暂无版本。</div>')
+                + '</div>'
+                + '<div class="band"><div class="band-title"><i class="fas fa-wallet"></i> 预算（绑定本行程）</div>'
+                + '<div id="budget-sum" class="hint"></div>'
+                + '<div id="budget-list" style="margin-top:8px"></div>'
+                + '<div class="list-add" style="margin-top:10px">' + catSelect()
+                + '<input type="text" id="bitem" placeholder="项目（如 高铁票）">'
+                + '<input type="number" step="0.01" id="bamount" placeholder="金额">'
+                + '<input type="text" id="bdate" placeholder="日期 2026-10-01">'
+                + '<button class="btn" id="badd"><i class="fas fa-plus"></i> 记一笔</button></div>'
+                + '<div class="hint" id="bmsg" style="margin-top:8px"></div>'
+                + '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+                + '<i class="fas fa-bell"></i><span class="hint">告警阈值</span>'
+                + '<input type="number" id="bth" placeholder="如 5000" style="width:120px">'
+                + '<button class="btn small ghost" id="bset"><i class="fas fa-check"></i> 保存阈值</button></div>'
+                + '</div>';
+            host.querySelectorAll('[data-rb]').forEach(b => b.addEventListener('click', async () => {
+                if (!confirm('回退到这个版本？当前内容会先自动备份。')) return;
+                const r = await Shell.api('trips/version/rollback', {versionId: b.getAttribute('data-rb')}).catch(() => null);
+                alert((r && r.message) || '回退失败');
+                open(id);
+            }));
+            host.querySelector('#badd').addEventListener('click', addBudget);
+            host.querySelector('#bset').addEventListener('click', setThreshold);
+            loadBudget();
+        }
+
+        async function loadBudget() {
+            if (!current) return;
+            const tid = current.id;
+            const [list, sum] = await Promise.all([
+                Shell.api('toolbox/budget/list', {tripId: tid}).catch(() => null),
+                Shell.api('toolbox/budget/summary', {tripId: tid}).catch(() => null)
+            ]);
+            const entries = (list && list.entries) || [];
+            const total = (sum && sum.total) || 0;
+            document.getElementById('budget-sum').textContent =
+                '本行程共 ' + entries.length + ' 笔，合计 ¥' + total
+                + (sum && sum.overAlert ? '（已超出告警阈值 ¥' + sum.threshold + '）' : '');
+            document.getElementById('budget-list').innerHTML = entries.length
+                ? entries.map(e => '<div class="meal-row"><span class="tag plain">' + Shell.esc(e.category) + '</span>'
+                    + '<span style="flex:1;min-width:0">' + Shell.esc(e.item || '') + '</span>'
+                    + '<span class="hint">' + Shell.esc(e.entryDate || '') + '</span>'
+                    + '<span class="meal-price">¥' + e.amount + '</span>'
+                    + '<button class="btn small ghost" data-bdel="' + e.id + '"><i class="fas fa-trash"></i></button></div>').join('')
+                : '<div class="hint">还没有花销记录。</div>';
+            document.querySelectorAll('[data-bdel]').forEach(b => b.addEventListener('click', async () => {
+                await Shell.api('toolbox/budget/delete', {id: b.getAttribute('data-bdel')}).catch(() => null);
+                loadBudget();
+            }));
+        }
+
+        async function addBudget() {
+            const item = document.getElementById('bitem').value.trim();
+            const amount = parseFloat(document.getElementById('bamount').value);
+            const bmsg = document.getElementById('bmsg');
+            if (!item || isNaN(amount)) { bmsg.className = 'hint error'; bmsg.textContent = '项目与金额都要填'; return; }
+            const data = await Shell.api('toolbox/budget/save', {
+                tripId: current.id, category: document.getElementById('bcat').value,
+                item: item, amount: amount, entryDate: document.getElementById('bdate').value.trim()
+            }).catch(() => null);
+            bmsg.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            bmsg.textContent = (data && data.message) || '保存失败';
+            if (data && data.status === 'success') {
+                document.getElementById('bitem').value = '';
+                document.getElementById('bamount').value = '';
+                loadBudget();
+            }
+        }
+
+        async function setThreshold() {
+            const v = parseFloat(document.getElementById('bth').value);
+            const bmsg = document.getElementById('bmsg');
+            if (isNaN(v)) { bmsg.className = 'hint error'; bmsg.textContent = '填一个阈值金额'; return; }
+            const data = await Shell.api('toolbox/budget/threshold', {amount: v}).catch(() => null);
+            bmsg.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            bmsg.textContent = (data && data.message) || '保存失败';
+            loadBudget();
+        }
+
+        document.getElementById('create').addEventListener('click', async function () {
+            const title = document.getElementById('title').value.trim();
+            const content = document.getElementById('content').value.trim();
+            if (!title) { msg.className = 'hint error'; msg.textContent = '先写个标题'; return; }
+            if (!content) { msg.className = 'hint error'; msg.textContent = '再写点行程内容（后端要求正文非空）'; return; }
+            this.disabled = true;
+            const data = await Shell.api('trips/save', {title: title, content: content, visibility: visibility}).catch(() => null);
+            this.disabled = false;
+            msg.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            msg.textContent = (data && data.message) || '创建失败';
+            if (data && data.status === 'success') {
+                document.getElementById('title').value = '';
+                document.getElementById('content').value = '';
+                loadList();
+            }
+        });
+
+        /* ===== 行李清单：出行前照着勾，与行程同页 ===== */
+        async function loadPacking() {
+            const data = await Shell.api('toolbox/packing/list').catch(() => null);
+            const tpls = (data && data.templates) || [];
+            document.getElementById('pack-list').innerHTML = tpls.length
+                ? tpls.map(t => '<div class="meal-row"><div style="flex:1;min-width:0">'
+                    + '<div>' + Shell.esc(t.name) + '</div>'
+                    + '<div class="hint">' + Shell.esc((t.items || '').replace(/\n/g, ' · ')) + '</div></div>'
+                    + '<button class="btn small ghost" data-pdel="' + t.id + '">'
+                    + '<i class="fas fa-trash"></i></button></div>').join('')
+                : '还没有行李清单。上面存一份，出发前照着收拾。';
+            document.querySelectorAll('[data-pdel]').forEach(b => b.addEventListener('click', async () => {
+                await Shell.api('toolbox/packing/delete', {id: b.getAttribute('data-pdel')}).catch(() => null);
+                loadPacking();
+            }));
+        }
+
+        document.getElementById('pack-add').addEventListener('click', async function () {
+            const name = document.getElementById('pack-name').value.trim();
+            const items = document.getElementById('pack-items').value.trim();
+            const msgEl = document.getElementById('pack-msg');
+            if (!name) {
+                msgEl.className = 'hint error';
+                msgEl.textContent = '先给清单起个名字';
+                return;
+            }
+            const data = await Shell.api('toolbox/packing/save', {name: name, items: items}).catch(() => null);
+            msgEl.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            msgEl.textContent = (data && data.message) || '保存失败';
+            if (data && data.status === 'success') {
+                document.getElementById('pack-name').value = '';
+                document.getElementById('pack-items').value = '';
+                loadPacking();
+            }
+        });
+
+        loadList();
+        loadPacking();
+    })();
+</script>
+</body>
+</html>

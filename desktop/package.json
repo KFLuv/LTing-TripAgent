@@ -4,8 +4,9 @@
   "description": "AI旅游助手 本地桌面端（Electron 外壳 + 内嵌浏览器）",
   "main": "main.js",
   "scripts": {
+    "jre": "node scripts/make-jre.js",
     "start": "electron .",
-    "dist": "electron-builder --win portable"
+    "dist": "npm run jre && electron-builder --win portable"
   },
   "author": "",
   "license": "UNLICENSED",
@@ -24,6 +25,10 @@
       {
         "from": "../backend/target/chat-gpt.jar",
         "to": "backend/chat-gpt.jar"
+      },
+      {
+        "from": "build/jre",
+        "to": "jre"
       }
     ],
     "win": {

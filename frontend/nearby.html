@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>附近吃喝玩乐 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">附近吃喝玩乐</div>
+                    <div class="page-sub" id="source-note">以当前位置为圆心，5–10 公里内至少 35 家商户</div>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-magnifying-glass-location"></i> 搜索范围</div>
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                    <div class="seg" id="radius">
+                        <button data-r="5000" class="on">5 公里</button>
+                        <button data-r="10000">10 公里</button>
+                    </div>
+                    <div style="flex:1 1 220px;min-width:0">
+                        <input type="text" id="keyword" placeholder="关键词，如 火锅 / 咖啡 / 博物馆（可留空）">
+                    </div>
+                    <button class="btn" id="search"><i class="fas fa-location-crosshairs"></i> 查附近</button>
+                </div>
+                <div class="hint" id="msg" style="margin-top:10px"></div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-store"></i> 商户
+                    <span class="spacer"></span><span class="hint" id="count"></span></div>
+                <div class="cards two" id="list">
+                    <div class="hint">点上面的「查附近」开始。列表里点「详情」进商户页看店铺图、菜单与评价。</div>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-circle-info"></i> 说明</div>
+                <div class="hint">
+                    商户与商户评级来自本模块配置的数据源（nearby.source：大众点评通道 / 高德兜底）。
+                    单页最多 25 条，后端会翻页合并去重，保证至少 35 家；半径内确实不足时如实返回数量，不凑数。
+                    菜单与评价是本机数据（poi_menu / poi_review），评价可设公开 / 仅好友 / 仅自己。
+                    这套能力只服务本模块，不作为全局能力对外暴露——AI 管家也没有这个工具。
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('nearby.html');
+        if (!await Shell.currentUser()) return;
+
+        const msg = document.getElementById('msg');
+        const listEl = document.getElementById('list');
+        let radius = 5000;
+
+        document.querySelectorAll('#radius button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#radius button').forEach(b => b.classList.remove('on'));
+                btn.classList.add('on');
+                radius = parseInt(btn.getAttribute('data-r'), 10);
+            });
+        });
+
+        function stars(rating) {
+            const r = Math.round(Number(rating) || 0);
+            return '★★★★★'.slice(0, r) + '☆☆☆☆☆'.slice(0, 5 - r);
+        }
+
+        function render(pois) {
+            document.getElementById('count').textContent = pois.length ? pois.length + ' 家' : '';
+            if (!pois.length) {
+                listEl.innerHTML = '<div class="hint">这个范围内没查到商户，换个关键词或放大范围再试。</div>';
+                return;
+            }
+            listEl.innerHTML = pois.map((p, i) => {
+                const rating = (p.ourRating != null) ? p.ourRating : p.sourceRating;
+                const cover = (p.photos && p.photos.length) ? p.photos[0] : Shell.DEFAULT_AVATAR;
+                return '<div class="card">'
+                    + '<div class="card-head">'
+                    + '<img src="' + cover + '" alt="店铺图" style="width:52px;height:52px;border-radius:14px;object-fit:cover">'
+                    + '<div style="min-width:0">'
+                    + '<div class="card-title">' + Shell.esc(p.name || '（未命名）') + '</div>'
+                    + '<div class="card-meta">' + (rating != null
+                        ? '<span class="stars">' + stars(rating) + '</span> ' + Shell.esc(rating)
+                          + '（' + ((p.ourRating != null) ? '本机评价' : '数据源') + '）'
+                        : '暂无评分')
+                    + (p.reviewCount ? ' · ' + p.reviewCount + ' 条评价' : '') + '</div>'
+                    + '</div></div>'
+                    + '<div class="card-meta" style="margin-top:4px">'
+                    + (p.distance >= 0 ? '距你 ' + (p.distance >= 1000
+                        ? (p.distance / 1000).toFixed(1) + ' km' : p.distance + ' m') : '距离未知')
+                    + (p.cost ? ' · 人均 ¥' + Shell.esc(p.cost) : '') + '</div>'
+                    + '<div class="card-body" style="margin-top:4px">'
+                    + Shell.esc(p.type || '') + (p.address ? ' · ' + Shell.esc(p.address) : '') + '</div>'
+                    + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">'
+                    + '<button class="btn small" data-nav="' + i + '"><i class="fas fa-diamond-turn-right"></i> 一键导航</button>'
+                    + '<a class="btn small" href="poi.html?id=' + encodeURIComponent(p.poiId) + '">'
+                    + '<i class="fas fa-store"></i> 详情 / 菜单</a>'
+                    + '<button class="btn ghost small" data-reviews="' + Shell.esc(p.poiId) + '">'
+                    + '<i class="fas fa-comments"></i> 看评价</button>'
+                    + '<button class="btn ghost small" data-dp="' + i + '">'
+                    + '<i class="fas fa-comment-dots"></i> 大众点评</button>'
+                    + '</div>'
+                    + '<div id="rv-' + Shell.esc(p.poiId) + '"></div>'
+                    + '</div>';
+            }).join('');
+
+            listEl.querySelectorAll('[data-reviews]').forEach(btn => {
+                btn.addEventListener('click', () => loadReviews(btn.getAttribute('data-reviews')));
+            });
+            listEl.querySelectorAll('[data-nav]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const p = pois[parseInt(btn.getAttribute('data-nav'), 10)];
+                    // 内嵌用高德 PC 地图（与对话页一致），要真导航再点面板里的「在浏览器打开」
+                    Shell.openEmbedded(Shell.mapEmbedUrl(p), '地图 · ' + (p.name || ''), Shell.navUrl(p));
+                });
+            });
+            listEl.querySelectorAll('[data-dp]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const p = pois[parseInt(btn.getAttribute('data-dp'), 10)];
+                    const dp = Shell.dianpingUrl(p);
+                    Shell.openEmbedded(dp.url, '大众点评 · ' + (p.name || ''), 'https://www.dianping.com/');
+                });
+            });
+        }
+
+        async function loadReviews(poiId) {
+            const host = document.getElementById('rv-' + poiId);
+            if (!host) return;
+            if (host.dataset.open === '1') {
+                host.innerHTML = '';
+                host.dataset.open = '0';
+                return;
+            }
+            host.dataset.open = '1';
+            host.innerHTML = '<div class="hint">读取中…</div>';
+            const data = await Shell.api('nearby/review/list', {poiId: poiId}).catch(() => null);
+            const reviews = (data && data.reviews) || [];
+            host.innerHTML = reviews.length
+                ? reviews.map(r => '<div class="review-row">'
+                    + '<div style="flex:1;min-width:0">'
+                    + '<div><strong>' + Shell.esc(r.username) + '</strong> '
+                    + '<span class="stars">' + stars(r.rating) + '</span>'
+                    + '<span class="hint"> · ' + Shell.esc(r.createTime) + '</span></div>'
+                    + '<div style="margin-top:4px">' + Shell.esc(r.content || '（没有文字）') + '</div>'
+                    + '</div></div>').join('')
+                : '<div class="hint" style="margin-top:8px">还没有人评价这家，去详情页写一条。</div>';
+        }
+
+        async function doSearch() {
+            msg.className = 'hint';
+            msg.textContent = '正在定位并查询（要翻页凑够 35 家，稍等两三秒）…';
+            let coords;
+            // 允许用 ?lat=&lng= 直接指定坐标：定位被拒时也能查，方便现场用固定点位对比结果
+            const qLat = parseFloat(Shell.qs('lat'));
+            const qLng = parseFloat(Shell.qs('lng'));
+            if (!isNaN(qLat) && !isNaN(qLng)) {
+                coords = {lat: qLat, lng: qLng};
+            } else {
+                try {
+                    coords = await Shell.locate();
+                } catch (e) {
+                    msg.className = 'hint error';
+                    msg.textContent = e.message + '（本模块需要位置才能找附近商户；也可用 ?lat=&lng= 指定坐标）';
+                    return;
+                }
+            }
+            const data = await Shell.api('nearby/search', {
+                lat: coords.lat,
+                lng: coords.lng,
+                radius: radius,
+                keyword: document.getElementById('keyword').value.trim()
+            }).catch(() => null);
+            if (!data) {
+                msg.className = 'hint error';
+                msg.textContent = '查询失败，请检查网络';
+                return;
+            }
+            if (data.status !== 'success') {
+                msg.className = 'hint error';
+                msg.textContent = data.message || '查询失败';
+                return;
+            }
+            msg.className = 'hint';
+            msg.textContent = '以 ' + (radius / 1000) + ' 公里为半径查到 ' + data.pois.length + ' 家'
+                + (data.pois.length >= 35 ? '（已满足至少 35 家）' : '（该半径内实际就这么些）');
+            document.getElementById('source-note').textContent =
+                '数据源：' + (data.source === 'dianping' ? '大众点评' : '高德（未配置点评通道）')
+                + ' · 半径 ' + (data.radiusMeters / 1000) + ' 公里';
+            render(data.pois);
+        }
+
+        document.getElementById('search').addEventListener('click', doSearch);
+        // 带坐标进来就直接查，省一次点击
+        if (Shell.qs('lat') && Shell.qs('lng')) {
+            doSearch();
+        }
+    })();
+</script>
+</body>
+</html>

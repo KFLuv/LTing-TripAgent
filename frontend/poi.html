@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商户详情 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">商户详情</div>
+                    <div class="page-sub" id="source-note">…</div>
+                </div>
+                <div class="spacer"></div>
+                <a class="btn ghost small" href="nearby.html"><i class="fas fa-arrow-left"></i> 返回列表</a>
+            </div>
+
+            <div id="hero"><div class="hint">正在加载…</div></div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-utensils"></i> 菜单
+                    <span class="spacer"></span><span class="hint" id="menu-count"></span></div>
+                <div id="menu"></div>
+                <div class="list-add" style="margin-top:12px">
+                    <input type="text" id="dish" placeholder="菜名 / 招牌（必填）">
+                    <input type="text" id="price" placeholder="价格，如 68 / 人均 80">
+                    <input type="text" id="dish-note" placeholder="备注，可选">
+                    <button class="btn" id="add-dish"><i class="fas fa-plus"></i> 加进菜单</button>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-comments"></i> 真实用户评价
+                    <span class="spacer"></span><span class="hint" id="review-count"></span></div>
+                <div id="reviews"><div class="hint">正在加载…</div></div>
+
+                <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)">
+                    <div class="field-row">
+                        <select id="score">
+                            <option value="5">5 星 · 强烈推荐</option>
+                            <option value="4">4 星 · 不错</option>
+                            <option value="3">3 星 · 一般</option>
+                            <option value="2">2 星 · 不太行</option>
+                            <option value="1">1 星 · 避雷</option>
+                        </select>
+                        <select id="vis">
+                            <option value="public">公开</option>
+                            <option value="friends">仅好友</option>
+                            <option value="private">仅自己</option>
+                        </select>
+                    </div>
+                    <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap">
+                        <input type="text" id="review-text" placeholder="说说体验（可留空）" style="flex:1 1 260px">
+                        <input type="file" id="review-images" accept="image/*" multiple style="flex:0 1 auto">
+                        <button class="btn" id="post-review"><i class="fas fa-paper-plane"></i> 发布评价</button>
+                    </div>
+                    <div class="hint" id="msg" style="margin-top:8px"></div>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-location-dot"></i> 打卡
+                    <span class="spacer"></span><span class="hint" id="checkin-count"></span></div>
+                <div id="checkins"><div class="hint">正在加载…</div></div>
+                <div class="hint" style="margin-top:8px">
+                    在「打卡」页选这家商户，记录就会出现在这里；打卡独立于动态广场。
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('nearby.html');
+        if (!await Shell.currentUser()) return;
+
+        const poiId = Shell.qs('id');
+        const msg = document.getElementById('msg');
+        if (!poiId) {
+            document.getElementById('hero').innerHTML = '<div class="band"><div class="hint error">缺少商户参数。</div></div>';
+            return;
+        }
+
+        function stars(n) {
+            const r = Math.round(Number(n) || 0);
+            return '★★★★★'.slice(0, r) + '☆☆☆☆☆'.slice(0, 5 - r);
+        }
+
+        let poi = null;
+
+        function renderHero() {
+            const img = (poi.photos && poi.photos.length) ? poi.photos[0] : Shell.DEFAULT_AVATAR;
+            const rating = (poi.ourRating != null) ? poi.ourRating : poi.sourceRating;
+            document.getElementById('hero').innerHTML = ''
+                + '<div class="poi-hero">'
+                + '<img src="' + img + '" alt="店铺图">'
+                + '<div class="info">'
+                + '<div class="poi-name">' + Shell.esc(poi.name || '（未命名）') + '</div>'
+                + '<div class="poi-score">'
+                + (rating != null ? '<span class="num">' + Shell.esc(rating) + '</span>'
+                    + '<span class="stars">' + stars(rating) + '</span>' : '<span class="hint">暂无评分</span>')
+                + (poi.reviewCount ? '<span class="hint">· ' + poi.reviewCount + ' 条本机评价</span>' : '')
+                + '</div>'
+                + '<div class="poi-line"><i class="fas fa-location-dot"></i> '
+                + Shell.esc(poi.address || '地址未提供')
+                + (poi.distance >= 0 ? ' · 距你 ' + (poi.distance >= 1000
+                    ? (poi.distance / 1000).toFixed(1) + ' km' : poi.distance + ' m') : '') + '</div>'
+                + (poi.tel ? '<div class="poi-line"><i class="fas fa-phone"></i> ' + Shell.esc(poi.tel) + '</div>' : '')
+                + (poi.cost ? '<div class="poi-line"><i class="fas fa-yen-sign"></i> 人均 ¥' + Shell.esc(poi.cost) + '</div>' : '')
+                + (poi.type ? '<div class="poi-line hint">' + Shell.esc(poi.type) + '</div>' : '')
+                + '<div style="margin-top:12px"><button class="btn" id="nav-btn">'
+                + '<i class="fas fa-diamond-turn-right"></i> 一键导航到这里</button>'
+                + '<button class="btn ghost" id="dp-btn" style="margin-left:8px">'
+                + '<i class="fas fa-comment-dots"></i> 去大众点评看详情</button></div>'
+                + '<div class="hint" style="margin-top:6px" id="dp-hint"></div>'
+                + '</div></div>';
+            document.getElementById('nav-btn').addEventListener('click', () =>
+                Shell.openEmbedded(Shell.mapEmbedUrl(poi), '地图 · ' + (poi.name || ''), Shell.navUrl(poi)));
+            // 点评也用内嵌面板打开：桌面端是独立的 webview，不受对方 X-Frame-Options 限制
+            document.getElementById('dp-btn').addEventListener('click', () => {
+                const dp = Shell.dianpingUrl(poi);
+                Shell.openEmbedded(dp.url, '大众点评 · ' + (poi.name || ''), 'https://www.dianping.com/');
+            });
+            const dp = Shell.dianpingUrl(poi);
+            document.getElementById('dp-hint').textContent = dp.searched
+                ? '已按「店名 + 地址」在' + (poi.city || '该城市') + '的点评里搜：' + dp.keyword
+                : '没有「' + (poi.city || '该城市') + '」的点评城市编号，先打开点评首页；'
+                  + '搜索词已备好：' + dp.keyword;
+        }
+
+        function renderMenu() {
+            const menu = poi.menu || [];
+            document.getElementById('menu-count').textContent = menu.length ? menu.length + ' 道' : '';
+            document.getElementById('menu').innerHTML = menu.length
+                ? menu.map(m => '<div class="meal-row"><span>' + Shell.esc(m.name) + '</span>'
+                    + (m.note ? '<span class="hint">' + Shell.esc(m.note) + '</span>' : '')
+                    + '<span class="meal-price">' + Shell.esc(m.price || '') + '</span></div>').join('')
+                : '<div class="hint">还没有菜单。数据源不提供菜品，这里由用户或 AI 录入。</div>';
+        }
+
+        async function loadReviews() {
+            const data = await Shell.api('nearby/review/list', {poiId: poiId}).catch(() => null);
+            const list = (data && data.reviews) || [];
+            document.getElementById('review-count').textContent = list.length ? list.length + ' 条' : '';
+            document.getElementById('reviews').innerHTML = list.length
+                ? list.map(r => {
+                    let imgs = [];
+                    try { imgs = r.images ? JSON.parse(r.images) : []; } catch (e) { imgs = []; }
+                    return '<div class="review-row">' + Shell.avatar('', 'sm')
+                    + '<div style="flex:1;min-width:0">'
+                    + '<div><strong>' + Shell.esc(r.username) + '</strong> '
+                    + '<span class="stars">' + stars(r.rating) + '</span>'
+                    + '<span class="hint"> · ' + Shell.esc(r.createTime) + '</span></div>'
+                    + '<div style="margin-top:4px">' + Shell.esc(r.content || '（没有文字）') + '</div>'
+                    + (imgs.length ? '<div class="thumb-grid">'
+                        + imgs.map(u => '<img src="' + u + '" alt="评价图片">').join('') + '</div>' : '')
+                    + '</div></div>';
+                }).join('')
+                : '<div class="hint">还没有人评价这家。</div>';
+        }
+
+        async function load() {
+            const data = await Shell.api('nearby/detail', {poiId: poiId}).catch(() => null);
+            if (!data || data.status !== 'success') {
+                document.getElementById('hero').innerHTML = '<div class="band"><div class="hint error">'
+                    + Shell.esc((data && data.message) || '详情读取失败') + '</div></div>';
+                return;
+            }
+            poi = data.poi;
+            document.getElementById('source-note').textContent =
+                '数据源：' + (data.source === 'dianping' ? '大众点评' : '高德（未配置点评通道）');
+            renderHero();
+            renderMenu();
+            loadReviews();
+            loadCheckins();
+        }
+
+        /** 这家商户收到的打卡（来自「打卡」页，按可见权限过滤） */
+        async function loadCheckins() {
+            const data = await Shell.api('travel-log/by-poi', {poiId: poiId}).catch(() => null);
+            const logs = (data && data.logs) || [];
+            document.getElementById('checkin-count').textContent = logs.length ? logs.length + ' 条' : '';
+            document.getElementById('checkins').innerHTML = logs.length
+                ? logs.map(l => {
+                    const cn = l.rating === 'like' ? '喜欢' : (l.rating === 'avoid' ? '避雷' : '一般');
+                    let imgs = [];
+                    try { imgs = l.images ? JSON.parse(l.images) : []; } catch (e) { imgs = []; }
+                    return '<div class="review-row"><div style="flex:1;min-width:0">'
+                        + '<div><strong>' + Shell.esc(l.username) + '</strong> '
+                        + '<span class="tag plain">' + cn + '</span>'
+                        + '<span class="hint"> · ' + Shell.esc(l.createTime || '') + '</span></div>'
+                        + (l.note ? '<div style="margin-top:4px">' + Shell.esc(l.note) + '</div>' : '')
+                        + (imgs.length ? '<div class="thumb-grid">'
+                            + imgs.map(u => '<img src="' + u + '" alt="打卡图片">').join('') + '</div>' : '')
+                        + '</div></div>';
+                }).join('')
+                : '<div class="hint">还没有人在这里打卡。</div>';
+        }
+
+        document.getElementById('add-dish').addEventListener('click', async function () {
+            const name = document.getElementById('dish').value.trim();
+            if (!name) { msg.className = 'hint error'; msg.textContent = '先写菜名'; return; }
+            this.disabled = true;
+            const data = await Shell.api('nearby/menu/save', {
+                poiId: poiId, name: name,
+                price: document.getElementById('price').value.trim(),
+                note: document.getElementById('dish-note').value.trim()
+            }).catch(() => null);
+            this.disabled = false;
+            msg.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            msg.textContent = (data && data.message) || '保存失败';
+            if (data && data.status === 'success') {
+                poi.menu = data.menu || [];
+                document.getElementById('dish').value = '';
+                document.getElementById('price').value = '';
+                document.getElementById('dish-note').value = '';
+                renderMenu();
+            }
+        });
+
+        document.getElementById('post-review').addEventListener('click', async function () {
+            this.disabled = true;
+            const data = await Shell.api('nearby/review/save', {
+                poiId: poiId, poiName: poi ? poi.name : '',
+                rating: document.getElementById('score').value,
+                content: document.getElementById('review-text').value.trim(),
+                visibility: document.getElementById('vis').value,
+                images: reviewImages.length ? JSON.stringify(reviewImages) : ''
+            }).catch(() => null);
+            this.disabled = false;
+            msg.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            msg.textContent = (data && data.message) || '发布失败';
+            if (data && data.status === 'success') {
+                document.getElementById('review-text').value = '';
+                document.getElementById('review-images').value = '';
+                reviewImages = [];
+                load();
+            }
+        });
+
+        let reviewImages = [];
+        document.getElementById('review-images').addEventListener('change', async function (ev) {
+            const files = Array.from(ev.target.files || []).slice(0, 3);
+            reviewImages = [];
+            try {
+                for (const f of files) {
+                    reviewImages.push(await Shell.fileToDataUrl(f, 1024));
+                }
+                msg.className = 'hint';
+                msg.textContent = reviewImages.length ? '已选 ' + reviewImages.length + ' 张图' : '';
+            } catch (e) {
+                msg.className = 'hint error';
+                msg.textContent = e.message;
+            }
+        });
+
+        load();
+    })();
+</script>
+</body>
+</html>

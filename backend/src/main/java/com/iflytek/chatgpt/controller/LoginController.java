@@ -1,5 +1,7 @@
 package com.iflytek.chatgpt.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -12,9 +14,9 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.UUID;
 
 /**
@@ -23,8 +25,21 @@ import java.util.UUID;
 @Controller
 public class LoginController {
 
+    private static final Logger log = LoggerFactory.getLogger(LoginController.class);
+
     /** 游客名前缀，用来判断 session 里已有的是不是一个游客身份 */
     private static final String GUEST_PREFIX = "游客";
+
+    /**
+     * 「记住账号」Cookie 的有效期：30 天。
+     * <p>
+     * 旧实现写的是 {@code maxAge(60)}（60 <b>秒</b>），勾不勾选都等于没有；
+     * 这里与 30 天的服务端会话保持一致。
+     */
+    private static final int REMEMBER_USERNAME_SECONDS = 30 * 24 * 60 * 60;
+
+    /** 记住账号用的 Cookie 名 */
+    private static final String COOKIE_USERNAME = "username";
 
     /**
      * 登录
@@ -52,33 +67,25 @@ public class LoginController {
         if (flag) {
             // 登录成功：把当前用户写进 session，后面的接口都靠它来识别"我是谁"
             request.getSession().setAttribute("loginUser", username);
+
+            // 历史上这里会把「明文口令 + autoLogin」写进浏览器 Cookie。现在不再存口令：
+            // 一是安全（浏览器里躺着一份明文密码），二是它本来也没换来功能——
+            // Cookie 只活 60 秒，而且从来没有代码读取它做自动登录。
+            // 顺手把老版本留在浏览器里的那两个 Cookie 清掉。
+            clearLegacyCredentialCookies(request, response);
+
+            // 「记住账号」：只存用户名，供登录页回填；真正的免重复登录由 30 天会话保证。
             if ("on".equals(remember) || "on".equals(auto)) {
                 String encodeUsername = URLEncoder.encode(username, "UTF-8");
-                String encodePassword = URLEncoder.encode(password, "UTF-8");
-                Cookie usernameCookie = new Cookie("username", encodeUsername);
-                Cookie passwordCookie = new Cookie("password", encodePassword);
-                Cookie autoLoginCookie = new Cookie("autoLogin", "true");
-                usernameCookie.setMaxAge(60);//60秒
-                passwordCookie.setMaxAge(60);//60秒
-                autoLoginCookie.setMaxAge(60);//60秒
+                Cookie usernameCookie = new Cookie(COOKIE_USERNAME, encodeUsername);
+                usernameCookie.setMaxAge(REMEMBER_USERNAME_SECONDS);
+                usernameCookie.setPath("/chat");
                 response.addCookie(usernameCookie);
-                response.addCookie(passwordCookie);
-                response.addCookie(autoLoginCookie);
-            } else {//否则清除cookie
-                Cookie[] cookies = request.getCookies();
-                if (cookies != null) {
-                    for (Cookie cookie : cookies) {
-                        if (cookie.getName().equals("username")
-                                || cookie.getName().equals("password")
-                                || cookie.getName().equals("autoLogin")) {
-                            cookie.setMaxAge(0);//0即为清除
-                            response.addCookie(cookie);
-                        }
-                    }
-                }
+            } else {
+                clearCookie(response, COOKIE_USERNAME);
             }
             // 登录成功，重定向到首页
-            response.sendRedirect("chat.html");
+            response.sendRedirect("home.html");
         } else {
             // 登录失败
             response.getWriter().write("用户名或密码错误");
@@ -111,30 +118,48 @@ public class LoginController {
         session.setAttribute(ChatController.SESSION_USER, guest);
 
         // 游客不写"记住密码/自动登录"cookie，避免与注册账号的登录态互相干扰
-        response.sendRedirect("chat.html");
+        response.sendRedirect("home.html");
     }
 
     /**
      * 校验账号和密码是否正确，正确返回true，否则返回false
+     * <p>
+     * 用占位符而不是拼字符串：拼接写法下输入 {@code ' or '1'='1} 就能绕过登录。
      */
     private boolean doLogin(String username, String password) {
-        try {
-            Connection connection = MySQLUtil.getConnection();
-            // 2、根据连接对象获取sql 执行对象
-            Statement statement = connection.createStatement();
-            // 3、定义sql 语句,查询用户名和密码是否正确
-            String sql = "select * from user where username='" + username + "' and password='" + password + "'";
-            // 4、执行sql语句
-            ResultSet resultSet = statement.executeQuery(sql);
-            if (resultSet.next()) { // 账号和密码存在
-                return true;
+        String sql = "select id from `user` where username = ? and password = ?";
+        try (Connection connection = MySQLUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, username);
+            statement.setString(2, password);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
             }
-            // 5、关闭资源。先开后关
-            statement.close();
-            connection.close();
         } catch (SQLException e) {
+            log.error("登录查询失败：username={}", username, e);
             throw new RuntimeException(e);
         }
-        return false;
+    }
+
+    /** 清掉老版本写入浏览器的口令类 Cookie（password / autoLogin） */
+    private void clearLegacyCredentialCookies(HttpServletRequest request, HttpServletResponse response) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return;
+        }
+        for (Cookie cookie : cookies) {
+            String name = cookie.getName();
+            if ("password".equals(name) || "autoLogin".equals(name)) {
+                clearCookie(response, name);
+            }
+        }
+    }
+
+    /** 按同一个 path 让浏览器删除该 Cookie */
+    private void clearCookie(HttpServletResponse response, String name) {
+        Cookie cookie = new Cookie(name, "");
+        cookie.setMaxAge(0);
+        cookie.setPath("/chat");
+        response.addCookie(cookie);
     }
 }

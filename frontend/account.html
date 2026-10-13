@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账号管理 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">账号管理</div>
+                    <div class="page-sub">密码、邮箱与注销都在这里，个人资料请去「个人资料」页</div>
+                </div>
+            </div>
+
+            <div class="band" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+                <img class="avatar lg" id="avatar" alt="头像">
+                <div style="flex:1;min-width:0">
+                    <div class="page-title" id="nickname">…</div>
+                    <div class="hint" id="account-line">…</div>
+                </div>
+                <a class="btn ghost small" href="profile.html"><i class="fas fa-id-badge"></i> 去改资料</a>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-key"></i> 修改密码</div>
+                <div class="field-row">
+                    <input type="password" id="cur-pwd" placeholder="当前密码" autocomplete="new-password">
+                    <input type="password" id="new-pwd" placeholder="新密码（至少 6 位）" autocomplete="new-password">
+                    <input type="password" id="cfm-pwd" placeholder="再输一次新密码" autocomplete="new-password">
+                </div>
+                <div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <button class="btn" id="save-pwd"><i class="fas fa-check"></i> 修改密码</button>
+                    <span class="hint" id="pwd-msg"></span>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-envelope"></i> 绑定邮箱</div>
+                <div class="hint" id="email-now" style="margin-bottom:10px">…</div>
+                <div class="field-row">
+                    <input type="email" id="email" placeholder="常用邮箱">
+                    <input type="password" id="email-pwd" placeholder="当前密码（验证身份）" autocomplete="new-password">
+                </div>
+                <div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <button class="btn" id="bind-email"><i class="fas fa-link"></i> 绑定 / 更换</button>
+                    <button class="btn ghost" id="unbind-email"><i class="fas fa-link-slash"></i> 解绑邮箱</button>
+                    <span class="hint" id="email-msg"></span>
+                </div>
+            </div>
+
+            <div class="band" style="box-shadow:0 0 0 1px rgba(255,59,48,.18), var(--shadow)">
+                <div class="band-title" style="color:var(--danger)"><i class="fas fa-triangle-exclamation"></i> 注销账号</div>
+                <div class="hint" style="margin-bottom:10px">
+                    注销会清空这个账号下的全部数据：行程、动态、打卡、评价、偏好、会话记录。
+                    这一步不可撤销。
+                </div>
+                <div class="field-row">
+                    <input type="text" id="confirm-name" placeholder="把用户名原样输入一遍">
+                    <input type="password" id="del-pwd" placeholder="当前密码" autocomplete="new-password">
+                </div>
+                <div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <button class="btn" id="delete-account"
+                            style="background:var(--danger)">
+                        <i class="fas fa-user-slash"></i> 永久注销
+                    </button>
+                    <span class="hint" id="del-msg"></span>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('account.html');
+        const me = await Shell.currentUser();
+        if (!me) return;
+
+        const isGuest = (me.name || '').indexOf('游客') === 0;
+        document.getElementById('nickname').textContent = me.name || '';
+        document.getElementById('account-line').textContent = isGuest
+            ? '游客账号（无密码）· 数据只挂在这个会话上'
+            : '账号：' + me.name;
+        document.getElementById('email-now').textContent = me.email
+            ? '当前邮箱：' + me.email
+            : '还没有绑定邮箱';
+
+        const profile = await Shell.api('profile/get').catch(() => null);
+        const avatar = profile && profile.profile && profile.profile.avatar;
+        const img = document.getElementById('avatar');
+        img.src = avatar || Shell.DEFAULT_AVATAR;
+        if (profile && profile.profile && profile.profile.nickname) {
+            document.getElementById('nickname').textContent = profile.profile.nickname;
+        }
+        if (isGuest) {
+            document.getElementById('cur-pwd').disabled = true;
+            document.getElementById('new-pwd').disabled = true;
+            document.getElementById('cfm-pwd').disabled = true;
+            document.getElementById('save-pwd').disabled = true;
+            document.getElementById('email-pwd').disabled = true;
+            document.getElementById('del-pwd').disabled = true;
+            document.getElementById('pwd-msg').textContent = '游客没有密码，注册账号后可用';
+        }
+
+        document.getElementById('save-pwd').addEventListener('click', async function () {
+            const cur = document.getElementById('cur-pwd').value;
+            const nw = document.getElementById('new-pwd').value;
+            const cfm = document.getElementById('cfm-pwd').value;
+            const msg = document.getElementById('pwd-msg');
+            if (!cur) { msg.className = 'hint error'; msg.textContent = '请输入当前密码'; return; }
+            if (!nw || nw.length < 6) { msg.className = 'hint error'; msg.textContent = '新密码至少 6 位'; return; }
+            if (nw !== cfm) { msg.className = 'hint error'; msg.textContent = '两次输入的新密码不一致'; return; }
+            this.disabled = true;
+            const data = await Shell.api('updateUserInfo', {
+                currentPassword: cur, newPassword: nw, confirmPassword: cfm
+            }).catch(() => null);
+            this.disabled = false;
+            msg.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            msg.textContent = (data && data.message) || '修改失败';
+            if (data && data.status === 'success') {
+                document.getElementById('cur-pwd').value = '';
+                document.getElementById('new-pwd').value = '';
+                document.getElementById('cfm-pwd').value = '';
+            }
+        });
+
+        document.getElementById('bind-email').addEventListener('click', async function () {
+            const email = document.getElementById('email').value.trim();
+            const pwd = document.getElementById('email-pwd').value;
+            const msg = document.getElementById('email-msg');
+            if (!email || email.indexOf('@') < 0) { msg.className = 'hint error'; msg.textContent = '请填一个有效邮箱'; return; }
+            this.disabled = true;
+            const data = await Shell.api('updateUserInfo', {currentPassword: pwd, newEmail: email}).catch(() => null);
+            this.disabled = false;
+            msg.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            msg.textContent = (data && data.message) || '绑定失败';
+            if (data && data.status === 'success') {
+                document.getElementById('email-now').textContent = '当前邮箱：' + email;
+                document.getElementById('email').value = '';
+                document.getElementById('email-pwd').value = '';
+            }
+        });
+
+        document.getElementById('unbind-email').addEventListener('click', async function () {
+            const pwd = document.getElementById('email-pwd').value;
+            const msg = document.getElementById('email-msg');
+            if (!confirm('解绑邮箱？之后需要重新绑定才能用它找回账号。')) return;
+            this.disabled = true;
+            const data = await Shell.api('account/unbind-email', {password: pwd}).catch(() => null);
+            this.disabled = false;
+            msg.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            msg.textContent = (data && data.message) || '解绑失败';
+            if (data && data.status === 'success') {
+                document.getElementById('email-now').textContent = '还没有绑定邮箱';
+                document.getElementById('email-pwd').value = '';
+            }
+        });
+
+        document.getElementById('delete-account').addEventListener('click', async function () {
+            const msg = document.getElementById('del-msg');
+            const confirmName = document.getElementById('confirm-name').value.trim();
+            if (confirmName !== me.name) {
+                msg.className = 'hint error';
+                msg.textContent = '用户名要原样输入才能注销';
+                return;
+            }
+            if (!confirm('确定注销？该账号下的行程、动态、打卡、评价、偏好会全部删除，且无法恢复。')) return;
+            this.disabled = true;
+            const data = await Shell.api('account/delete', {
+                confirm: confirmName, password: document.getElementById('del-pwd').value
+            }).catch(() => null);
+            this.disabled = false;
+            msg.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            msg.textContent = (data && data.message) || '注销失败';
+            if (data && data.status === 'success') {
+                setTimeout(() => { location.href = 'login.html'; }, 1200);
+            }
+        });
+    })();
+</script>
+</body>
+</html>

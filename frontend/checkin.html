@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打卡 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">打卡</div>
+                    <div class="page-sub">记录去过的地方：打卡独立于动态，可带图，选中的商户会出现在它的详情页</div>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-location-dot"></i> 记一次打卡</div>
+                <div class="field">
+                    <label>地点</label>
+                    <div class="field-row">
+                        <input type="text" id="place" placeholder="手填地点，如：汕头小公园">
+                        <button class="btn ghost" id="pick"><i class="fas fa-store"></i> 从附近商户选</button>
+                    </div>
+                    <div class="hint" id="pick-msg" style="margin-top:6px">选商户后，打卡会同时出现在该商户的详情页。</div>
+                </div>
+                <div class="field-row">
+                    <div class="field"><label>感受</label>
+                        <select id="rating">
+                            <option value="like">喜欢</option>
+                            <option value="neutral">一般</option>
+                            <option value="avoid">避雷</option>
+                        </select></div>
+                    <div class="field"><label>耗时（分钟）</label><input type="number" id="duration" placeholder="如 90"></div>
+                    <div class="field"><label>可见范围</label>
+                        <select id="vis">
+                            <option value="public">公开</option>
+                            <option value="friends">仅好友</option>
+                            <option value="private">仅自己</option>
+                        </select></div>
+                </div>
+                <div class="field"><label>随手记</label>
+                    <textarea id="note" placeholder="现场感受、排队情况、拍照机位…"></textarea></div>
+                <div class="field"><label>图片（可选，最多 3 张）</label>
+                    <input type="file" id="images" accept="image/*" multiple></div>
+                <div class="thumb-grid" id="thumbs"></div>
+                <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                    <button class="btn" id="save"><i class="fas fa-check"></i> 记录打卡</button>
+                    <span class="hint" id="msg"></span>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-clock-rotate-left"></i> 我的打卡
+                    <span class="spacer"></span><span class="hint" id="count"></span></div>
+                <div id="list"><div class="hint">正在加载…</div></div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('checkin.html');
+        if (!await Shell.currentUser()) return;
+
+        let poi = null;       // 选中的附近商户
+        let picked = [];      // 图片 data URL
+        const msg = document.getElementById('msg');
+
+        document.getElementById('pick').addEventListener('click', async function () {
+            const info = document.getElementById('pick-msg');
+            info.className = 'hint';
+            info.textContent = '正在定位并查附近商户…';
+            let coords;
+            try {
+                coords = await Shell.locate();
+            } catch (e) {
+                info.className = 'hint error';
+                info.textContent = e.message;
+                return;
+            }
+            const data = await Shell.api('nearby/search', {lat: coords.lat, lng: coords.lng, radius: 5000}).catch(() => null);
+            if (!data || data.status !== 'success' || !data.pois.length) {
+                info.className = 'hint error';
+                info.textContent = (data && data.message) || '附近没查到商户';
+                return;
+            }
+            info.innerHTML = '选一家：<select id="poi-pick">'
+                + data.pois.slice(0, 20).map((p, i) => '<option value="' + i + '">'
+                    + Shell.esc(p.name) + (p.distance >= 0 ? '（' + p.distance + ' m）' : '') + '</option>').join('')
+                + '</select> <button class="btn small" id="poi-ok">就用这家</button>';
+            document.getElementById('poi-ok').addEventListener('click', () => {
+                const idx = parseInt(document.getElementById('poi-pick').value, 10);
+                const p = data.pois[idx];
+                poi = {poiId: p.poiId, poiName: p.name};
+                document.getElementById('place').value = p.name;
+                info.className = 'hint ok';
+                info.textContent = '已选商户：' + p.name + '（这条打卡会出现在它的详情页）';
+            });
+        });
+
+        document.getElementById('images').addEventListener('change', async function (ev) {
+            const files = Array.from(ev.target.files || []).slice(0, 3);
+            picked = [];
+            msg.textContent = '';
+            try {
+                for (const f of files) {
+                    picked.push(await Shell.fileToDataUrl(f, 1024));
+                }
+            } catch (e) {
+                msg.className = 'hint error';
+                msg.textContent = e.message;
+            }
+            document.getElementById('thumbs').innerHTML = picked.map(u => '<img src="' + u + '" alt="打卡图片">').join('');
+        });
+
+        const ratingCn = r => r === 'like' ? '喜欢' : (r === 'avoid' ? '避雷' : '一般');
+
+        async function load() {
+            const data = await Shell.api('travel-log/list').catch(() => null);
+            const logs = (data && data.logs) || [];
+            document.getElementById('count').textContent = logs.length ? logs.length + ' 条' : '';
+            const listEl = document.getElementById('list');
+            if (!logs.length) {
+                listEl.innerHTML = '<div class="hint">还没有打卡记录。</div>';
+                return;
+            }
+            listEl.innerHTML = logs.map(l => {
+                let imgs = [];
+                try { imgs = l.images ? JSON.parse(l.images) : []; } catch (e) { imgs = []; }
+                return '<div class="meal-row" style="align-items:flex-start">'
+                    + '<span class="tag plain">' + ratingCn(l.rating) + '</span>'
+                    + '<div style="flex:1;min-width:0">'
+                    + '<div>' + Shell.esc(l.place || '') + '<span class="hint"> · ' + Shell.esc(l.logTime || '') + '</span></div>'
+                    + (l.note ? '<div class="hint">' + Shell.esc(l.note) + '</div>' : '')
+                    + (imgs.length ? '<div class="thumb-grid">'
+                        + imgs.map(u => '<img src="' + u + '" alt="打卡图片">').join('') + '</div>' : '')
+                    + '</div>'
+                    + '<button class="btn small ghost" data-del="' + l.id + '"><i class="fas fa-trash"></i></button>'
+                    + '</div>';
+            }).join('');
+            listEl.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
+                if (!confirm('删除这条打卡？')) return;
+                await Shell.api('travel-log/delete', {id: b.getAttribute('data-del')}).catch(() => null);
+                load();
+            }));
+        }
+
+        document.getElementById('save').addEventListener('click', async function () {
+            const place = document.getElementById('place').value.trim();
+            if (!place) { msg.className = 'hint error'; msg.textContent = '先填或选一个地点'; return; }
+            this.disabled = true;
+            const data = await Shell.api('travel-log/save', {
+                place: place,
+                rating: document.getElementById('rating').value,
+                note: document.getElementById('note').value.trim(),
+                durationMin: document.getElementById('duration').value.trim(),
+                visibility: document.getElementById('vis').value,
+                poiId: poi ? poi.poiId : '',
+                poiName: poi ? poi.poiName : '',
+                images: picked.length ? JSON.stringify(picked) : ''
+            }).catch(() => null);
+            this.disabled = false;
+            msg.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            msg.textContent = (data && data.message) || '保存失败';
+            if (data && data.status === 'success') {
+                document.getElementById('note').value = '';
+                document.getElementById('place').value = '';
+                document.getElementById('thumbs').innerHTML = '';
+                picked = [];
+                poi = null;
+                load();
+            }
+        });
+
+        load();
+    })();
+</script>
+</body>
+</html>

@@ -178,7 +178,7 @@ public class PreferenceTemplateController {
             }
             for (Map<String, Object> item : listItems(username, id)) {
                 MySQLUtil.executeUpdate(
-                        "insert into preference_item(template_id, username, tag, value) values(?, ?, ?, ?)",
+                        "insert into preference_item(template_id, username, tag, `value`) values(?, ?, ?, ?)",
                         newId, username, item.get("tag"), item.get("value"));
             }
             result.put("status", "success");
@@ -304,12 +304,12 @@ public class PreferenceTemplateController {
                     return fail(result, "偏好项不存在");
                 }
                 MySQLUtil.executeUpdate(
-                        "update preference_item set tag = ?, value = ? where id = ? and username = ?",
+                        "update preference_item set tag = ?, `value` = ? where id = ? and username = ?",
                         safeTag, safeValue, id, username);
             } else {
                 try (Connection conn = MySQLUtil.getConnection();
                      PreparedStatement ps = conn.prepareStatement(
-                             "insert into preference_item(template_id, username, tag, value) values(?, ?, ?, ?)",
+                             "insert into preference_item(template_id, username, tag, `value`) values(?, ?, ?, ?)",
                              PreparedStatement.RETURN_GENERATED_KEYS)) {
                     ps.setInt(1, templateId);
                     ps.setString(2, username);
@@ -387,7 +387,7 @@ public class PreferenceTemplateController {
     /** 列出某模板下的标签；模板归属由调用方先校验，这里再按 username 兜底 */
     private List<Map<String, Object>> listItems(String username, int templateId) {
         List<Map<String, Object>> list = new ArrayList<>();
-        String sql = "select id, tag, value from preference_item"
+        String sql = "select id, tag, `value` from preference_item"
                 + " where template_id = ? and username = ? order by id";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -466,9 +466,9 @@ public class PreferenceTemplateController {
      */
     private void syncToUserPreference(String username, String tag, String value) {
         MySQLUtil.executeUpdate(
-                "insert into user_preference(username, tag, value, update_time) values(?, ?, ?, now())"
-                        + " on duplicate key update value = values(value), update_time = now()",
-                username, tag, value);
+                "insert into user_preference(username, tag, `value`, update_time) values(?, ?, ?, now())"
+                        + " on duplicate key update `value` = ?, update_time = now()",
+                username, tag, value, value);
     }
 
     private String formatTime(java.sql.Timestamp ts) {
@@ -508,7 +508,7 @@ public class PreferenceTemplateController {
         }
 
         List<Map<String, Object>> items = new ArrayList<>();
-        String sql = "select tag, value, update_time from user_preference"
+        String sql = "select tag, `value`, update_time from user_preference"
                 + " where username = ? order by update_time desc";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

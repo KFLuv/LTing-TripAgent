@@ -645,6 +645,33 @@
             gap: 18px;
         }
 
+        /* 简易模式横幅：没配大模型 Key 时常驻消息区顶部。
+           没有它，用户拿到的是一段写死的"假行程"，却以为这就是产品的全部能力。 */
+        .degrade-banner {
+            position: sticky;
+            top: 0;
+            z-index: 6;
+            flex: none;
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            padding: 10px 14px;
+            border: 1px solid #f2dfae;
+            border-radius: 10px;
+            background: #fff8e6;
+            color: #8a5a11;
+            font-size: 12.5px;
+            line-height: 1.6;
+        }
+
+        .degrade-banner i {
+            margin-top: 2px;
+        }
+
+        .degrade-banner strong {
+            font-weight: 600;
+        }
+
         .message {
             display: flex;
             gap: 12px;
@@ -1684,6 +1711,148 @@
             box-shadow: 0 0 0 3px rgba(74, 144, 194, 0.12);
         }
 
+        /* 下拉选择：与上面的输入框同一套外观（预算分类 / 收藏清单类型） */
+        .list-add select {
+            flex: 1 1 180px;
+            min-width: 0;
+            padding: 9px 11px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            font-family: inherit;
+            font-size: 13px;
+            color: inherit;
+            background: #fff;
+            cursor: pointer;
+            transition: border-color .18s ease, box-shadow .18s ease;
+        }
+
+        .list-add select:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(74, 144, 194, 0.12);
+        }
+
+        /* 行程详情里的分区：时间线 / 版本 / 游记（后端早就返回了，此前界面上不渲染） */
+        .detail-section {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px dashed var(--line);
+        }
+
+        .detail-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #24405c;
+        }
+
+        .detail-head .trip-open-btn {
+            margin-left: auto;
+        }
+
+        .detail-count {
+            font-size: 12px;
+            font-weight: 400;
+            color: #8a99a8;
+        }
+
+        .node-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .node-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 0;
+            border-bottom: 1px solid #f0f4f8;
+            font-size: 12.5px;
+            color: #46617c;
+        }
+
+        .node-row:last-child {
+            border-bottom: none;
+        }
+
+        .node-type {
+            flex: none;
+            padding: 1px 7px;
+            border-radius: 6px;
+            background: #eef4fb;
+            color: #4a7fb5;
+            font-size: 11.5px;
+        }
+
+        .node-time {
+            flex: none;
+            color: #8a99a8;
+        }
+
+        .node-title {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .node-status {
+            flex: none;
+            color: #2f8f6a;
+        }
+
+        .travelog-draft {
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 10px;
+            background: #f7fafd;
+            font-size: 12.5px;
+            color: #3c5772;
+        }
+
+        .travelog-title {
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .travelog-body {
+            margin: 0 0 8px;
+            font-family: inherit;
+            white-space: pre-wrap;
+            line-height: 1.7;
+        }
+
+        .travelog-points div {
+            line-height: 1.7;
+        }
+
+        .budget-threshold {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 12.5px;
+            color: #46617c;
+        }
+
+        .budget-threshold input {
+            width: 110px;
+            padding: 6px 9px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            font-size: 12.5px;
+        }
+
+        .budget-threshold .over {
+            font-weight: 600;
+            color: #d9534f;
+        }
+
         /* 行程本手动新建 */
         .trip-add {
             margin-top: 16px;
@@ -2019,10 +2188,13 @@
 
         /* ===== 消息区：干净画布 + 更透气的留白 ===== */
         .chat-messages {
-            padding: 28px 32px;
+            /* 对话区压缩：缩小内边距与气泡间距，把纵向空间还给消息本身 */
+            padding: 18px 22px;
             background: transparent;
-            gap: 20px;
+            gap: 12px;
         }
+
+        /* 左下角账号区：头像 + 昵称，点击进账号管理 */
 
         .message-avatar {
             width: 34px;
@@ -2341,10 +2513,146 @@
             box-shadow: none;
         }
 
+        /* ===== 常驻左侧工作台导航：与其它页面同一套，位置固定、切页不移位 ===== */
+        #app {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .chat-nav {
+            flex: 0 0 236px;
+            width: 236px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 28px 16px 20px;
+            background: rgba(249, 249, 251, .85);
+            backdrop-filter: blur(40px) saturate(200%);
+            border-right: 1px solid var(--line);
+            overflow-y: auto;
+        }
+
+        .chat-nav .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 4px 11px 18px;
+            font-size: 15px;
+            font-weight: 650;
+            letter-spacing: -.02em;
+        }
+
+        .chat-nav .nav-item {
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 11px;
+            border-radius: 12px;
+            color: #6e6e73;
+            font-size: 13px;
+            font-weight: 450;
+            transition: background .28s ease, color .28s ease;
+        }
+
+        .chat-nav .nav-item i {
+            width: 16px;
+            text-align: center;
+            color: var(--ink-mute);
+        }
+
+        .chat-nav .nav-item:hover {
+            background: rgba(0, 0, 0, .04);
+            color: var(--ink);
+        }
+
+        .chat-nav .nav-item.on {
+            background: rgba(0, 0, 0, .07);
+            color: var(--ink);
+            font-weight: 650;
+        }
+
+        .chat-nav .nav-item.on i {
+            color: var(--ink);
+        }
+
+        .chat-nav .nav-foot {
+            margin-top: auto;
+            padding: 12px 4px 0;
+            border-top: 1px solid var(--line);
+        }
+
+        .chat-nav .nav-account {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 9px;
+            border-radius: 12px;
+            color: var(--ink);
+        }
+
+        .chat-nav .nav-account:hover {
+            background: rgba(0, 0, 0, .05);
+        }
+
+        .chat-nav .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #eef2f7;
+            border: 1px solid var(--line);
+        }
+
+        .chat-nav .nav-account-text {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            line-height: 1.35;
+        }
+
+        .chat-nav .nav-account-text b {
+            font-size: 13px;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-nav .nav-account-text i {
+            font-style: normal;
+            font-size: 11.5px;
+            color: var(--ink-mute);
+        }
+
+        .chat-nav .nav-logout {
+            display: block;
+            padding: 6px 11px;
+            font-size: 12px;
+            color: var(--ink-mute);
+        }
+
+        /* 对话区整体右移并压缩，把左侧导航的空间让出来 */
+        #app > .chat-container {
+            flex: 1;
+            min-width: 0;
+            max-width: none;
+            margin: 14px 18px 14px 0;
+            height: calc(100vh - 28px);
+        }
+
         /* 内嵌地图打开时仍要留出右侧面板宽度 */
         html.app-desktop .chat-container.embed-open {
             margin-right: calc(var(--embed-w, min(720px, 52vw)) + 16px);
             max-width: calc(100vw - var(--embed-w, min(720px, 52vw)) - 16px);
+        }
+
+        /* 非桌面端（网页版）同样让宽：面板浮在右侧时对话区跟着收缩，导航宽度不变 */
+        #app > .chat-container.embed-open {
+            margin-right: calc(var(--embed-w, min(720px, 52vw)) + 18px);
+            transition: margin-right .28s ease;
         }
 
     </style>
@@ -2363,6 +2671,8 @@
 </head>
 <body>
 <div id="app" v-cloak>
+    <!-- 常驻左侧工作台导航：与其它页面同一套入口，固定不随页面切换移位 -->
+    <nav class="chat-nav" id="nav"></nav>
     <!-- 动态背景 -->
     <div class="travel-bg">
         <div class="bg-element"></div>
@@ -2393,9 +2703,6 @@
                 <button class="pill-btn ghost" @click="openMyLocation">
                     <i class="fas fa-map"></i> 内嵌地图
                 </button>
-                <button class="pill-btn ghost" @click="openTrips">我的行程</button>
-                <button class="pill-btn ghost" @click="openEdit">编辑信息</button>
-                <a class="pill-btn logout" href="login.html">退出</a>
             </div>
         </header>
 
@@ -2451,59 +2758,6 @@
                        placeholder="搜索目的地 / 城市 / 分类" autocomplete="off" name="spot-search">
             </div>
 
-            <!-- 我的旅行资产 -->
-            <div class="asset-block">
-                <div class="asset-head">
-                    <div class="asset-title"><i class="fas fa-suitcase-rolling"></i> 我的旅行资产</div>
-                    <div class="asset-sub">管家记住的一切都在这里</div>
-                </div>
-
-                <ul class="asset-list">
-                    <li class="asset-item" @click="openTrips()">
-                        <span class="asset-ico"><i class="fas fa-book"></i></span>
-                        <span class="asset-name">行程本</span>
-                        <span class="asset-count" :class="{on: assetCounts.trips > 0}">{{ assetCounts.trips }}</span>
-                    </li>
-                    <li class="asset-item" @click="openPref()">
-                        <span class="asset-ico"><i class="fas fa-heart"></i></span>
-                        <span class="asset-name">偏好档案</span>
-                        <span class="asset-count" :class="{on: assetCounts.prefs > 0}">{{ assetCounts.prefs }}</span>
-                    </li>
-                    <li class="asset-item" @click="openLogs()">
-                        <span class="asset-ico"><i class="fas fa-location-dot"></i></span>
-                        <span class="asset-name">打卡日志</span>
-                        <span class="asset-count" :class="{on: assetCounts.logs > 0}">{{ assetCounts.logs }}</span>
-                    </li>
-                    <li class="asset-item" @click="openFavs()">
-                        <span class="asset-ico"><i class="fas fa-star"></i></span>
-                        <span class="asset-name">灵感收藏</span>
-                        <span class="asset-count" :class="{on: assetCounts.favs > 0}">{{ assetCounts.favs }}</span>
-                    </li>
-                </ul>
-
-                <div class="asset-sep"></div>
-
-                <ul class="asset-list">
-                    <li class="asset-item" @click="openBudget()">
-                        <span class="asset-ico"><i class="fas fa-wallet"></i></span>
-                        <span class="asset-name">预算</span>
-                        <span class="asset-count money" :class="{on: assetCounts.budget > 0}">
-                            ¥{{ assetCounts.budget.toLocaleString() }}
-                        </span>
-                    </li>
-                    <li class="asset-item" @click="openPacking()">
-                        <span class="asset-ico"><i class="fas fa-suitcase"></i></span>
-                        <span class="asset-name">行李清单</span>
-                        <span class="asset-count" :class="{on: assetCounts.packing > 0}">{{ assetCounts.packing }}</span>
-                    </li>
-                    <li class="asset-item" @click="openDocs()">
-                        <span class="asset-ico"><i class="fas fa-id-card"></i></span>
-                        <span class="asset-name">证件</span>
-                        <span class="asset-count" :class="{on: assetCounts.docs > 0}">{{ assetCounts.docs }}</span>
-                    </li>
-                </ul>
-            </div>
-
             <!-- 最近行程 -->
             <div class="asset-block" v-if="recentTrips.length">
                 <div class="asset-head">
@@ -2541,10 +2795,20 @@
                     </template>
                 </div>
             </div>
+            <!-- 左下角账号区：头像 + 昵称，点击进账号管理（编辑信息/密码设置都在那一页） -->
         </aside>
 
         <!-- 消息区 -->
         <main class="chat-messages" ref="msgBox" @click="onMessagesClick">
+            <!-- 未配置大模型 Key 时明确告知：否则用户会把写死的模板回复当成产品的真实水平 -->
+            <div v-if="agentDegraded" class="degrade-banner">
+                <i class="fas fa-triangle-exclamation"></i>
+                <div>
+                    <strong>当前为简易模式</strong>：未检测到大模型 Key，行程管家（工具调用、偏好记忆、
+                    周边查询、行程改写）暂不可用，回答来自本地模板。
+                    在 <code>application.properties</code> 里填好 <code>ai.api-key</code> 并重启即可启用。
+                </div>
+            </div>
             <template v-for="msg in messages" :key="msg.id">
                 <div v-if="msg.role === 'system'" class="sys-note">{{ msg.text }}</div>
                 <div v-else class="message" :class="msg.role === 'user' ? 'user-message' : 'ai-message'">
@@ -2720,6 +2984,11 @@
                 <input v-model="tripForm.title" placeholder="行程标题，如：汕头 4 天美食之旅" maxlength="120">
                 <textarea v-model="tripForm.content" rows="4"
                           placeholder="行程内容：天数、想去的地方、每天的安排…（可留空）"></textarea>
+                <select v-model="tripVis" title="可见范围">
+                    <option value="public">公开</option>
+                    <option value="friends">仅好友</option>
+                    <option value="private">仅自己</option>
+                </select>
                 <button class="btn-primary" :disabled="tripSaving" @click="saveTripManual()">
                     {{ tripSaving ? '保存中…' : '新建行程' }}
                 </button>
@@ -2733,8 +3002,73 @@
         <div class="modal-content wide">
             <button class="modal-close" @click="detailOpen = false">&times;</button>
             <div class="modal-title">{{ detail.title }}</div>
-            <div class="modal-subtitle">{{ detail.createTime ? '创建于 ' + detail.createTime : '' }}</div>
+            <div class="modal-subtitle">
+                {{ detail.createTime ? '创建于 ' + detail.createTime : '' }}
+                <span v-if="detail.status"> · {{ detail.status }}</span>
+            </div>
             <div class="trip-detail-content">{{ detail.content }}</div>
+
+            <!-- 时间线节点：后端 /trips/get 一直返回 nodes，此前界面上完全不渲染 -->
+            <div class="detail-section">
+                <div class="detail-head">
+                    <i class="fas fa-timeline"></i> 时间线
+                    <span class="detail-count" v-if="detail.nodes && detail.nodes.length">{{ detail.nodes.length }} 个节点</span>
+                </div>
+                <div v-if="!detail.nodes || !detail.nodes.length" class="pref-hint">
+                    还没有节点。让管家改行程（「起晚了」「加个地方」）会写到这里。
+                </div>
+                <ul v-else class="node-list">
+                    <li v-for="n in detail.nodes" :key="n.id" class="node-row">
+                        <span class="node-type">{{ nodeTypeLabel(n.nodeType) }}</span>
+                        <span class="node-time" v-if="n.nodeTime">{{ n.nodeTime }}</span>
+                        <span class="node-title">{{ n.title }}</span>
+                        <span class="node-status" v-if="n.status">{{ n.status }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 版本历史：每次修改自动存一版，可一键回退 -->
+            <div class="detail-section">
+                <div class="detail-head"><i class="fas fa-clock-rotate-left"></i> 版本历史</div>
+                <div v-if="!detail.versions || !detail.versions.length" class="pref-hint">暂无版本记录。</div>
+                <ul v-else class="node-list">
+                    <li v-for="v in detail.versions" :key="v.id" class="node-row">
+                        <span class="node-type">v{{ v.versionNo }}</span>
+                        <span class="node-time">{{ v.createTime }}</span>
+                        <span class="node-title">{{ v.changeNote || '（无说明）' }}</span>
+                        <button class="trip-open-btn" @click="rollbackTrip(v)">回退</button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 游记：按本行程的打卡记录生成草稿 -->
+            <div class="detail-section">
+                <div class="detail-head">
+                    <i class="fas fa-book-open"></i> 游记草稿
+                    <button class="trip-open-btn" :disabled="travelogSaving" @click="genTravelog()">
+                        {{ travelogSaving ? '生成中…' : '生成游记' }}
+                    </button>
+                </div>
+                <div v-if="!tripTravelogs.length" class="pref-hint">
+                    还没有草稿。点「生成游记」会按本行程的打卡记录汇总一篇。
+                </div>
+                <ul v-else class="node-list">
+                    <li v-for="t in tripTravelogs" :key="t.id" class="node-row">
+                        <span class="node-time">{{ t.createTime }}</span>
+                        <span class="node-title">{{ t.title }}</span>
+                        <button class="trip-open-btn" @click="openTravelog(t.id)">查看</button>
+                    </li>
+                </ul>
+                <div v-if="travelogDraft" class="travelog-draft">
+                    <div class="travelog-title">{{ travelogDraft.title }}</div>
+                    <pre class="travelog-body">{{ travelogDraft.draft }}</pre>
+                    <div class="travelog-points">
+                        <div><strong>亮点</strong>：{{ travelogDraft.highlights }}</div>
+                        <div><strong>踩坑</strong>：{{ travelogDraft.pitfalls }}</div>
+                    </div>
+                </div>
+                <div v-if="detailMsg" class="pref-hint">{{ detailMsg }}</div>
+            </div>
         </div>
     </div>
 
@@ -2775,7 +3109,72 @@
                 </button>
                 <button v-if="prefForm.editing" class="btn-ghost" @click="cancelEditPref()">取消</button>
             </div>
+
+            <!-- 偏好模板：一人可有多套画像，切换即生效（后端 5 个接口此前零调用） -->
+            <div class="detail-section">
+                <div class="detail-head">
+                    <i class="fas fa-layer-group"></i> 偏好模板
+                    <button class="trip-open-btn" :disabled="tplSaving" @click="saveTemplateFromCurrent()">
+                        {{ tplSaving ? '保存中…' : '当前画像存为模板' }}
+                    </button>
+                </div>
+                <div v-if="!templates.length" class="pref-hint">
+                    还没有模板。把常用画像存成一套，之后一键切换（例如「一个人的穷游」「带爸妈」）。
+                </div>
+                <ul v-else class="list-rows">
+                    <li v-for="t in templates" :key="t.id" class="list-row">
+                        <div class="list-row-body">
+                            <div class="list-row-main">
+                                {{ t.name }}<span v-if="t.isActive" class="node-status"> 生效中</span>
+                            </div>
+                            <div class="list-row-sub">
+                                {{ t.items && t.items.length ? t.items.map(i => i.tag + '=' + i.value).join(' · ') : '（空模板）' }}
+                            </div>
+                        </div>
+                        <button v-if="!t.isActive" class="trip-open-btn" @click="activateTemplate(t)">启用</button>
+                        <button class="list-row-del" title="删除" @click="removeTemplate(t)"><i class="fas fa-trash"></i></button>
+                    </li>
+                </ul>
+                <div v-if="tplMsg" class="pref-hint">{{ tplMsg }}</div>
+            </div>
             <div v-if="prefMsg" class="pref-hint">{{ prefMsg }}</div>
+        </div>
+    </div>
+
+    <!-- 同行人：多人协同引擎的界面（此前只有后端工具，界面上完全看不到） -->
+    <div class="modal" :class="{show: compOpen}" @click.self="compOpen = false">
+        <div class="modal-content">
+            <button class="modal-close" @click="compOpen = false">&times;</button>
+            <div class="modal-title"><i class="fas fa-users"></i> 同行人</div>
+            <div class="modal-subtitle">登记每位同行人的偏好与诉求，管家排行程时会一起考虑</div>
+
+            <div v-if="compLoading" class="pref-hint">正在读取…</div>
+            <ul v-else-if="companions.length" class="list-rows">
+                <li v-for="c in companions" :key="c.id" class="list-row">
+                    <div class="list-row-body">
+                        <div class="list-row-main">{{ c.name }}</div>
+                        <div class="list-row-sub">
+                            {{ [c.preferences, c.vote ? '投票：' + c.vote : ''].filter(Boolean).join(' · ') || '（未填偏好）' }}
+                        </div>
+                    </div>
+                    <button class="list-row-del" title="删除" @click="removeCompanion(c)"><i class="fas fa-trash"></i></button>
+                </li>
+            </ul>
+            <div v-else class="pref-empty">
+                <i class="fas fa-users"></i>
+                <div class="pref-empty-title">还没有登记同行人</div>
+                <div class="pref-empty-desc">例如「妈妈 · 走不了太久」「爸爸 · 想去看海」，管家据此给出带取舍的方案。</div>
+            </div>
+
+            <div class="list-add">
+                <input v-model="compForm.name" placeholder="称呼（如 妈妈）" maxlength="64">
+                <input v-model="compForm.preferences" placeholder="偏好 / 限制（如 走不了太久）" maxlength="500">
+                <input v-model="compForm.vote" placeholder="诉求或投票（可选）" maxlength="255">
+                <button class="btn-primary" :disabled="compSaving" @click="saveCompanion()">
+                    {{ compSaving ? '保存中…' : '添加' }}
+                </button>
+            </div>
+            <div v-if="compMsg" class="pref-hint">{{ compMsg }}</div>
         </div>
     </div>
 
@@ -2807,8 +3206,18 @@
             </ul>
 
             <div v-if="listOpts && listOpts.add" class="list-add">
-                <input v-for="f in listOpts.add.fields" :key="f.key" v-model="listForm[f.key]"
-                       :placeholder="f.ph" maxlength="500">
+                <template v-for="f in listOpts.add.fields">
+                    <select v-if="f.type === 'select'" :key="f.key" v-model="listForm[f.key]">
+                        <option v-for="o in f.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+                    </select>
+                    <input v-else :key="f.key" v-model="listForm[f.key]"
+                           :placeholder="f.ph" maxlength="500">
+                </template>
+                <select v-model="listVis" title="可见范围">
+                    <option value="public">公开</option>
+                    <option value="friends">仅好友</option>
+                    <option value="private">仅自己</option>
+                </select>
                 <button class="btn-primary" :disabled="listSaving" @click="saveListItem()">
                     {{ listSaving ? '保存中…' : '添加' }}
                 </button>
@@ -2832,6 +3241,16 @@
                 <span class="budget-total">合计 ¥{{ Number(budgetSummary.total || 0).toLocaleString() }}</span>
             </div>
 
+            <!-- 预算告警阈值：后端 /toolbox/budget/threshold 此前零调用 -->
+            <div class="budget-threshold">
+                <i class="fas fa-bell"></i> 告警阈值
+                <input v-model="budgetThreshold" type="number" step="1" placeholder="如 5000">
+                <button class="trip-open-btn" :disabled="budgetSaving" @click="saveBudgetThreshold()">保存</button>
+                <span v-if="Number(budgetSummary.threshold || 0) > 0" :class="{over: budgetSummary.overAlert}">
+                    {{ budgetSummary.overAlert ? '已超出 ¥' + budgetSummary.threshold : '阈值 ¥' + budgetSummary.threshold }}
+                </span>
+            </div>
+
             <div v-if="budgetLoading" class="pref-hint">正在读取…</div>
             <div v-else-if="!budgetEntries.length" class="pref-empty">
                 <i class="fas fa-wallet"></i>
@@ -2843,7 +3262,7 @@
                     <div class="list-row-body">
                         <div class="list-row-main">{{ e.item || e.category || '(未命名)' }}
                             <span class="budget-amt">¥{{ e.amount }}</span></div>
-                        <div class="list-row-sub">{{ [e.category, e.entryDate].filter(Boolean).join(' · ') }}</div>
+                        <div class="list-row-sub">{{ [catLabel(e.category), e.entryDate].filter(Boolean).join(' · ') }}</div>
                     </div>
                     <button class="list-row-del" title="删除" @click="deleteBudgetEntry(e)">
                         <i class="fas fa-trash"></i></button>
@@ -2851,7 +3270,9 @@
             </ul>
 
             <div class="list-add budget-add">
-                <input v-model="budgetForm.category" placeholder="类别（交通 / 住宿 / 餐饮）" maxlength="64">
+                <select v-model="budgetForm.category">
+                    <option v-for="c in budgetCategories" :key="c.value" :value="c.value">{{ c.label }}</option>
+                </select>
                 <input v-model="budgetForm.item" placeholder="项目（如：高铁票）" maxlength="128">
                 <input v-model="budgetForm.amount" placeholder="金额" type="number" step="0.01">
                 <input v-model="budgetForm.entryDate" placeholder="日期 2026-10-01" maxlength="20">
@@ -2866,6 +3287,7 @@
     </div>
 </div>
 
+<script src="assets/shell.js"></script>
 <script src="vendor/vue.global.prod.js"></script>
 <script>
     const {createApp} = Vue;
@@ -2961,7 +3383,24 @@
                 tripSaving: false,
                 tripMsg: '',
 
-                detail: {title: '', createTime: '', content: ''},
+                detail: {id: 0, title: '', createTime: '', content: '', status: '', nodes: [], versions: []},
+                detailMsg: '',
+                travelogSaving: false,
+                tripTravelogs: [],
+                travelogDraft: null,
+
+                // 同行人（多人协同引擎的界面入口）
+                compOpen: false,
+                compLoading: false,
+                compSaving: false,
+                compMsg: '',
+                companions: [],
+                compForm: {name: '', preferences: '', vote: ''},
+
+                // 偏好模板：可存多套画像，一键切换生效
+                templates: [],
+                tplSaving: false,
+                tplMsg: '',
 
                 // 我的偏好（当前生效画像）
                 prefOpen: false,
@@ -2973,7 +3412,7 @@
                 prefForm: {tag: '', value: '', editing: false},
 
                 // ── 左侧「我的旅行资产」──
-                assetCounts: {trips: 0, prefs: 0, logs: 0, favs: 0, budget: 0, packing: 0, docs: 0},
+                assetCounts: {trips: 0, prefs: 0, logs: 0, favs: 0, companions: 0, budget: 0, packing: 0, docs: 0},
                 recentTrips: [],          // 最近行程（最多显示 3 条）
 
                 // 轻量列表弹窗（打卡日志 / 收藏 / 行李 / 证件），支持手动新增与删除
@@ -2987,6 +3426,8 @@
                 listForm: {},            // 手动新增表单的输入值
                 listSaving: false,
                 listMsg: '',
+                listVis: 'public',       // 通用列表新增内容的可见范围
+                tripVis: 'public',       // 行程的可见范围
 
                 // 预算（按行程）
                 budgetOpen: false,
@@ -2997,13 +3438,34 @@
                 budgetLoading: false,
                 budgetSaving: false,
                 budgetMsg: '',
-                budgetForm: {category: '交通', item: '', amount: '', entryDate: ''},
+                budgetThreshold: '',
+                // 分类必须有值且与后端白名单一致：以前是自由文本，用户填的中文
+                // 会被后端 normalizeCategory 一律归一成 other，分类统计等于失效。
+                budgetForm: {category: 'transport', item: '', amount: '', entryDate: ''},
+                budgetCategories: [
+                    {value: 'transport', label: '交通'},
+                    {value: 'lodging', label: '住宿'},
+                    {value: 'food', label: '餐饮'},
+                    {value: 'ticket', label: '门票'},
+                    {value: 'other', label: '其他'}
+                ],
+
+                // 收藏清单四类，值与 FavoriteController 的白名单一致，界面只负责中文化
+                favTypes: [
+                    {value: 'favorite', label: '收藏'},
+                    {value: 'blacklist', label: '避雷'},
+                    {value: 'todo', label: '待打卡'},
+                    {value: 'wish', label: '想去'}
+                ],
 
                 agentReady: false,
+                // 简易模式：未登录 / 未配置大模型 Key 时置真，消息区顶部常驻提示
+                agentDegraded: false,
 
                 // 内嵌浏览器（地图导航）
                 embedOpen: false,
                 embedUrl: '',
+                embedExternalUrl: '',   // 「在浏览器打开」用的原始链接（内嵌页会被换成 PC 地图页）
                 embedTitle: '地图导航',
                 embedMode: '',
                 // iframe 模式下的虚拟渲染宽度：跨域页面读不到真实宽度，
@@ -3030,6 +3492,9 @@
         },
 
         mounted() {
+            // 左侧常驻导航：与其它页面同一套入口（头像 + 账号管理在导航底部）
+            Shell.renderNav('chat.html');
+            Shell.currentUser();
             this.tickTime();
             this.timeTimer = setInterval(this.tickTime, 1000);
             window.addEventListener('keydown', this.onGlobalKey);
@@ -3037,6 +3502,8 @@
             this.loadSpots('');
             this.loadUser().then(loggedIn => {
                 if (loggedIn) {
+                    // 先探一次管家可用性：不可用就在进页面时亮出「简易模式」，别等发第一条消息
+                    this.isAgentAvailable();
                     // 进入系统后自动识别定位并输出现场指引
                     this.autoLocate();
                 }
@@ -3209,7 +3676,8 @@
              */
             async loadHistory(sessionId) {
                 try {
-                    const url = 'agent/history?limit=20' + (sessionId ? '&sessionId=' + sessionId : '');
+                    // 后端单次最多回 200 条；这里取 100 条，避免长会话重开后"看起来只剩一半"
+                    const url = 'agent/history?limit=100' + (sessionId ? '&sessionId=' + sessionId : '');
                     const res = await fetch(url, {method: 'POST', credentials: 'include'});
                     if (!res.ok) { this.welcomeIfEmpty(); return; }
                     const data = await res.json();
@@ -3446,8 +3914,8 @@
                         this.sendText('给我推荐几个值得去的目的地');
                         break;
                     case 'pref':
-                        // 打开画像面板，而不是发一句"我想设置偏好"——用户要看的是已经记住了什么
-                        this.openPref();
+                        // 偏好档案已独立成页：这里直接跳过去，不再用对话页的弹窗
+                        window.location.href = 'preferences.html';
                         break;
                 }
             },
@@ -3483,8 +3951,10 @@
             // 划出内嵌浏览器并加载目标地址
             openEmbedded(url, title) {
                 if (!url) return;
-                // 直接内嵌高德网页版原页面：功能（搜索/路线/图层/周边等）全部由高德自己提供
-                this.embedUrl = url;
+                // 统一内嵌观感：高德的"唤起客户端"深链（uri.amap.com/navigation 之类）嵌进来是个
+                // 简版落地页，和「附近吃喝玩乐」那边的地图长得不一样，这里统一换成高德 PC 地图页。
+                this.embedExternalUrl = url;
+                this.embedUrl = this.toMapPageUrl(url);
                 this.embedTitle = title || '地图导航';
                 // 用上次拖好的宽度（有的话），否则按当前窗口算默认宽度
                 const saved = this.savedEmbedWidth();
@@ -3492,6 +3962,25 @@
                 this.applyEmbedWidth(saved || this.defaultEmbedWidth());
                 this.embedOpen = true;
                 this.$nextTick(() => this.mountEmbed());
+            },
+
+            /** 把高德深链/导航链接归一成 PC 地图页；其它地址原样返回 */
+            toMapPageUrl(url) {
+                const text = String(url);
+                const m = text.match(/[?&](?:to|keyword|query|address)=([^&]+)/);
+                if (/uri\.amap\.com|ditu\.amap\.com/i.test(text) && m) {
+                    let kw = m[1];
+                    try {
+                        kw = decodeURIComponent(kw);
+                    } catch (e) { /* 解码失败就原样用 */ }
+                    // 导航深链的 to 形如 "lng,lat,名称"，取名称部分
+                    const parts = kw.split(',');
+                    const name = parts.length >= 3 ? parts.slice(2).join(',') : kw;
+                    if (name.trim()) {
+                        return 'https://www.amap.com/search?query=' + encodeURIComponent(name.trim());
+                    }
+                }
+                return url;
             },
 
             /**
@@ -3687,6 +4176,7 @@
             closeEmbed() {
                 this.embedOpen = false;
                 this.embedUrl = '';
+                this.embedExternalUrl = '';
                 this.embedView = null;
                 this.embedMode = '';
                 this.embedLocal = false;
@@ -3697,7 +4187,7 @@
             openEmbedExternal() {
                 if (!this.embedUrl) return;
                 // 站内相对路径（如 map.html）要补成绝对地址，外部浏览器才打得开
-                const url = new URL(this.embedUrl, location.href).href;
+                const url = new URL(this.embedExternalUrl || this.embedUrl, location.href).href;
                 if (window.desktopBridge && window.desktopBridge.openExternal) {
                     window.desktopBridge.openExternal(url);
                 } else {
@@ -3801,6 +4291,8 @@
                 } catch (e) {
                     this.agentReady = false;
                 }
+                // 不可用时亮出"简易模式"横幅：静默降级会让用户把模板回复当成产品真实水平
+                this.agentDegraded = !this.agentReady;
                 return this.agentReady;
             },
 
@@ -3810,8 +4302,10 @@
             openPref() {
                 this.prefOpen = true;
                 this.prefMsg = '';
+                this.tplMsg = '';
                 this.cancelEditPref();
                 this.loadPrefs();
+                this.loadTemplates();
                 this.loadAssets();   // 打开时顺带刷新左栏计数
             },
 
@@ -3920,11 +4414,11 @@
                     body: body ? new URLSearchParams(body).toString() : undefined
                 }).then(r => r.json()).catch(() => null);
 
-                const [trips, prefs, logs, favs, budget, packing, docs] = await Promise.all([
+                const [trips, prefs, logs, comps, budget, packing, docs] = await Promise.all([
                     post('trips/list'),
                     post('preference/list'),
                     post('travel-log/list'),
-                    post('favorites/item/list'),
+                    post('companion/list'),
                     post('toolbox/budget/summary'),
                     post('toolbox/packing/list'),
                     post('toolbox/document/list')
@@ -3936,7 +4430,7 @@
                     trips: n(trips, 'trips'),
                     prefs: n(prefs, 'items'),
                     logs: n(logs, 'logs'),
-                    favs: n(favs, 'items'),
+                    companions: n(comps, 'companions'),
                     budget: (budget && typeof budget.total === 'number') ? Math.round(budget.total) : 0,
                     packing: n(packing, 'templates'),
                     docs: n(docs, 'documents')
@@ -3958,7 +4452,8 @@
                 // 初始化手动新增表单
                 this.listForm = {};
                 if (opts.add && opts.add.fields) {
-                    opts.add.fields.forEach(f => { this.listForm[f.key] = ''; });
+                    // 有默认值的字段（下拉框）用默认值，其余给空串
+                    opts.add.fields.forEach(f => { this.listForm[f.key] = f.default || ''; });
                 }
                 await this.reloadList();
                 this.loadAssets();
@@ -3999,6 +4494,7 @@
                     body.append(f.key, v);
                 }
                 Object.keys(opts.add.fixed || {}).forEach(k => body.append(k, opts.add.fixed[k]));
+                body.append('visibility', this.listVis || 'public');
                 this.listSaving = true;
                 this.listMsg = '';
                 try {
@@ -4012,7 +4508,7 @@
                         this.listMsg = data.message || '保存失败';
                     } else {
                         this.listMsg = opts.add.okMsg || '已保存';
-                        (opts.add.fields || []).forEach(f => { this.listForm[f.key] = ''; });
+                        (opts.add.fields || []).forEach(f => { this.listForm[f.key] = f.default || ''; });
                         await this.reloadList();
                         this.loadAssets();
                     }
@@ -4071,19 +4567,35 @@
                     title: '灵感收藏', icon: 'fa-star', path: 'favorites/item/list', key: 'items',
                     map: r => ({
                         main: r.name || '(未命名)',
-                        sub: [r.listType || '', r.category || '', r.note || ''].filter(Boolean).join(' · ')
+                        sub: [this.favTypeLabel(r.listType), r.category || '', r.note || '']
+                            .filter(Boolean).join(' · ')
                     }),
                     add: {
                         path: 'favorites/item/save',
                         okMsg: '已加入灵感收藏',
-                        fixed: {listType: '灵感'},
                         fields: [
+                            // 清单类型交给用户选。以前这里写死 '灵感'，被后端归一成 favorite，
+                            // 于是「避雷 / 待打卡 / 想去」三类在界面上根本记不下来。
+                            {key: 'listType', ph: '清单', type: 'select', default: 'favorite',
+                             options: this.favTypes},
                             {key: 'name', ph: '景点 / 地点名称（必填）', required: true},
                             {key: 'note', ph: '它的特点（如：日落很出片）'}
                         ]
                     },
                     del: {path: 'favorites/item/delete'}
                 });
+            },
+
+            /** 预算分类：英文值 → 中文标签（值由后端白名单决定，界面只做显示） */
+            catLabel(value) {
+                const hit = this.budgetCategories.find(c => c.value === value);
+                return hit ? hit.label : (value || '');
+            },
+
+            /** 收藏清单类型：英文值 → 中文标签 */
+            favTypeLabel(value) {
+                const hit = this.favTypes.find(t => t.value === value);
+                return hit ? hit.label : (value || '');
             },
 
             openPacking() {
@@ -4227,7 +4739,9 @@
                     const res = await fetch('trips/save', {
                         method: 'POST', credentials: 'include',
                         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                        body: new URLSearchParams({title: title, content: content}).toString()
+                        body: new URLSearchParams({
+                            title: title, content: content, visibility: this.tripVis || 'public'
+                        }).toString()
                     });
                     const data = await res.json();
                     if (data.status !== 'success') {
@@ -4299,9 +4813,271 @@
                     const data = await res.json();
                     if (data.status !== 'success') throw new Error(data.message || '读取失败');
                     this.detail = data.trip;
+                    this.detailMsg = '';
+                    this.travelogDraft = null;
                     this.detailOpen = true;
+                    this.loadTripTravelogs(data.trip.id);
                 } catch (e) {
                     this.addMsg('system', '行程读取失败：' + e.message);
+                }
+            },
+
+            /** 节点类型 → 中文标签，与后端 NODE_TYPES 对应 */
+            nodeTypeLabel(t) {
+                const map = {timeline: '时间线', order: '订单', booking: '预约', risk: '风险', note: '备注', route: '备选路线'};
+                return map[t] || t || '节点';
+            },
+
+            /** 本行程的游记草稿（接口一次返回全部，这里按 tripId 过滤） */
+            async loadTripTravelogs(tripId) {
+                this.tripTravelogs = [];
+                try {
+                    const res = await fetch('travel-log/travelog/list', {method: 'POST', credentials: 'include'});
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        this.tripTravelogs = (data.travelogs || [])
+                            .filter(t => Number(t.tripId) === Number(tripId));
+                    }
+                } catch (e) { /* 拉不到不影响主流程 */ }
+            },
+
+            /** 回退到某个版本；后端会在回退前自动备份当前状态 */
+            async rollbackTrip(v) {
+                if (!v || !v.id) return;
+                if (!confirm('回退到 v' + v.versionNo + '？当前内容会先自动备份一版。')) return;
+                this.detailMsg = '回退中…';
+                try {
+                    const res = await fetch('trips/version/rollback', {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({versionId: String(v.id)}).toString()
+                    });
+                    const data = await res.json();
+                    this.detailMsg = data.message || (data.status === 'success' ? '已回退' : '回退失败');
+                    if (data.status === 'success') {
+                        await this.loadTrips();
+                        await this.openTrip(this.detail.id);
+                    }
+                } catch (e) {
+                    this.detailMsg = '回退失败，请检查网络后重试';
+                }
+            },
+
+            /** 按本行程的打卡记录生成游记草稿 */
+            async genTravelog() {
+                if (!this.detail.id) return;
+                this.travelogSaving = true;
+                this.detailMsg = '';
+                try {
+                    const res = await fetch('travel-log/travelog/generate', {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({tripId: String(this.detail.id)}).toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') {
+                        this.detailMsg = data.message || '生成失败';
+                        return;
+                    }
+                    this.travelogDraft = data.travelog;
+                    await this.loadTripTravelogs(this.detail.id);
+                } catch (e) {
+                    this.detailMsg = '生成失败，请检查网络后重试';
+                } finally {
+                    this.travelogSaving = false;
+                }
+            },
+
+            async openTravelog(id) {
+                try {
+                    const res = await fetch('travel-log/travelog/get', {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({id: String(id)}).toString()
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success') this.travelogDraft = data.travelog;
+                    else this.detailMsg = data.message || '游记读取失败';
+                } catch (e) {
+                    this.detailMsg = '游记读取失败，请检查网络后重试';
+                }
+            },
+
+            /* ==================== 同行人 ==================== */
+            async openCompanions() {
+                this.compOpen = true;
+                this.compMsg = '';
+                this.loadCompanions();
+                this.loadAssets();
+            },
+
+            async loadCompanions() {
+                this.compLoading = true;
+                try {
+                    const res = await fetch('companion/list', {method: 'POST', credentials: 'include'});
+                    const data = await res.json();
+                    this.companions = (data && data.status === 'success' && Array.isArray(data.companions))
+                        ? data.companions : [];
+                } catch (e) {
+                    this.companions = [];
+                } finally {
+                    this.compLoading = false;
+                }
+            },
+
+            async saveCompanion() {
+                const name = (this.compForm.name || '').trim();
+                if (!name) { this.compMsg = '请先填写称呼'; return; }
+                this.compSaving = true;
+                this.compMsg = '';
+                try {
+                    const res = await fetch('companion/save', {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({
+                            name: name,
+                            preferences: (this.compForm.preferences || '').trim(),
+                            vote: (this.compForm.vote || '').trim()
+                        }).toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') {
+                        this.compMsg = data.message || '保存失败';
+                        return;
+                    }
+                    this.compMsg = '已登记：' + name;
+                    this.compForm = {name: '', preferences: '', vote: ''};
+                    await this.loadCompanions();
+                    this.loadAssets();
+                } catch (e) {
+                    this.compMsg = '保存失败，请检查网络后重试';
+                } finally {
+                    this.compSaving = false;
+                }
+            },
+
+            async removeCompanion(c) {
+                if (!c || !c.id) return;
+                try {
+                    const res = await fetch('companion/delete', {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({id: String(c.id)}).toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') this.compMsg = data.message || '删除失败';
+                    else { await this.loadCompanions(); this.loadAssets(); }
+                } catch (e) {
+                    this.compMsg = '删除失败，请检查网络后重试';
+                }
+            },
+
+            /* ==================== 偏好模板 ==================== */
+            async loadTemplates() {
+                try {
+                    const res = await fetch('preference/template/list', {method: 'POST', credentials: 'include'});
+                    const data = await res.json();
+                    this.templates = (data && data.status === 'success' && Array.isArray(data.templates))
+                        ? data.templates : [];
+                } catch (e) {
+                    this.templates = [];
+                }
+            },
+
+            /** 把当前画像整体存成一套模板：先建模板，再逐条写标签 */
+            async saveTemplateFromCurrent() {
+                if (!this.prefItems.length) {
+                    this.tplMsg = '当前画像还是空的，先在上面添加几条偏好';
+                    return;
+                }
+                const name = prompt('这套模板叫什么？（例如：一个人的穷游 / 带爸妈）');
+                if (!name || !name.trim()) return;
+                this.tplSaving = true;
+                this.tplMsg = '';
+                const post = (path, params) => fetch(path, {
+                    method: 'POST', credentials: 'include',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams(params).toString()
+                }).then(r => r.json());
+                try {
+                    const created = await post('preference/template/save', {name: name.trim()});
+                    if (created.status !== 'success' || !created.id) {
+                        this.tplMsg = created.message || '模板创建失败';
+                        return;
+                    }
+                    for (const item of this.prefItems) {
+                        await post('preference/item/save', {
+                            templateId: String(created.id), tag: item.tag, value: item.value || ''
+                        });
+                    }
+                    this.tplMsg = '已存为模板：' + name.trim();
+                    await this.loadTemplates();
+                } catch (e) {
+                    this.tplMsg = '保存失败，请检查网络后重试';
+                } finally {
+                    this.tplSaving = false;
+                }
+            },
+
+            async activateTemplate(t) {
+                if (!t || !t.id) return;
+                try {
+                    const res = await fetch('preference/template/activate', {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({id: String(t.id)}).toString()
+                    });
+                    const data = await res.json();
+                    this.tplMsg = data.message || (data.status === 'success' ? '已启用' : '启用失败');
+                    if (data.status === 'success') {
+                        await this.loadTemplates();
+                        await this.loadPrefs();
+                        this.loadAssets();
+                    }
+                } catch (e) {
+                    this.tplMsg = '启用失败，请检查网络后重试';
+                }
+            },
+
+            async removeTemplate(t) {
+                if (!t || !t.id) return;
+                if (!confirm('删除模板「' + t.name + '」？当前画像不受影响。')) return;
+                try {
+                    const res = await fetch('preference/template/delete', {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({id: String(t.id)}).toString()
+                    });
+                    const data = await res.json();
+                    if (data.status !== 'success') this.tplMsg = data.message || '删除失败';
+                    else { this.tplMsg = '已删除模板'; await this.loadTemplates(); }
+                } catch (e) {
+                    this.tplMsg = '删除失败，请检查网络后重试';
+                }
+            },
+
+            /** 预算告警阈值：超过就在预算面板里标红 */
+            async saveBudgetThreshold() {
+                const v = parseFloat(this.budgetThreshold);
+                if (isNaN(v) || v < 0) { this.budgetMsg = '请填写有效的阈值金额'; return; }
+                this.budgetSaving = true;
+                this.budgetMsg = '';
+                try {
+                    const res = await fetch('toolbox/budget/threshold', {
+                        method: 'POST', credentials: 'include',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({amount: String(v)}).toString()
+                    });
+                    const data = await res.json();
+                    this.budgetMsg = data.status === 'success' ? ('告警阈值已设为 ¥' + v) : (data.message || '保存失败');
+                    if (data.status === 'success') {
+                        this.budgetThreshold = '';
+                        await this.loadBudget();
+                    }
+                } catch (e) {
+                    this.budgetMsg = '保存失败，请检查网络后重试';
+                } finally {
+                    this.budgetSaving = false;
                 }
             },
 

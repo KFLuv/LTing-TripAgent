@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>好友 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">好友</div>
+                    <div class="page-sub">用 ID 或邀请码互加，之后就能看对方"仅好友可见"的内容</div>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <a class="on" href="friends.html">好友</a>
+                <a href="square.html">广场</a>
+                <a href="moments.html">我的动态</a>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-ticket"></i> 我的账号</div>
+                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+                    <div>
+                        <div class="hint">我的 ID</div>
+                        <div style="font-size:15px;font-weight:600" id="my-id">…</div>
+                    </div>
+                    <div>
+                        <div class="hint">邀请码（发给朋友即可加你）</div>
+                        <div class="code-box"><span id="my-code">…</span>
+                            <button class="btn small ghost" id="copy"><i class="fas fa-copy"></i> 复制</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-user-plus"></i> 加好友</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <div style="flex:1 1 240px;min-width:0">
+                        <input type="text" id="target" placeholder="对方的 ID 或 6 位邀请码">
+                    </div>
+                    <button class="btn" id="add"><i class="fas fa-plus"></i> 添加</button>
+                </div>
+                <div class="hint" id="msg" style="margin-top:10px"></div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-user-group"></i> 好友列表
+                    <span class="spacer"></span><span class="hint" id="count"></span></div>
+                <div id="list"><div class="hint">正在加载…</div></div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('friends.html');
+        const me = await Shell.currentUser();
+        if (!me) return;
+
+        document.getElementById('my-id').textContent = me.name || '';
+        const msg = document.getElementById('msg');
+
+        function render(friends) {
+            document.getElementById('count').textContent = friends.length ? friends.length + ' 位' : '';
+            const listEl = document.getElementById('list');
+            if (!friends.length) {
+                listEl.innerHTML = '<div class="hint">还没有好友。把上面的邀请码发给朋友，或者填对方的 ID 加一下。</div>';
+                return;
+            }
+            listEl.innerHTML = friends.map(f => (
+                '<div class="friend-row">'
+                + Shell.avatar(f.avatar, 'sm')
+                + '<div style="flex:1;min-width:0">'
+                + '<div style="font-weight:600">' + Shell.esc(f.nickname || f.username) + '</div>'
+                + '<div class="hint">ID：' + Shell.esc(f.username)
+                + (f.inviteCode ? ' · 邀请码：' + Shell.esc(f.inviteCode) : '') + '</div>'
+                + '</div>'
+                + '<a class="btn small ghost" href="user.html?u=' + encodeURIComponent(f.username) + '">'
+                + '<i class="fas fa-house-user"></i> 主页</a>'
+                + '<button class="btn small ghost" data-del="' + Shell.esc(f.username) + '">'
+                + '<i class="fas fa-user-minus"></i></button>'
+                + '</div>')).join('');
+            listEl.querySelectorAll('[data-del]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const name = btn.getAttribute('data-del');
+                    if (!confirm('删除好友 ' + name + '？')) return;
+                    await Shell.api('friend/delete', {friend: name}).catch(() => null);
+                    load();
+                });
+            });
+        }
+
+        async function load() {
+            const data = await Shell.api('friend/list').catch(() => null);
+            if (!data || data.status !== 'success') {
+                document.getElementById('list').innerHTML = '<div class="hint error">好友列表读取失败</div>';
+                return;
+            }
+            document.getElementById('my-code').textContent = data.inviteCode || '（去个人资料页保存一次后生成）';
+            render(data.friends || []);
+        }
+
+        document.getElementById('copy').addEventListener('click', async function () {
+            const code = document.getElementById('my-code').textContent.trim();
+            if (!code || code.indexOf('（') === 0) return;
+            try {
+                await navigator.clipboard.writeText(code);
+                this.innerHTML = '<i class="fas fa-check"></i> 已复制';
+            } catch (e) {
+                msg.textContent = '邀请码：' + code;
+            }
+        });
+
+        document.getElementById('add').addEventListener('click', async function () {
+            const target = document.getElementById('target').value.trim();
+            if (!target) { msg.className = 'hint error'; msg.textContent = '填一下对方的 ID 或邀请码'; return; }
+            this.disabled = true;
+            const data = await Shell.api('friend/add', {target: target}).catch(() => null);
+            this.disabled = false;
+            msg.className = (data && data.status === 'success') ? 'hint ok' : 'hint error';
+            msg.textContent = (data && data.message) || '添加失败，请检查网络';
+            if (data && data.status === 'success') {
+                document.getElementById('target').value = '';
+                load();
+            }
+        });
+
+        load();
+    })();
+</script>
+</body>
+</html>

@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Agent 的"手脚"：工具的真实实现。
@@ -142,7 +143,8 @@ public class TravelTools {
      */
     public List<Map<String, String>> listPreferences(String username) {
         List<Map<String, String>> list = new ArrayList<>();
-        String sql = "select tag, value from user_preference where username = ? order by update_time";
+        // `value` 在 H2 里是保留字，MySQL 与 H2 都认反引号，统一加上
+        String sql = "select tag, `value` from user_preference where username = ? order by update_time";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
@@ -167,10 +169,13 @@ public class TravelTools {
         if (tag == null || tag.trim().isEmpty()) {
             return "标签为空，未记录";
         }
+        // 用重复占位符代替 MySQL 专有的 values(value)：H2 不认识 values()，
+        // 而 MySQL 8.0.20 起也把这个写法标记为废弃。两边都跑同一句更省心。
+        String v = value == null ? "" : value.trim();
         MySQLUtil.executeUpdate(
-                "insert into user_preference(username, tag, value, update_time) values(?, ?, ?, now())"
-                        + " on duplicate key update value = values(value), update_time = now()",
-                username, tag.trim(), value == null ? "" : value.trim());
+                "insert into user_preference(username, tag, `value`, update_time) values(?, ?, ?, now())"
+                        + " on duplicate key update `value` = ?, update_time = now()",
+                username, tag.trim(), v, v);
         return "已更新画像：" + tag.trim() + " = " + (value == null ? "" : value.trim());
     }
 
@@ -275,14 +280,13 @@ public class TravelTools {
         if (name == null || name.trim().isEmpty()) {
             return "同行人姓名为空，未记录";
         }
+        String prefs = preferences == null ? "" : preferences.trim();
+        String voteText = vote == null ? "" : vote.trim();
         MySQLUtil.executeUpdate(
                 "insert into trip_companion(owner, name, preferences, vote, update_time)"
                         + " values(?, ?, ?, ?, now())"
-                        + " on duplicate key update preferences = values(preferences),"
-                        + " vote = values(vote), update_time = now()",
-                owner, name.trim(),
-                preferences == null ? "" : preferences.trim(),
-                vote == null ? "" : vote.trim());
+                        + " on duplicate key update preferences = ?, vote = ?, update_time = now()",
+                owner, name.trim(), prefs, voteText, prefs, voteText);
         return "已登记同行人：" + name.trim();
     }
 
@@ -291,10 +295,20 @@ public class TravelTools {
 
     /** 行程允许的状态，和 TripController 保持一致 */
     private static final List<String> TRIP_STATUS = Arrays.asList("规划中", "进行中", "已结束");
+
+    /** 时间格式：与 App 其它模块保持一致 */
+    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    /** 去空白 + 截断到字段上限，避免超长写入报错 */
+    private static String trim(String value, int max) {
+        if (value == null) {
+            return null;
+        }
+        String v = value.trim();
+        return v.length() > max ? v.substring(0, max) : v;
+    }
     private static final List<String> NODE_TYPES = Arrays.asList(
             "timeline", "order", "booking", "risk", "note", "route");
-    private static final List<String> FAVORITE_TYPES = Arrays.asList(
-            "favorite", "blacklist", "todo", "wish");
     private static final List<String> BUDGET_CATEGORIES = Arrays.asList(
             "transport", "lodging", "food", "ticket", "other");
 
@@ -592,57 +606,6 @@ public class TravelTools {
                 pitfalls.length() == 0 ? "暂未踩坑" : pitfalls.toString().trim());
         return "已生成游记草稿《" + safeTitle + "》：\n" + draft;
     }
-
-    // —— 5.4 灵感收藏库 ——
-
-    /** 工具：收藏一个点位/餐厅/展览（或加入避雷黑名单、待打卡清单） */
-    public String saveFavorite(String username, String listType, String name, String category,
-                               String note, String expectDuration, String season) {
-        if (name == null || name.trim().isEmpty()) {
-            return "收藏名称为空，未记录";
-        }
-        String type = listType == null || !FAVORITE_TYPES.contains(listType.trim())
-                ? "favorite" : listType.trim();
-        MySQLUtil.executeUpdate(
-                "insert into favorite_item(username, folder_id, list_type, name, category, note,"
-                        + " expect_duration, season, create_time) values(?, null, ?, ?, ?, ?, ?, ?, now())",
-                username, type, name.trim(), category, note, expectDuration, season);
-        String cn = favoriteTypeCn(type);
-        return "已加入「" + cn + "」：" + name.trim();
-    }
-
-    /** 工具：查看收藏库（可按 listType 过滤：favorite/blacklist/todo/wish） */
-    public List<Map<String, Object>> listFavorites(String username, String listType) {
-        boolean filter = listType != null && FAVORITE_TYPES.contains(listType.trim());
-        String sql = "select id, list_type, name, category, note, expect_duration, season"
-                + " from favorite_item where username = ?" + (filter ? " and list_type = ?" : "")
-                + " order by id desc";
-        List<Map<String, Object>> list = new ArrayList<>();
-        try (Connection conn = MySQLUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, username);
-            if (filter) {
-                ps.setString(2, listType.trim());
-            }
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("id", rs.getInt("id"));
-                    m.put("listType", rs.getString("list_type"));
-                    m.put("name", rs.getString("name"));
-                    m.put("category", rs.getString("category"));
-                    m.put("note", rs.getString("note"));
-                    m.put("expectDuration", rs.getString("expect_duration"));
-                    m.put("season", rs.getString("season"));
-                    list.add(m);
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("读取收藏失败：" + e.getMessage(), e);
-        }
-        return list;
-    }
-
     // —— 5.5 偏好模板 ——
 
     /** 工具：列出用户的多套偏好模板及各自标签 */
@@ -693,16 +656,16 @@ public class TravelTools {
         List<Map<String, String>> items = templateItems(username, templateId);
         for (Map<String, String> item : items) {
             MySQLUtil.executeUpdate(
-                    "insert into user_preference(username, tag, value, update_time) values(?, ?, ?, now())"
-                            + " on duplicate key update value = values(value), update_time = now()",
-                    username, item.get("tag"), item.get("value"));
+                    "insert into user_preference(username, tag, `value`, update_time) values(?, ?, ?, now())"
+                            + " on duplicate key update `value` = ?, update_time = now()",
+                    username, item.get("tag"), item.get("value"), item.get("value"));
         }
         return "已启用偏好模板「" + name + "」，共 " + items.size() + " 个标签已生效";
     }
 
     private List<Map<String, String>> templateItems(String username, int templateId) {
         List<Map<String, String>> list = new ArrayList<>();
-        String sql = "select tag, value from preference_item where template_id = ? and username = ? order by id";
+        String sql = "select tag, `value` from preference_item where template_id = ? and username = ? order by id";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, templateId);
@@ -778,10 +741,11 @@ public class TravelTools {
 
     /** 工具：设置预算告警阈值 */
     public String setBudgetThreshold(String username, double amount) {
+        String amountText = String.valueOf(amount);
         MySQLUtil.executeUpdate(
-                "insert into user_preference(username, tag, value, update_time) values(?, '预算告警阈值', ?, now())"
-                        + " on duplicate key update value = values(value), update_time = now()",
-                username, String.valueOf(amount));
+                "insert into user_preference(username, tag, `value`, update_time) values(?, '预算告警阈值', ?, now())"
+                        + " on duplicate key update `value` = ?, update_time = now()",
+                username, amountText, amountText);
         return "预算告警阈值已设为 " + amount + " 元";
     }
 
@@ -834,15 +798,6 @@ public class TravelTools {
         return "已归档到工具箱（" + documentTypeCn(type) + "）：" + title.trim();
     }
 
-    private String favoriteTypeCn(String type) {
-        switch (type) {
-            case "blacklist": return "避雷黑名单";
-            case "todo": return "待打卡";
-            case "wish": return "意向清单";
-            default: return "收藏";
-        }
-    }
-
     private String budgetCategoryCn(String category) {
         switch (category) {
             case "transport": return "交通";
@@ -868,7 +823,7 @@ public class TravelTools {
     private double readBudgetThreshold(String username) {
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "select value from user_preference where username = ? and tag = '预算告警阈值'")) {
+                     "select `value` from user_preference where username = ? and tag = '预算告警阈值'")) {
             ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -898,5 +853,113 @@ public class TravelTools {
         } catch (SQLException e) {
             return false;
         }
+    }
+
+    // ==================== 六、朋友圈 / 个人资料（AI 也能读写这两个模块的数据） ====================
+
+    /**
+     * 工具：发布一条朋友圈动态。
+     * <p>
+     * 发布时间由服务端 now() 记录（不由模型或前端指定）；
+     * 地点优先用坐标反查，反查不到就留空——不编造地名。
+     */
+    public String saveMoment(String username, String content, String place, String visibility,
+                             Double lat, Double lng) {
+        if (content == null || content.trim().isEmpty()) {
+            return "动态内容为空，未发布";
+        }
+        String safeContent = trim(content, 2000);
+        String safePlace = trim(place, 120);
+        String safeVisibility = com.iflytek.chatgpt.social.Visibility.normalize(visibility);
+        MySQLUtil.executeUpdate(
+                "insert into moment(username, content, place, lat, lng, visibility, create_time)"
+                        + " values(?, ?, ?, ?, ?, ?, now())",
+                username, safeContent, safePlace, lat, lng, safeVisibility);
+        return "已发布动态（可见：" + safeVisibility + "）"
+                + (safePlace == null || safePlace.isEmpty() ? "" : "，地点：" + safePlace);
+    }
+
+    /** 工具：读最近的朋友圈动态 */
+    public List<Map<String, Object>> listMoments(String username, Integer limit) {
+        int take = limit == null || limit <= 0 ? 10 : Math.min(limit, 50);
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "select id, content, place, create_time from moment"
+                + " where username = ? order by id desc limit " + take;
+        try (Connection conn = MySQLUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("id", rs.getInt("id"));
+                    m.put("content", rs.getString("content"));
+                    m.put("place", rs.getString("place"));
+                    java.sql.Timestamp ts = rs.getTimestamp("create_time");
+                    m.put("createTime", ts == null ? "" : ts.toLocalDateTime().format(TIME_FORMAT));
+                    list.add(m);
+                }
+            }
+        } catch (SQLException e) {
+            // 读不到就返回空列表，由模型如实告知用户
+        }
+        return list;
+    }
+
+    /** 工具：读个人资料 */
+    public List<Map<String, Object>> getProfile(String username) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "select nickname, tags, bio, interests from user_profile where username = ?";
+        try (Connection conn = MySQLUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("nickname", rs.getString("nickname"));
+                    m.put("tags", rs.getString("tags"));
+                    m.put("bio", rs.getString("bio"));
+                    m.put("interests", rs.getString("interests"));
+                    list.add(m);
+                }
+            }
+        } catch (SQLException e) {
+            // 同上：空资料就让模型说"还没填过"
+        }
+        return list;
+    }
+
+    /**
+     * 工具：更新个人资料。
+     * <p>
+     * 只覆盖传进来的字段（null 或空串都视为"这次不改"），避免模型补一句话就把别的资料清空。
+     * 头像不走这里——那是用户在资料页自己传的图。
+     */
+    public String saveProfile(String username, String nickname, String tags, String bio, String interests) {
+        List<String> sets = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+        if (nickname != null && !nickname.trim().isEmpty()) {
+            sets.add(" nickname = ?");
+            params.add(trim(nickname, 60));
+        }
+        if (tags != null && !tags.trim().isEmpty()) {
+            sets.add(" tags = ?");
+            params.add(trim(tags, 300));
+        }
+        if (bio != null && !bio.trim().isEmpty()) {
+            sets.add(" bio = ?");
+            params.add(trim(bio, 500));
+        }
+        if (interests != null && !interests.trim().isEmpty()) {
+            sets.add(" interests = ?");
+            params.add(trim(interests, 500));
+        }
+        if (sets.isEmpty()) {
+            return "没有需要更新的资料字段";
+        }
+        params.add(username);
+        MySQLUtil.executeUpdate(
+                "update user_profile set" + String.join(",", sets) + ", update_time = now() where username = ?",
+                params.toArray());
+        return "已更新个人资料：" + String.join("、", sets).replace(" = ?", "").trim();
     }
 }

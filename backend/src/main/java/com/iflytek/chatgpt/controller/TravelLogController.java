@@ -37,6 +37,12 @@ public class TravelLogController {
 
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
+    private final com.iflytek.chatgpt.social.SocialService social;
+
+    public TravelLogController(com.iflytek.chatgpt.social.SocialService social) {
+        this.social = social;
+    }
+
     /** 评分允许的取值，非法或空一律归一为 neutral */
     private static final String RATING_LIKE = "like";
     private static final String RATING_AVOID = "avoid";
@@ -59,6 +65,10 @@ public class TravelLogController {
                                     @RequestParam(required = false) String note,
                                     @RequestParam(required = false) Integer durationMin,
                                     @RequestParam(required = false) String photos,
+                                    @RequestParam(required = false) String visibility,
+                                    @RequestParam(required = false) String poiId,
+                                    @RequestParam(required = false) String poiName,
+                                    @RequestParam(required = false) String images,
                                     HttpSession session) {
         Map<String, Object> result = new LinkedHashMap<>();
         String username = ChatController.currentUser(session);
@@ -132,7 +142,59 @@ public class TravelLogController {
 
         result.put("status", "success");
         result.put("id", newId);
+        MySQLUtil.executeUpdate(
+                "update travel_log set visibility = ?, poi_id = ?, poi_name = ?, images = ?"
+                        + " where id = ? and username = ?",
+                com.iflytek.chatgpt.social.Visibility.normalize(visibility),
+                trim(poiId, 120), trim(poiName, 120), trim(images, 400_000), newId, username);
         result.put("message", "已记录打卡");
+        return result;
+    }
+
+    /**
+     * 某家商户收到的打卡（商家详情页用）。
+     * 公开的谁都能看，仅好友的要互为好友，仅自己的只有本人可见。
+     */
+    @PostMapping(value = "/travel-log/by-poi", produces = "application/json;charset=UTF-8")
+    public Map<String, Object> byPoi(@RequestParam(required = false) String poiId, HttpSession session) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        String me = ChatController.currentUser(session);
+        if (me == null) {
+            return fail(result, "请先登录");
+        }
+        if (poiId == null || poiId.trim().isEmpty()) {
+            return fail(result, "缺少商户标识");
+        }
+        List<Map<String, Object>> logs = new ArrayList<>();
+        String sql = "select id, username, place, rating, note, duration_min, images, create_time"
+                + " from travel_log where poi_id = ?" + social.visibilityClause("username")
+                + " order by id desc limit 50";
+        try (Connection conn = MySQLUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, poiId.trim());
+            ps.setString(2, me);
+            ps.setString(3, me);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("id", rs.getInt("id"));
+                    m.put("username", rs.getString("username"));
+                    m.put("place", rs.getString("place"));
+                    m.put("rating", rs.getString("rating"));
+                    m.put("note", rs.getString("note"));
+                    m.put("durationMin", rs.getObject("duration_min"));
+                    m.put("images", rs.getString("images"));
+                    java.sql.Timestamp ts = rs.getTimestamp("create_time");
+                    m.put("createTime", ts == null ? "" : ts.toLocalDateTime().format(TIME_FORMAT));
+                    logs.add(m);
+                }
+            }
+        } catch (SQLException e) {
+            log.error("读取商户打卡失败：poiId={}", poiId, e);
+            return fail(result, "打卡读取失败，请稍后重试");
+        }
+        result.put("status", "success");
+        result.put("logs", logs);
         return result;
     }
 

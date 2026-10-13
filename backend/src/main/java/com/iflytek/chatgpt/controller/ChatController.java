@@ -82,7 +82,8 @@ public class ChatController {
 
         user.put("login", "true");
         user.put("name", username);
-        user.put("email", queryString("select email from user where username = ?", username));
+        // `user` 在 H2 里是保留字；反引号在 MySQL / H2 上都合法
+        user.put("email", queryString("select email from `user` where username = ?", username));
         return user;
     }
 
@@ -108,7 +109,7 @@ public class ChatController {
 
         // 1. 校验当前密码，防止别人拿到页面就能改密码
         if (!Objects.equals(currentPassword,
-                queryString("select password from user where username = ?", username))) {
+                queryString("select password from `user` where username = ?", username))) {
             return fail(result, "当前密码不正确");
         }
 
@@ -125,10 +126,10 @@ public class ChatController {
 
         // 3. 落库（用占位符而不是拼字符串，避免 SQL 注入）
         if (changePassword) {
-            MySQLUtil.executeUpdate("update user set password = ? where username = ?", newPassword, username);
+            MySQLUtil.executeUpdate("update `user` set password = ? where username = ?", newPassword, username);
         }
         if (changeEmail) {
-            MySQLUtil.executeUpdate("update user set email = ? where username = ?", newEmail.trim(), username);
+            MySQLUtil.executeUpdate("update `user` set email = ? where username = ?", newEmail.trim(), username);
         }
 
         result.put("status", "success");

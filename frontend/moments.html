@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的动态 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">我的动态</div>
+                    <div class="page-sub">发布时间与位置由系统自动记录；可见范围发布前自己选</div>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <a class="on" href="moments.html">我的动态</a>
+                <a href="square.html">广场</a>
+                <a href="friends.html">好友</a>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-pen-to-square"></i> 发布动态</div>
+                <textarea id="content" placeholder="今天去哪儿了？随手记一句…"></textarea>
+                <div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span class="hint">谁能看</span>
+                    <div class="seg" id="visibility">
+                        <button data-v="public" class="on">公开</button>
+                        <button data-v="friends">仅好友</button>
+                        <button data-v="private">仅自己</button>
+                    </div>
+                </div>
+                <div class="field-row" style="margin-top:12px">
+                    <div class="field" style="margin:0">
+                        <label>图片（可选，最多 3 张）</label>
+                        <input type="file" id="images" accept="image/*" multiple>
+                    </div>
+                    <div class="field" style="margin:0">
+                        <label>位置（发布时自动记录）</label>
+                        <div class="hint" id="place">正在定位…</div>
+                    </div>
+                </div>
+                <div class="thumb-grid" id="thumbs"></div>
+                <div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <button class="btn" id="publish"><i class="fas fa-paper-plane"></i> 发布</button>
+                    <button class="btn ghost small" id="relocate"><i class="fas fa-location-dot"></i> 重新定位</button>
+                    <span class="hint" id="msg"></span>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-clock-rotate-left"></i> 我的动态
+                    <span class="spacer"></span><span class="hint" id="count"></span></div>
+                <div class="cards" id="list"></div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('square.html');
+        if (!await Shell.currentUser()) return;
+
+        let coords = null;          // 发布时一并提交的坐标
+        let picked = [];            // 已选图片的 data URL
+        let visibility = 'public';  // 可见范围
+
+        document.querySelectorAll('#visibility button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#visibility button').forEach(b => b.classList.remove('on'));
+                btn.classList.add('on');
+                visibility = btn.getAttribute('data-v');
+            });
+        });
+
+        const placeEl = document.getElementById('place');
+        const msgEl = document.getElementById('msg');
+
+        async function refreshLocation() {
+            placeEl.textContent = '正在定位…';
+            try {
+                const pos = await Shell.locate();
+                coords = {lat: pos.lat, lng: pos.lng};
+                placeEl.textContent = '已获取坐标（' + pos.lat.toFixed(4) + ', ' + pos.lng.toFixed(4)
+                    + '，精度约 ±' + Math.round(pos.accuracy) + ' 米）· 发布时由服务端解析地名';
+            } catch (e) {
+                coords = null;
+                placeEl.textContent = '未获取到定位：' + e.message + '（仍可发布，只是不带位置）';
+            }
+        }
+
+        document.getElementById('relocate').addEventListener('click', refreshLocation);
+        refreshLocation();
+
+        document.getElementById('images').addEventListener('change', async function (ev) {
+            msgEl.textContent = '';
+            const files = Array.from(ev.target.files || []).slice(0, 3);
+            picked = [];
+            try {
+                for (const f of files) {
+                    picked.push(await Shell.fileToDataUrl(f, 1024));
+                }
+            } catch (e) {
+                msgEl.className = 'hint error';
+                msgEl.textContent = e.message;
+            }
+            document.getElementById('thumbs').innerHTML = picked.map(u =>
+                '<img src="' + u + '" alt="待发布图片">').join('');
+        });
+
+        async function load() {
+            const listEl = document.getElementById('list');
+            const data = await Shell.api('moment/list').catch(() => null);
+            const moments = (data && data.moments) || [];
+            document.getElementById('count').textContent = moments.length ? moments.length + ' 条' : '';
+            if (!moments.length) {
+                listEl.innerHTML = '<div class="hint">还没有动态。发一条试试，或者直接对 AI 管家说「记一下今天…」。</div>';
+                return;
+            }
+            listEl.innerHTML = moments.map(m => (
+                '<div class="card">'
+                + '<div class="card-head">'
+                + '<span class="card-title">' + Shell.esc((m.content || '').slice(0, 18)) + '</span>'
+                + (m.place ? '<span class="tag plain"><i class="fas fa-location-dot"></i> ' + Shell.esc(m.place) + '</span>' : '')
+                + '<span class="tag">' + Shell.esc(Shell.visLabel(m.visibility)) + '</span>'
+                + '<span class="card-ops">'
+                + '<span class="card-meta">' + Shell.esc(m.createTime) + '</span>'
+                + '<button class="btn ghost small" data-del="' + m.id + '"><i class="fas fa-trash"></i></button>'
+                + '</span></div>'
+                + '<div class="card-body">' + Shell.esc(m.content) + '</div>'
+                + ((m.images && m.images.length)
+                    ? '<div class="thumb-grid">' + m.images.map(u => '<img src="' + u + '" alt="动态图片">').join('') + '</div>'
+                    : '')
+                + '</div>')).join('');
+
+            listEl.querySelectorAll('[data-del]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!confirm('删除这条动态？')) return;
+                    await Shell.api('moment/delete', {id: btn.getAttribute('data-del')}).catch(() => null);
+                    load();
+                });
+            });
+        }
+
+        document.getElementById('publish').addEventListener('click', async function () {
+            const content = document.getElementById('content').value.trim();
+            if (!content) {
+                msgEl.className = 'hint error';
+                msgEl.textContent = '先写点什么再发布';
+                return;
+            }
+            this.disabled = true;
+            msgEl.className = 'hint';
+            msgEl.textContent = '发布中…';
+            try {
+                const data = await Shell.api('moment/save', {
+                    content: content,
+                    lat: coords ? coords.lat : '',
+                    lng: coords ? coords.lng : '',
+                    images: picked.length ? JSON.stringify(picked) : '',
+                    visibility: visibility
+                });
+                if (data.status !== 'success') {
+                    msgEl.className = 'hint error';
+                    msgEl.textContent = data.message || '发布失败';
+                    return;
+                }
+                msgEl.className = 'hint ok';
+                msgEl.textContent = '已发布（时间与地点已自动记录）';
+                document.getElementById('content').value = '';
+                document.getElementById('images').value = '';
+                picked = [];
+                document.getElementById('thumbs').innerHTML = '';
+                load();
+            } catch (e) {
+                msgEl.className = 'hint error';
+                msgEl.textContent = '发布失败，请检查网络';
+            } finally {
+                this.disabled = false;
+            }
+        });
+
+        load();
+    })();
+</script>
+</body>
+</html>

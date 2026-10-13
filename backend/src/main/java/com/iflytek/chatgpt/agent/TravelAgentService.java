@@ -62,6 +62,8 @@ public class TravelAgentService {
                     + "必须先调用对应工具把改动写入真实数据，再给出文字说明；"
                     + "禁止只用文字给出建议而不落库——用户会在对应页面里发现「你根本没做」。\n"
                     + "铁律2 每次回答前，先用 listTrips / listTripNodes / listPreferences 读取当前真实状态，"
+                    + "铁律6 用户的「偏好档案」是硬约束：任何行程方案、点位与商家推荐都必须先满足画像里的饮食（忌口/辣度/过敏）、体力（怕累/怕爬山/怕久走）、环境（怕冷/怕热/怕吵）、出行（公交/打车/自驾）偏好；与偏好冲突时必须点明冲突并给折中方案。"
+                    + "用户在任何一句话里提到这类信息时（不吃辣、走不了太久、怕吵、想坐地铁…），立即用 savePreference 写入画像，不要等他明说「记一下」。"
                     + "不要凭记忆或凭想象回答用户已有的行程与画像。\n"
                     + "铁律3 写入成功后必须回报「已写入什么」，让用户能在对应页面看到变化，不要长篇复述工具返回值。\n"
                     + "铁律4 凡涉及空间距离，必须基于真实坐标算出的距离作答（报出米数），禁止用「附近」这类模糊说法，"
@@ -112,12 +114,13 @@ public class TravelAgentService {
                     + "用户说「出发了/玩完了/结束了/撤销/回退上一个版本」时必须落到这些工具。"
                     + "「旅途轨迹日志」——用户报告在某地打卡、喜欢或避雷某处、花了多少时间时，用 logCheckin 记录；"
                     + "用户说「生成游记/总结这次旅行」或行程标记「已结束」时，用 genTravelog 生成结构化游记草稿（亮点/踩坑）。"
-                    + "「灵感收藏库」——用户说「收藏/记下/想去/别去/避雷/待打卡」某地时，用 saveFavorite（listType 取 favorite/blacklist/todo/wish）；"
-                    + "规划行程前可用 listFavorites 参考其收藏与黑名单，避开用户已标避雷的地方。"
                     + "「偏好档案」——涉及用户画像时先 listPreferences，也可用 listPreferenceTemplates/activatePreferenceTemplate 切换模板。"
                     + "「工具箱」——用户报账用 saveBudgetEntry，问花销/超支用 getBudgetSummary（含告警阈值），设阈值用 setBudgetThreshold，"
                     + "整行李用 savePackingTemplate/listPackingTemplates，归档票据证件用 saveDocument。"
                     + "写入成功后，只需一句话确认存到了哪个资产，不要长篇复述工具返回值。\n"
+                    + "「朋友圈」与「个人资料」同样归你管：用户说「记一下今天…」「发个动态」时用 moment(action=save) 落库；"
+                    + "问「我是谁 / 我的标签 / 我的兴趣」时用 profile(action=get) 读，要求改资料时用 profile(action=set)。"
+                    + "这两类数据与其它资产一样必须先写库再回话，不要只在对话里答应。\n"
                     + "全局强制规则：\n"
                     + "- 禁止把景点介绍/历史百科/网上游记当主体；用户若提出这类问题，先结合其行程、位置、画像给落地建议，科普仅作附属补充。\n"
                     + "- 所有方案必须带时间约束与风险提醒，点出潜在坑点：预约名额紧张、周一闭馆、停车困难、傍晚限流等。\n"
@@ -200,9 +203,9 @@ public class TravelAgentService {
      */
     private static final List<String> WRITE_TOOLS = Arrays.asList(
             "saveTrip", "savePreference", "saveCompanion", "setTripStatus", "saveTripNode",
-            "rollbackTrip", "logCheckin", "genTravelog", "saveFavorite",
+            "rollbackTrip", "logCheckin", "genTravelog",
             "activatePreferenceTemplate", "saveBudgetEntry", "setBudgetThreshold",
-            "savePackingTemplate", "saveDocument");
+            "savePackingTemplate", "saveDocument", "moment", "profile");
 
     public TravelAgentService(AiChatService aiChatService, TravelTools travelTools,
                               WebSearchService webSearchService, NavigationService navigationService) {
@@ -590,18 +593,7 @@ public class TravelAgentService {
                 new AgentTool("genTravelog",
                         "行程结束后，把该行程的轨迹日志自动汇总成结构化游记草稿（含亮点总结、踩坑汇总）并保存。",
                         schema("tripId", "integer", "行程ID")),
-                // —— 5.3 灵感收藏库 ——
-                new AgentTool("saveFavorite",
-                        "把点位/餐厅/展览/市集加入收藏库的某个清单：favorite(收藏)/blacklist(避雷黑名单)/todo(待打卡)/wish(意向)。",
-                        schema("name", "string", "收藏对象名称",
-                               "listType", "string", "清单类型：favorite/blacklist/todo/wish，默认 favorite",
-                               "category", "string", "类别，如“餐厅/展览/市集/景点”，可空",
-                               "note", "string", "自定义备注，可空",
-                               "expectDuration", "string", "期望游玩时长，如“2小时”，可空",
-                               "season", "string", "想去的季节，如“秋天”，可空")),
-                new AgentTool("listFavorites",
-                        "查看收藏库内容，可按清单类型过滤（favorite/blacklist/todo/wish）。",
-                        schema("listType", "string", "可选：favorite/blacklist/todo/wish；不填返回全部")),
+                // 灵感收藏模块已按产品要求删除：不再向模型暴露相关工具
                 // —— 5.4 偏好档案（多套模板） ——
                 new AgentTool("listPreferenceTemplates",
                         "列出用户的多套偏好模板（步行耐受、预算、忌口、同行人群等标签），看哪套在生效、有哪些可选。",
@@ -637,6 +629,22 @@ public class TravelAgentService {
                                "docNo", "string", "单号/凭证号，可空",
                                "detail", "string", "备注详情，可空",
                                "expireTime", "string", "有效期/截止时间，可空"))
+                ,
+                // —— 六、朋友圈 / 个人资料：把这两个模块的数据也纳入 AI 的读写范围 ——
+                new AgentTool("moment",
+                        "朋友圈动态。action=list 读最近动态；action=save 发布一条（发布时间由系统记录，地点不传则按定位解析）。",
+                        schemaAllOptional("action", "string", "list 或 save",
+                                "content", "string", "action=save 时的正文",
+                                "place", "string", "可选：发布地点",
+                                "visibility", "string", "可选：可见范围 public/friends/private，默认 public",
+                                "limit", "integer", "action=list 时取几条，默认 10")),
+                new AgentTool("profile",
+                        "用户个人资料（昵称/标签/简介/兴趣偏好）。action=get 读；action=set 写，只覆盖传入的字段。",
+                        schemaAllOptional("action", "string", "get 或 set",
+                                "nickname", "string", "可选：昵称",
+                                "tags", "string", "可选：标签，逗号分隔",
+                                "bio", "string", "可选：个人简介",
+                                "interests", "string", "可选：兴趣偏好"))
         );
     }
 
@@ -657,6 +665,26 @@ public class TravelAgentService {
         schema.put("type", "object");
         schema.set("properties", properties);
         schema.set("required", required);
+        return schema;
+    }
+
+    /**
+     * 与 {@link #schema} 相同，但所有参数都非必填。
+     * <p>
+     * action 型工具（moment / profile）里"读"和"写"用的字段不一样，
+     * 全标成必填会逼着模型塞一堆空串，这里显式放开。
+     */
+    private ObjectNode schemaAllOptional(String... triples) {
+        ObjectNode properties = objectMapper.createObjectNode();
+        for (int i = 0; i + 2 < triples.length; i += 3) {
+            ObjectNode prop = properties.putObject(triples[i]);
+            prop.put("type", triples[i + 1]);
+            prop.put("description", triples[i + 2]);
+        }
+        ObjectNode schema = objectMapper.createObjectNode();
+        schema.put("type", "object");
+        schema.set("properties", properties);
+        schema.set("required", objectMapper.createArrayNode());
         return schema;
     }
 
@@ -741,15 +769,7 @@ public class TravelAgentService {
                     return toJson(travelTools.listTravelLogs(username, args.path("tripId").asInt(0)));
                 case "genTravelog":
                     return toJson(travelTools.genTravelog(username, args.path("tripId").asInt(0)));
-                // —— 五大资产 Tab：灵感收藏库 ——
-                case "saveFavorite":
-                    return toJson(travelTools.saveFavorite(username,
-                            args.path("listType").asText(""), args.path("name").asText(""),
-                            args.path("category").asText(""), args.path("note").asText(""),
-                            args.path("expectDuration").asText(""), args.path("season").asText("")));
-                case "listFavorites":
-                    return toJson(travelTools.listFavorites(username, args.path("listType").asText("")));
-                // —— 五大资产 Tab：偏好档案 ——
+                // —— 五大资产 Tab：偏好档案（灵感收藏已移除） ——
                 case "listPreferenceTemplates":
                     return toJson(travelTools.listPreferenceTemplates(username));
                 case "activatePreferenceTemplate":
@@ -776,6 +796,19 @@ public class TravelAgentService {
                             args.path("docType").asText(""), args.path("title").asText(""),
                             args.path("docNo").asText(""), args.path("detail").asText(""),
                             args.path("expireTime").asText("")));
+                case "moment":
+                    if ("save".equalsIgnoreCase(args.path("action").asText(""))) {
+                        return travelTools.saveMoment(username, args.path("content").asText(""),
+                                args.path("place").asText(""), args.path("visibility").asText(""), lat, lng);
+                    }
+                    return toJson(travelTools.listMoments(username, args.path("limit").asInt(10)));
+                case "profile":
+                    if ("set".equalsIgnoreCase(args.path("action").asText(""))) {
+                        return travelTools.saveProfile(username,
+                                textOrNull(args, "nickname"), textOrNull(args, "tags"),
+                                textOrNull(args, "bio"), textOrNull(args, "interests"));
+                    }
+                    return toJson(travelTools.getProfile(username));
                 default:
                     return errorJson("未知工具：" + toolName);
             }
@@ -816,8 +849,6 @@ public class TravelAgentService {
                     return "打卡：" + arg(args, "place");
                 case "genTravelog":
                     return "生成游记草稿（行程 " + args.path("tripId").asInt(0) + "）";
-                case "saveFavorite":
-                    return "收藏：" + arg(args, "name");
                 case "activatePreferenceTemplate":
                     return "启用偏好模板 " + args.path("templateId").asInt(0);
                 case "saveBudgetEntry":
@@ -829,6 +860,10 @@ public class TravelAgentService {
                     return "保存行李清单：" + arg(args, "name");
                 case "saveDocument":
                     return "归档证件：" + arg(args, "title");
+                case "moment":
+                    return "save".equalsIgnoreCase(args.path("action").asText("")) ? "发布了一条朋友圈动态" : null;
+                case "profile":
+                    return "set".equalsIgnoreCase(args.path("action").asText("")) ? "更新了个人资料" : null;
                 default:
                     return null;
             }
@@ -842,6 +877,11 @@ public class TravelAgentService {
     private String arg(JsonNode args, String field) {
         String v = args.path(field).asText("").trim();
         return v.isEmpty() ? "（未填）" : v;
+    }
+
+    /** 取参数值，字段没传返回 null（用于"只覆盖传入字段"的更新） */
+    private String textOrNull(JsonNode args, String field) {
+        return args.has(field) ? args.get(field).asText() : null;
     }
 
     // ==================== 小工具 ====================

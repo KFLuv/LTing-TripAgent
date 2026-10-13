@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出发 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">出发</div>
+                    <div class="page-sub" id="greeting">正在读取你的数据…</div>
+                </div>
+                <div class="spacer"></div>
+                <a class="btn ghost small" href="chat.html"><i class="fas fa-comments"></i> 找 AI 管家</a>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-chart-simple"></i> 我的数据</div>
+                <div class="stat-row" id="stats"></div>
+                <div class="hint" id="stats-hint" style="margin-top:12px"></div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-layer-group"></i> 功能模块</div>
+                <div class="cards two" id="modules"></div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('home.html');
+        const me = await Shell.currentUser();
+        if (!me) return;
+
+        const MODULES = [
+            {href: 'square.html', icon: 'fa-fire', title: '动态广场',
+             desc: '发动态（公开 / 仅好友 / 仅自己）、刷广场、看好友主页。'},
+            {href: 'profile.html', icon: 'fa-id-badge', title: '个人资料',
+             desc: '头像、昵称、标签、简介与兴趣偏好，AI 也读这份资料。'},
+            {href: 'nearby.html', icon: 'fa-utensils', title: '附近吃喝玩乐',
+             desc: '5–10km 内至少 35 家商户，含评级、菜单与真实点评。'},
+            {href: 'chat.html', icon: 'fa-comments', title: 'AI 管家',
+             desc: '对话式规划行程，并把上面三个模块的数据写进同一份库。'}
+        ];
+        document.getElementById('modules').innerHTML = MODULES.map(m =>
+            '<a class="card" href="' + m.href + '">'
+            + '<div class="card-head"><i class="fas ' + m.icon + '" style="color:var(--brand)"></i>'
+            + '<span class="card-title">' + Shell.esc(m.title) + '</span></div>'
+            + '<div class="card-body">' + Shell.esc(m.desc) + '</div></a>').join('');
+
+        const safe = (p) => p.then(r => r).catch(() => null);
+        const [moments, trips, prefs, profile] = await Promise.all([
+            safe(Shell.api('moment/list')),
+            safe(Shell.api('trips/list')),
+            safe(Shell.api('preference/list')),
+            safe(Shell.api('profile/get'))
+        ]);
+        const n = (d, k) => (d && Array.isArray(d[k])) ? d[k].length : 0;
+        const nickname = (profile && profile.profile && profile.profile.nickname) || me.name || '';
+        document.getElementById('greeting').textContent = '你好，' + nickname
+            + (profile && profile.profile && profile.profile.bio ? ' · ' + profile.profile.bio : '');
+        document.getElementById('stats').innerHTML = [
+            {num: n(moments, 'moments'), label: '朋友圈动态'},
+            {num: n(trips, 'trips'), label: '行程本'},
+            {num: n(prefs, 'items'), label: '偏好标签'},
+        ].map(s => '<div class="stat"><div class="stat-num">' + s.num + '</div>'
+            + '<div class="stat-label">' + s.label + '</div></div>').join('');
+        document.getElementById('stats-hint').textContent =
+            '这些数字来自数据库：AI 管家在对话里写入的内容，会和你自己在本页操作的内容落在同一份数据里。';
+    })();
+</script>
+</body>
+</html>

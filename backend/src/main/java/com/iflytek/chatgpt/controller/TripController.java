@@ -52,6 +52,7 @@ public class TripController {
     public Map<String, Object> save(@RequestParam(required = false) String title,
                                     @RequestParam(required = false) String content,
                                     @RequestParam(required = false) String status,
+                                    @RequestParam(required = false) String visibility,
                                     HttpSession session) {
         Map<String, Object> result = new LinkedHashMap<>();
         String username = ChatController.currentUser(session);
@@ -86,6 +87,10 @@ public class TripController {
 
         if (tripId > 0) {
             snapshot(tripId, username, "初始版本");
+            // 可见权限：默认公开，可在保存后单独调整；好友主页按这个字段过滤
+            MySQLUtil.executeUpdate(
+                    "update trip set visibility = ? where id = ? and username = ?",
+                    com.iflytek.chatgpt.social.Visibility.normalize(visibility), tripId, username);
         }
 
         result.put("status", "success");

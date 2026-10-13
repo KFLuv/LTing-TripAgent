@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态广场 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">动态广场</div>
+                    <div class="page-sub">所有人的【公开】动态，不用加好友也能看</div>
+                </div>
+                <div class="spacer"></div>
+                <a class="btn small" href="moments.html"><i class="fas fa-pen-to-square"></i> 发一条</a>
+            </div>
+
+            <div class="tabs">
+                <a class="on" href="square.html">广场</a>
+                <a href="moments.html">我的动态</a>
+                <a href="friends.html">好友</a>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-fire"></i> 广场动态
+                    <span class="spacer"></span><span class="hint" id="count"></span></div>
+                <div id="list"><div class="hint">正在加载…</div></div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('square.html');
+        if (!await Shell.currentUser()) return;
+
+        const data = await Shell.api('moment/square', {limit: 40}).catch(() => null);
+        const moments = (data && data.moments) || [];
+        document.getElementById('count').textContent = moments.length ? moments.length + ' 条' : '';
+        const listEl = document.getElementById('list');
+        if (!moments.length) {
+            listEl.innerHTML = '<div class="hint">广场还很安静。去发一条公开动态，别人就能在这里看到。</div>';
+            return;
+        }
+        listEl.innerHTML = moments.map(m => (
+            '<div class="feed-item">'
+            + Shell.avatar(m.avatar, 'sm')
+            + '<div class="feed-body">'
+            + '<div class="feed-author">' + Shell.esc(m.nickname || m.username)
+            + '<a class="hint" style="margin-left:6px" href="user.html?u=' + encodeURIComponent(m.username) + '">看主页</a>'
+            + '<span class="feed-time">' + Shell.esc(m.createTime) + '</span></div>'
+            + '<div class="feed-text">' + Shell.esc(m.content) + '</div>'
+            + '<div class="feed-meta">'
+            + (m.place ? '<span class="tag plain"><i class="fas fa-location-dot"></i> ' + Shell.esc(m.place) + '</span>' : '')
+            + '</div>'
+            + ((m.images && m.images.length)
+                ? '<div class="thumb-grid">' + m.images.map(u => '<img src="' + u + '" alt="动态图片">').join('') + '</div>'
+                : '')
+            + '</div></div>')).join('');
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资料 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">个人资料</div>
+                    <div class="page-sub">这份资料会被 AI 管家读取，用来对齐你的偏好</div>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-user-pen"></i> 基本信息</div>
+                <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+                    <div style="flex:0 0 auto;text-align:center">
+                        <img id="avatarPreview" alt="头像"
+                             style="width:96px;height:96px;border-radius:50%;object-fit:cover;
+                                    border:1px solid var(--line);background:#f2f5f8">
+                        <div style="margin-top:8px">
+                            <label class="btn ghost small" style="cursor:pointer">
+                                <i class="fas fa-upload"></i> 换头像
+                                <input type="file" id="avatarFile" accept="image/*" style="display:none">
+                            </label>
+                        </div>
+                    </div>
+                    <div style="flex:1 1 320px;min-width:0">
+                        <div class="field">
+                            <label for="nickname">昵称</label>
+                            <input type="text" id="nickname" maxlength="60" placeholder="别人怎么称呼你">
+                        </div>
+                        <div class="field">
+                            <label for="tags">标签（逗号分隔）</label>
+                            <input type="text" id="tags" maxlength="300" placeholder="如：亲子 / 自驾 / 摄影">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="bio">个人简介</label>
+                    <textarea id="bio" maxlength="500" placeholder="一两句话介绍自己"></textarea>
+                </div>
+                <div class="field">
+                    <label for="interests">兴趣偏好</label>
+                    <textarea id="interests" maxlength="500"
+                              placeholder="如：喜欢逛老街和菜市场，不爱爬山，咖啡要手冲"></textarea>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                    <button class="btn" id="save"><i class="fas fa-floppy-disk"></i> 保存资料</button>
+                    <span class="hint" id="msg"></span>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-link"></i> 与 AI 的关系</div>
+                <div class="hint">
+                    资料保存在 user_profile 表里。对 AI 管家说「我是摄影师，喜欢老街」，
+                    它会用 profile(action=set) 写进同一张表——你在这里刷新就能看到。
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-users"></i> 同行人
+                    <span class="spacer"></span><span class="hint" id="comp-msg"></span></div>
+                <div id="comp-list" class="hint">正在加载…</div>
+                <div class="list-add" style="margin-top:10px">
+                    <input type="text" id="comp-name" placeholder="称呼（如 妈妈）">
+                    <input type="text" id="comp-pref" placeholder="偏好 / 限制（如 走不了太久）">
+                    <button class="btn" id="comp-add"><i class="fas fa-plus"></i> 添加</button>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-id-card"></i> 证件与票据
+                    <span class="spacer"></span><span class="hint" id="doc-msg"></span></div>
+                <div id="doc-list" class="hint">正在加载…</div>
+                <div class="list-add" style="margin-top:10px">
+                    <input type="text" id="doc-type" placeholder="类型（护照 / 身份证 / 酒店）">
+                    <input type="text" id="doc-title" placeholder="名称 / 持证人">
+                    <input type="text" id="doc-no" placeholder="号码（可选）">
+                    <button class="btn" id="doc-add"><i class="fas fa-plus"></i> 归档</button>
+                </div>
+            </div>
+                <div class="hint">
+                    资料保存在 user_profile 表里。对 AI 管家说「我是摄影师，喜欢老街」，
+                    它会用 profile(action=set) 写进同一张表——你在这里刷新就能看到。
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('profile.html');
+        if (!await Shell.currentUser()) return;
+
+        const msg = document.getElementById('msg');
+        const preview = document.getElementById('avatarPreview');
+        let avatarData = '';
+
+        const data = await Shell.api('profile/get').catch(() => null);
+        const p = (data && data.profile) || {};
+        document.getElementById('nickname').value = p.nickname || '';
+        document.getElementById('tags').value = p.tags || '';
+        document.getElementById('bio').value = p.bio || '';
+        document.getElementById('interests').value = p.interests || '';
+        avatarData = p.avatar || '';
+        preview.src = avatarData || 'data:image/svg+xml;utf8,'
+            + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">'
+                + '<rect width="96" height="96" fill="#eef2f7"/>'
+                + '<text x="48" y="56" font-size="13" fill="#8b9aab" text-anchor="middle">未设置</text></svg>');
+
+        document.getElementById('avatarFile').addEventListener('change', async function (ev) {
+            const f = (ev.target.files || [])[0];
+            if (!f) return;
+            try {
+                avatarData = await Shell.fileToDataUrl(f, 256);
+                preview.src = avatarData;
+            } catch (e) {
+                msg.className = 'hint error';
+                msg.textContent = e.message;
+            }
+        });
+
+        document.getElementById('save').addEventListener('click', async function () {
+            this.disabled = true;
+            msg.className = 'hint';
+            msg.textContent = '保存中…';
+            try {
+                const res = await Shell.api('profile/save', {
+                    nickname: document.getElementById('nickname').value.trim(),
+                    tags: document.getElementById('tags').value.trim(),
+                    bio: document.getElementById('bio').value.trim(),
+                    interests: document.getElementById('interests').value.trim(),
+                    avatar: avatarData
+                });
+                msg.className = res.status === 'success' ? 'hint ok' : 'hint error';
+                msg.textContent = res.message || (res.status === 'success' ? '已保存' : '保存失败');
+            } catch (e) {
+                msg.className = 'hint error';
+                msg.textContent = '保存失败，请检查网络';
+            } finally {
+                this.disabled = false;
+            }
+        });
+        loadCompanions();
+        loadDocs();
+    })();
+</script>
+</body>
+</html>

@@ -49,11 +49,11 @@ public class SessionConfig {
         return p;
     }
 
-    private static final String DB_URL = cfg("DB_URL",
-            "jdbc:mysql://localhost:3306/user-mannager?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8",
-            "db.url");
-    private static final String DB_DRIVER = cfg("DB_DRIVER", "com.mysql.jdbc.Driver", "db.driver");
-    private static final String DB_USER = cfg("DB_USER", "root", "db.username");
+    // ⚠️ 默认值必须与 util.MySQLUtil 完全一致：会话表（tomcat_sessions）和业务表
+    //    必须在同一个库里，否则默认走内嵌 H2 时会话却去连 MySQL，启动就会报连不上。
+    private static final String DB_URL = cfg("DB_URL", util.MySQLUtil.defaultUrl(), "db.url");
+    private static final String DB_DRIVER = cfg("DB_DRIVER", util.MySQLUtil.DEFAULT_DRIVER, "db.driver");
+    private static final String DB_USER = cfg("DB_USER", util.MySQLUtil.DEFAULT_USER, "db.username");
     private static final String DB_PASSWORD = cfg("DB_PASSWORD", "", "db.password");
 
     /** 环境变量优先，其次 JVM 系统属性，再次 application.properties，最后默认值 */

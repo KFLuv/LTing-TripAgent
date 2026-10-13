@@ -23,8 +23,7 @@
             <div class="error-message" id="passwordError">密码不能为空</div>
         </div>
         <div class="option-row">
-            <label><input type="checkbox" name="rememberPassword" id="remember">记住密码</label>
-            <label><input type="checkbox" name="auto" id="autofill">自动登录</label>
+            <label><input type="checkbox" name="remember" id="remember">记住账号</label>
         </div>
         <button type="submit" id="loginBtn">登录</button>
         <button type="button" id="guestBtn" class="guest-btn">游客登录（免注册直达）</button>
@@ -40,8 +39,17 @@
         const usernameError = document.getElementById('usernameError');
         const passwordError = document.getElementById('passwordError');
         const loginBtn = document.getElementById('loginBtn');
-        const rememberInput = document.getElementById('remember'); // 记住密码
-        const autofillInput = document.getElementById('autofill'); // 自动登录
+        const rememberInput = document.getElementById('remember'); // 记住账号
+
+        // 进页面时回填上次记住的账号（只存用户名，不存口令）
+        (function prefillRememberedUser() {
+            const hit = document.cookie.split('; ').find(c => c.indexOf('username=') === 0);
+            if (!hit) return;
+            try {
+                usernameInput.value = decodeURIComponent(hit.slice('username='.length));
+                rememberInput.checked = true;
+            } catch (e) { /* Cookie 损坏就忽略，不影响手动输入 */ }
+        })();
 
         // 表单提交处理
         loginForm.addEventListener('submit', function(e) {
@@ -54,8 +62,8 @@
             // 获取输入值
             const username = usernameInput.value.trim();
             const password = passwordInput.value.trim();
-            const remember = rememberInput.value.trim();
-            const autofill = autofillInput.value.trim();
+            // 复选框要读 checked：读 value 的话永远是 "on"，勾没勾都一样
+            const remember = rememberInput.checked ? 'on' : 'off';
 
             // 验证输入
             let isValid = true;
@@ -87,8 +95,7 @@
                 body: new URLSearchParams({
                     username: username,
                     password: password,
-                    remember: remember,
-                    auto: autofill
+                    remember: remember
                 }).toString()
             })
                 .then(response => {

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>偏好档案 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">偏好档案</div>
+                    <div class="page-sub">这里是硬约束：AI 排行程、推荐商户之前都会先读它</div>
+                </div>
+                <div class="spacer"></div>
+                <a class="btn ghost small" href="chat.html"><i class="fas fa-comments"></i> 去对话里说</a>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-sliders"></i> 结构化偏好
+                    <span class="spacer"></span><span class="hint" id="pref-msg"></span></div>
+                <div class="hint" style="margin-bottom:12px">
+                    点一下即保存，再点一次取消。你在对话里提到同类信息（不吃辣、怕累、想打车…）也会自动写进来。
+                </div>
+                <div id="pref-groups"></div>
+                <div class="field" style="margin-top:12px">
+                    <label>忌口食材（自己填，如：香菜、内脏）</label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <input type="text" id="avoid-input" placeholder="填好点右边保存" style="flex:1 1 200px">
+                        <button class="btn ghost" id="avoid-save">保存</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-list"></i> 已记录的画像
+                    <span class="spacer"></span><span class="hint" id="count"></span></div>
+                <div id="pref-list" class="hint">正在加载…</div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-layer-group"></i> 偏好模板
+                    <span class="spacer"></span><span class="hint" id="tpl-msg"></span></div>
+                <div id="tpl-list" class="hint">正在加载…</div>
+                <div style="margin-top:10px">
+                    <button class="btn ghost" id="tpl-save"><i class="fas fa-plus"></i> 把当前画像存为模板</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('preferences.html');
+        if (!await Shell.currentUser()) return;
+
+        const GROUPS = [
+            {tag: '辣度', label: '饮食 · 辣度', opts: ['不吃辣', '微辣', '重辣']},
+            {tag: '饮食禁忌', label: '饮食 · 禁忌', opts: ['无', '不吃生冷', '不吃甜', '素食']},
+            {tag: '过敏', label: '饮食 · 过敏', opts: ['无', '海鲜过敏']},
+            {tag: '体力偏好', label: '体力', opts: ['怕累', '喜欢短途步行', '拒绝长时间爬山', '偏好平缓路线']},
+            {tag: '环境偏好', label: '环境', opts: ['怕冷', '怕热', '怕嘈杂', '偏好安静', '优先室内场所']},
+            {tag: '出行偏好', label: '出行', opts: ['偏好公共交通', '偏好打车', '偏好自驾']}
+        ];
+        let prefs = {};
+        const prefMsg = document.getElementById('pref-msg');
+
+        function renderGroups() {
+            document.getElementById('pref-groups').innerHTML = GROUPS.map(g => {
+                const cur = prefs[g.tag];
+                return '<div style="margin-bottom:12px"><div class="hint" style="margin-bottom:5px">' + g.label + '</div>'
+                    + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+                    + g.opts.map(o => '<button class="btn small ' + (cur === o ? '' : 'ghost') + '" data-tag="'
+                        + g.tag + '" data-val="' + o + '">' + o + '</button>').join('')
+                    + '</div></div>';
+            }).join('');
+            document.querySelectorAll('#pref-groups button[data-tag]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const tag = btn.getAttribute('data-tag');
+                    const val = btn.getAttribute('data-val');
+                    const same = prefs[tag] === val;
+                    const data = same
+                        ? await Shell.api('preference/item/delete-current', {tag: tag}).catch(() => null)
+                        : await Shell.api('preference/item/save-current', {tag: tag, value: val}).catch(() => null);
+                    prefMsg.className = data ? 'hint ok' : 'hint error';
+                    prefMsg.textContent = data ? (same ? '已取消：' + tag : '已记录：' + tag + ' = ' + val) : '保存失败';
+                    load();
+                });
+            });
+        }
+
+        async function load() {
+            const data = await Shell.api('preference/list').catch(() => null);
+            const items = (data && data.items) || [];
+            prefs = {};
+            items.forEach(it => {
+                prefs[it.tag] = it.value;
+            });
+            renderGroups();
+            document.getElementById('avoid-input').value = prefs['忌口食材'] || '';
+            document.getElementById('count').textContent = items.length ? items.length + ' 条' : '';
+            document.getElementById('pref-list').innerHTML = items.length
+                ? items.map(it => '<span class="tag" style="margin:0 6px 6px 0">' + Shell.esc(it.tag)
+                    + '：' + Shell.esc(it.value) + '</span>').join('')
+                : '还没有记录。点上面的按钮，或者去对话里说一句。';
+            loadTemplates();
+        }
+
+        document.getElementById('avoid-save').addEventListener('click', async function () {
+            const v = document.getElementById('avoid-input').value.trim();
+            if (!v) {
+                prefMsg.className = 'hint error';
+                prefMsg.textContent = '先填点内容';
+                return;
+            }
+            const data = await Shell.api('preference/item/save-current', {tag: '忌口食材', value: v}).catch(() => null);
+            prefMsg.className = data ? 'hint ok' : 'hint error';
+            prefMsg.textContent = data ? '已记录忌口食材' : '保存失败';
+            load();
+        });
+
+        async function loadTemplates() {
+            const data = await Shell.api('preference/template/list').catch(() => null);
+            const tpls = (data && data.templates) || [];
+            document.getElementById('tpl-list').innerHTML = tpls.length
+                ? tpls.map(t => '<div class="meal-row"><span style="flex:1;min-width:0">' + Shell.esc(t.name)
+                    + (t.isActive ? '<span class="tag" style="margin-left:6px">生效中</span>' : '')
+                    + '<div class="hint">' + (t.items && t.items.length
+                        ? t.items.map(i => Shell.esc(i.tag + '=' + i.value)).join(' · ') : '（空模板）') + '</div></span>'
+                    + (t.isActive ? '' : '<button class="btn small ghost" data-act="' + t.id + '">启用</button>')
+                    + '<button class="btn small ghost" data-tpl="' + t.id + '"><i class="fas fa-trash"></i></button>'
+                    + '</div>').join('')
+                : '还没有模板。把常用画像存成一套，出行时一键切换（例如「一个人的穷游」「带爸妈」）。';
+            document.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', async () => {
+                const r = await Shell.api('preference/template/activate', {id: b.getAttribute('data-act')}).catch(() => null);
+                document.getElementById('tpl-msg').textContent = (r && r.message) || '启用失败';
+                load();
+            }));
+            document.querySelectorAll('[data-tpl]').forEach(b => b.addEventListener('click', async () => {
+                if (!confirm('删除这个模板？当前画像不受影响。')) return;
+                await Shell.api('preference/template/delete', {id: b.getAttribute('data-tpl')}).catch(() => null);
+                loadTemplates();
+            }));
+        }
+
+        document.getElementById('tpl-save').addEventListener('click', async function () {
+            const items = Object.keys(prefs);
+            const msgEl = document.getElementById('tpl-msg');
+            if (!items.length) {
+                msgEl.className = 'hint error';
+                msgEl.textContent = '当前画像还是空的';
+                return;
+            }
+            const name = prompt('这套模板叫什么？');
+            if (!name || !name.trim()) return;
+            this.disabled = true;
+            const created = await Shell.api('preference/template/save', {name: name.trim()}).catch(() => null);
+            if (!created || created.status !== 'success' || !created.id) {
+                msgEl.className = 'hint error';
+                msgEl.textContent = (created && created.message) || '模板创建失败';
+                this.disabled = false;
+                return;
+            }
+            for (const tag of items) {
+                await Shell.api('preference/item/save', {templateId: created.id, tag: tag, value: prefs[tag]});
+            }
+            this.disabled = false;
+            msgEl.className = 'hint ok';
+            msgEl.textContent = '已存为模板：' + name.trim();
+            loadTemplates();
+        });
+
+        load();
+    })();
+</script>
+</body>
+</html>

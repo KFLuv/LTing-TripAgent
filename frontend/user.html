@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主页 · AI旅游助手</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div id="head"><div class="hint">正在加载…</div></div>
+            <div id="sections"></div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+    (async function () {
+        Shell.renderNav('friends.html');
+        if (!await Shell.currentUser()) return;
+
+        const target = Shell.qs('u');
+        const code = Shell.qs('code');
+        const headEl = document.getElementById('head');
+        const secEl = document.getElementById('sections');
+        if (!target && !code) {
+            headEl.innerHTML = '<div class="band"><div class="hint error">缺少参数：请从好友列表或广场进入某个人的主页。</div></div>';
+            return;
+        }
+
+        const data = await Shell.api('user/home', target ? {username: target} : {code: code}).catch(() => null);
+        if (!data || data.status !== 'success') {
+            headEl.innerHTML = '<div class="band"><div class="hint error">'
+                + Shell.esc((data && data.message) || '主页读取失败') + '</div></div>';
+            return;
+        }
+        const p = data.profile || {};
+        headEl.innerHTML = ''
+            + '<div class="band" style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">'
+            + Shell.avatar(p.avatar, 'lg')
+            + '<div style="flex:1;min-width:0">'
+            + '<div class="page-title">' + Shell.esc(p.nickname || p.username) + '</div>'
+            + '<div class="hint">ID：' + Shell.esc(p.username)
+            + (data.isFriend ? ' · 已互为好友' : ' · 不是好友（只能看到公开内容）') + '</div>'
+            + (p.bio ? '<div style="margin-top:8px">' + Shell.esc(p.bio) + '</div>' : '')
+            + (p.tags ? '<div style="margin-top:8px">' + p.tags.split(',').filter(Boolean)
+                .map(t => '<span class="tag" style="margin-right:6px">' + Shell.esc(t.trim()) + '</span>').join('') + '</div>' : '')
+            + (p.interests ? '<div class="hint" style="margin-top:8px">兴趣：' + Shell.esc(p.interests) + '</div>' : '')
+            + '</div>'
+            + '<div id="add-friend"></div>'
+            + '</div>';
+
+        if (!data.isSelf && !data.isFriend) {
+            const box = document.getElementById('add-friend');
+            box.innerHTML = '<button class="btn" id="add"><i class="fas fa-user-plus"></i> 加好友</button>';
+            document.getElementById('add').addEventListener('click', async function () {
+                this.disabled = true;
+                const res = await Shell.api('friend/add', {target: p.username}).catch(() => null);
+                this.disabled = false;
+                box.innerHTML = '<div class="hint ' + ((res && res.status === 'success') ? 'ok' : 'error') + '">'
+                    + Shell.esc((res && res.message) || '添加失败') + '</div>';
+            });
+        } else if (data.isSelf) {
+            document.getElementById('add-friend').innerHTML =
+                '<a class="btn ghost" href="profile.html"><i class="fas fa-pen"></i> 编辑资料</a>';
+        }
+
+        /** 一类内容渲染成一行行 */
+        function section(icon, title, rows, lineFn, empty) {
+            const body = rows.length
+                ? rows.map(r => '<div class="meal-row">' + lineFn(r)
+                    + '<span class="tag plain">' + Shell.esc(Shell.visLabel(r.visibility)) + '</span></div>').join('')
+                : '<div class="hint">' + empty + '</div>';
+            return '<div class="band"><div class="band-title"><i class="fas ' + icon + '"></i> ' + title
+                + '<span class="spacer"></span><span class="hint">' + (rows.length ? rows.length + ' 条' : '') + '</span></div>'
+                + body + '</div>';
+        }
+
+        secEl.innerHTML = ''
+            + section('fa-camera-retro', '动态', data.moments || [], r =>
+                '<span style="flex:1;min-width:0">' + Shell.esc((r.content || '').slice(0, 40))
+                + '<span class="hint"> · ' + Shell.esc(r.create_time || '') + '</span></span>', '没有可看的动态')
+            + section('fa-book', '行程', data.trips || [], r =>
+                '<span style="flex:1;min-width:0">' + Shell.esc(r.title || '（未命名）')
+                + '<span class="hint"> · ' + Shell.esc(r.status || '') + ' · ' + Shell.esc(r.create_time || '') + '</span></span>',
+                '没有可看的行程')
+            + section('fa-location-dot', '打卡', data.logs || [], r =>
+                '<span style="flex:1;min-width:0">' + Shell.esc(r.place || '')
+                + '<span class="hint"> · ' + Shell.esc(r.note || '') + ' · ' + Shell.esc(r.create_time || '') + '</span></span>',
+                '没有可看的打卡')
+            + section('fa-star', '评价', data.reviews || [], r =>
+                '<span style="flex:1;min-width:0">' + Shell.esc(r.poi_name || '（商户）')
+                + ' <span class="stars">' + '★★★★★'.slice(0, Number(r.rating) || 0) + '</span>'
+                + '<span class="hint"> · ' + Shell.esc(r.content || '') + '</span></span>', '没有可看的评价')
+
+        secEl.insertAdjacentHTML('beforeend',
+            '<div class="band"><div class="hint">这里的每一项都按它自己的可见权限过滤：'
+            + '公开＝谁都能看、仅好友＝互为好友才看得到、仅自己＝只有本人可见。</div></div>');
+    })();
+</script>
+</body>
+</html>

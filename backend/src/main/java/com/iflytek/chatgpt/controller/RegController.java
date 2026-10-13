@@ -1,5 +1,7 @@
 package com.iflytek.chatgpt.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -8,15 +10,17 @@ import util.MySQLUtil;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 /**
  * 处理注册逻辑（由原 RegServlet 改写而来）
  */
 @Controller
 public class RegController {
+
+    private static final Logger log = LoggerFactory.getLogger(RegController.class);
 
     @PostMapping("/reg")
     public void reg(@RequestParam(required = false) String username,
@@ -26,9 +30,14 @@ public class RegController {
         // 解决响应的中文乱码
         response.setContentType("text/html;charset=utf-8");
 
-        System.out.println("用户名：" + username);
-        System.out.println("密码：" + password);
-        System.out.println("邮箱：" + email);
+        // 不再把凭据打到控制台：日志会被留存、被截图、被打包带走
+        log.info("收到注册请求：username={}", username);
+
+        if (username == null || username.trim().isEmpty()
+                || password == null || password.trim().isEmpty()) {
+            response.getWriter().write("用户名和密码不能为空");
+            return;
+        }
 
         // 校验账号是否存在，存在的话不允许注册
         boolean flag = checkUserName(username);
@@ -38,20 +47,16 @@ public class RegController {
             return; // 程序执行到这里就返回了，不往下执行
         }
 
-        // 将用户信息存储到数据库
-        // 1、获取数据库连接对象Connection
-        try {
-            Connection connection = MySQLUtil.getConnection();
-            // 2、根据连接对象获取sql 执行对象
-            Statement statement = connection.createStatement();
-            // 3、定义sql 语句
-            String sql = "insert into user(username,password,email) values('" + username + "','" + password + "','" + email + "')";
-            // 4、执行sql语句
-            statement.executeUpdate(sql);
-            // 5、关闭资源。先开后关
-            statement.close();
-            connection.close();
+        // 将用户信息存储到数据库：占位符写法，防止把用户输入当 SQL 执行
+        String sql = "insert into `user`(username, password, email) values(?, ?, ?)";
+        try (Connection connection = MySQLUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, username.trim());
+            statement.setString(2, password);
+            statement.setString(3, email);
+            statement.executeUpdate();
         } catch (SQLException e) {
+            log.error("注册写入失败：username={}", username, e);
             throw new RuntimeException(e);
         }
 
@@ -61,25 +66,20 @@ public class RegController {
 
     /**
      * 校验用户名是否存在，存在返回true,不存在返回false
+     * <p>
+     * 同样改占位符：拼接写法下用户名里塞引号即可改变 SQL 语义。
      */
     private boolean checkUserName(String username) {
-        try {
-            Connection connection = MySQLUtil.getConnection();
-            // 2、根据连接对象获取sql 执行对象
-            Statement statement = connection.createStatement();
-            // 3、定义sql 语句
-            String sql = "select * from user where username='" + username + "'";
-            // 4、执行sql语句
-            ResultSet resultSet = statement.executeQuery(sql);
-            if (resultSet.next()) { // 账号存在
-                return true;
+        String sql = "select id from `user` where username = ?";
+        try (Connection connection = MySQLUtil.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, username.trim());
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
             }
-            // 5、关闭资源。先开后关
-            statement.close();
-            connection.close();
         } catch (SQLException e) {
+            log.error("查询用户名失败：username={}", username, e);
             throw new RuntimeException(e);
         }
-        return false;
     }
 }

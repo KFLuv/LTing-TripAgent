@@ -10,6 +10,13 @@ import java.sql.Statement;
 
 /**
  * MySQL 数据库连接工具类 (适用于 MySQL 5.x)
+ * <p>
+ * <b>默认已经不再是 MySQL</b>：没有显式配置 {@code db.url} / {@code DB_URL} 时，
+ * 走内嵌的 H2（MySQL 兼容模式），库文件落在用户目录下的
+ * {@code .ai-travel-assistant/data/demo}。
+ * <p>
+ * 这样打包给面试官/朋友时，对方机器上不用先装 MySQL 才能用；
+ * 自己开发时在 {@code application.properties} 里配了 {@code db.url}，仍然走 MySQL。
  */
 public class MySQLUtil {
     // 数据库连接参数
@@ -43,13 +50,31 @@ public class MySQLUtil {
         return s == null || s.trim().isEmpty();
     }
 
-    private static String driver = cfg("DB_DRIVER", "com.mysql.jdbc.Driver", "db.driver");
+    /** 内嵌数据库的驱动/账号：H2 自带 sa + 空口令，单文件、免安装 */
+    public static final String DEFAULT_DRIVER = "org.h2.Driver";
+    public static final String DEFAULT_USER = "sa";
 
-    private static String url = cfg("DB_URL",
-            "jdbc:mysql://localhost:3306/user-mannager?useSSL=false&allowPublicKeyRetrieval=true",
-            "db.url");
+    /** 内嵌库的库文件目录（相对用户目录），SessionConfig 也用它，保证会话表落在同一个库里 */
+    private static final String EMBEDDED_DIR = ".ai-travel-assistant/data/demo";
 
-    private static String username = cfg("DB_USER", "root", "db.username");
+    /**
+     * 未显式配置数据库时用的连接串：H2 文件库 + MySQL 兼容模式。
+     * <p>
+     * {@code MODE=MySQL} 让建表语句、{@code on duplicate key update} 这些 MySQL 写法可用；
+     * {@code DATABASE_TO_LOWER} / {@code CASE_INSENSITIVE_IDENTIFIERS} 让大小写不敏感，
+     * 免得代码里的大小写差异在 H2 上变成"表不存在"。
+     */
+    public static String defaultUrl() {
+        String home = System.getProperty("user.home", ".");
+        return "jdbc:h2:file:" + home.replace('\\', '/') + "/" + EMBEDDED_DIR
+                + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE";
+    }
+
+    private static String driver = cfg("DB_DRIVER", DEFAULT_DRIVER, "db.driver");
+
+    private static String url = cfg("DB_URL", defaultUrl(), "db.url");
+
+    private static String username = cfg("DB_USER", DEFAULT_USER, "db.username");
 
     private static String password = cfg("DB_PASSWORD", "", "db.password");
 

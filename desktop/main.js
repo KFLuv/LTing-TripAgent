@@ -1,7 +1,8 @@
-const { app, BrowserWindow, shell, ipcMain, session } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, session, dialog } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
+const fs = require('fs');
 
 const PORT = 8078;
 const CONTEXT = '/chat';
@@ -16,6 +17,31 @@ function jarPath() {
     return app.isPackaged
         ? path.join(process.resourcesPath, 'backend', 'chat-gpt.jar')
         : path.join(__dirname, '..', 'backend', 'target', 'chat-gpt.jar');
+}
+
+/**
+ * 用哪个 java 跑后端：优先自带运行时，最后才回落到系统 PATH。
+ * <p>
+ * 面试官/朋友的机器上不一定装过 Java，所以打包时会把一个用 jlink 裁好的
+ * JRE 放进 resources/jre（本地开发时则是 desktop/build/jre）。
+ */
+function javaExe() {
+    const bundled = app.isPackaged
+        ? path.join(process.resourcesPath, 'jre', 'bin', 'java.exe')
+        : path.join(__dirname, 'build', 'jre', 'bin', 'java.exe');
+    return fs.existsSync(bundled) ? bundled : 'java';
+}
+
+/**
+ * 后端启动参数。
+ * <p>
+ * 这里刻意不传任何数据库参数：默认走内嵌 H2 由后端自己决定
+ * （见 util/MySQLUtil.defaultUrl()，库文件落在用户目录下的 .ai-travel-assistant/data）。
+ * 让带分号的 JDBC URL 穿过进程边界既没必要，也容易在某些 shell 下被拆坏。
+ * 要连自己的 MySQL 时，设环境变量 DB_URL / DB_USER / DB_PASSWORD 即可覆盖。
+ */
+function backendArgs(jar) {
+    return ['-jar', jar, '--server.port=' + PORT];
 }
 
 /** 探测后端是否已经起来（HTTP 200 即视为就绪） */
@@ -45,7 +71,9 @@ async function waitForBackend(timeoutMs) {
 /** 把 Java 后端作为本地服务拉起来（不依赖外部 Web 服务器） */
 function startBackend() {
     const jar = jarPath();
-    backend = spawn('java', ['-jar', jar], {
+    const java = javaExe();
+    console.log('[backend] 使用 java：', java);
+    backend = spawn(java, backendArgs(jar), {
         cwd: path.dirname(jar),
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe']
@@ -53,6 +81,15 @@ function startBackend() {
     spawnedBackend = true;
     backend.stdout.on('data', d => process.stdout.write('[backend] ' + d));
     backend.stderr.on('data', d => process.stderr.write('[backend] ' + d));
+    // 没有这段的话，找不到 java 时会抛未捕获异常，整个桌面端直接崩掉、连提示都没有
+    backend.on('error', err => {
+        console.error('[backend] 启动失败：', err);
+        backend = null;
+        dialog.showErrorBox('无法启动本地服务',
+            '没有找到可用的 Java 运行环境，后端服务没能启动。\n\n'
+            + '请确认程序目录下带有 jre 文件夹；或自行安装 Java 11 后重试。\n\n'
+            + '系统报错：' + err.message);
+    });
     backend.on('exit', code => {
         console.log('[backend] exited with code', code);
         backend = null;
@@ -124,6 +161,12 @@ app.whenReady().then(async () => {
     const ready = await waitForBackend(120000);
     if (!ready) {
         console.error('后端未能在规定时间内启动，请检查是否已构建 backend/target/chat-gpt.jar');
+        dialog.showErrorBox('本地服务启动失败',
+            '后端服务在 2 分钟内没有就绪，界面可能无法正常使用。\n\n'
+            + '常见原因：\n'
+            + '· 程序目录下的 jre 文件夹缺失（打包不完整）\n'
+            + '· 8078 端口被其它程序占用\n'
+            + '· 数据库配置指向了连不上的 MySQL（如果你手动设过 DB_URL）');
     }
 
     createWindow();

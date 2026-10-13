@@ -502,10 +502,11 @@ public class ToolboxController {
         BigDecimal safeAmount = amount == null
                 ? BigDecimal.ZERO : BigDecimal.valueOf(amount).setScale(2, RoundingMode.HALF_UP);
 
+        String amountText = safeAmount.toPlainString();
         MySQLUtil.executeUpdate(
-                "insert into user_preference(username, tag, value, update_time) values(?, ?, ?, now())"
-                        + " on duplicate key update value = values(value), update_time = now()",
-                username, THRESHOLD_TAG, safeAmount.toPlainString());
+                "insert into user_preference(username, tag, `value`, update_time) values(?, ?, ?, now())"
+                        + " on duplicate key update `value` = ?, update_time = now()",
+                username, THRESHOLD_TAG, amountText, amountText);
 
         result.put("status", "success");
         result.put("message", "已设置预算告警阈值");
@@ -516,7 +517,7 @@ public class ToolboxController {
 
     /** 读取当前用户的预算告警阈值，没有则返回 0 */
     private BigDecimal readThreshold(String username) {
-        String sql = "select value from user_preference where username = ? and tag = ?";
+        String sql = "select `value` from user_preference where username = ? and tag = ?";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
