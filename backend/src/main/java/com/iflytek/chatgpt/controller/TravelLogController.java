@@ -458,7 +458,8 @@ public class TravelLogController {
     private List<Map<String, Object>> loadLogs(String username, Integer tripId, boolean ascending) {
         List<Map<String, Object>> list = new ArrayList<>();
         boolean filter = tripId != null;
-        String sql = "select id, trip_id, place, lat, lng, rating, note, duration_min, photos, log_time"
+        String sql = "select id, trip_id, place, lat, lng, rating, note, duration_min, photos, images,"
+                + " poi_id, poi_name, log_time"
                 + " from travel_log where username = ?"
                 + (filter ? " and trip_id = ?" : "")
                 + (ascending ? " order by log_time, id" : " order by id desc");
@@ -484,6 +485,9 @@ public class TravelLogController {
                     int duration = rs.getInt("duration_min");
                     m.put("durationMin", rs.wasNull() ? null : duration);
                     m.put("photos", rs.getString("photos"));
+                    m.put("images", rs.getString("images"));
+                    m.put("poiId", rs.getString("poi_id"));
+                    m.put("poiName", rs.getString("poi_name"));
                     m.put("logTime", formatTime(rs.getTimestamp("log_time")));
                     list.add(m);
                 }

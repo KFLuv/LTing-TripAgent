@@ -65,9 +65,7 @@ public class NearbyController {
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> pois = (List<Map<String, Object>>) found.get("pois");
-        for (Map<String, Object> poi : pois) {
-            attachReviewStats(poi);
-        }
+        attachReviewStats(pois);
 
         result.put("status", "success");
         result.put("source", found.get("source"));
@@ -280,29 +278,61 @@ public class NearbyController {
         return v.length() > max ? v.substring(0, max) : v;
     }
 
-    /** 给一条商户补上"本机用户评过多少分、多少条点评" */
-    private void attachReviewStats(Map<String, Object> poi) {
-        Object id = poi.get("poiId");
-        if (id == null) {
+    /**
+     * 给商户列表批量补上"本机用户评过多少分、多少条点评"。
+     * <p>
+     * 一次 group by 查完再合并——按家逐条查的话，200 家就是 200 次数据库往返。
+     */
+    private void attachReviewStats(List<Map<String, Object>> pois) {
+        List<String> ids = new ArrayList<>();
+        for (Map<String, Object> poi : pois) {
+            Object id = poi.get("poiId");
+            if (id != null && !String.valueOf(id).isEmpty()) {
+                ids.add(String.valueOf(id));
+            }
+        }
+        if (ids.isEmpty()) {
             return;
         }
+        StringBuilder in = new StringBuilder();
+        for (int i = 0; i < ids.size(); i++) {
+            in.append(i == 0 ? "?" : ",?");
+        }
+        Map<String, Object[]> stats = new LinkedHashMap<>();
+        String sql = "select poi_id, count(*) as c, avg(rating) as a from poi_review"
+                + " where poi_id in (" + in + ") group by poi_id";
         try (Connection conn = MySQLUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                     "select count(*), avg(rating) from poi_review where poi_id = ?")) {
-            ps.setString(1, String.valueOf(id));
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < ids.size(); i++) {
+                ps.setString(i + 1, ids.get(i));
+            }
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    int count = rs.getInt(1);
-                    double avg = rs.getDouble(2);
-                    poi.put("reviewCount", count);
-                    if (count > 0) {
-                        poi.put("ourRating", Math.round(avg * 10) / 10.0);
-                    }
+                while (rs.next()) {
+                    stats.put(rs.getString("poi_id"),
+                            new Object[]{rs.getInt("c"), rs.getDouble("a")});
                 }
             }
         } catch (SQLException e) {
-            log.warn("统计商户点评失败：{}", e.getMessage());
+            log.warn("批量统计商户点评失败：{}", e.getMessage());
         }
+        for (Map<String, Object> poi : pois) {
+            Object[] s = stats.get(String.valueOf(poi.get("poiId")));
+            if (s == null) {
+                continue;
+            }
+            int count = (Integer) s[0];
+            poi.put("reviewCount", count);
+            if (count > 0) {
+                poi.put("ourRating", Math.round(((Double) s[1]) * 10) / 10.0);
+            }
+        }
+    }
+
+    /** 单条商户（详情页用）：复用批量逻辑 */
+    private void attachReviewStats(Map<String, Object> poi) {
+        List<Map<String, Object>> one = new ArrayList<>();
+        one.add(poi);
+        attachReviewStats(one);
     }
 
     /** 坐标优先用本页传来的（页面自己定位），其次用会话里保存的 GPS 上报 */

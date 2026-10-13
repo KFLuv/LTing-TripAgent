@@ -135,6 +135,16 @@ function createWindow() {
 // 站内链接留在本窗口，站外链接交给系统默认浏览器
 app.on('web-contents-created', (_event, contents) => {
     contents.setWindowOpenHandler(({ url }) => {
+        // 内嵌的 <webview>（高德地图、大众点评）里点出来的新窗口：
+        // 既不丢给系统浏览器（那会变成"明明内嵌却跳出去了"），也不能直接拒绝
+        // ——点评的搜索结果就是 target=_blank，拒绝会导致"点了没反应"。
+        // 所以：把新窗口的地址就地加载到同一个内嵌页里，导航始终留在面板内。
+        if (typeof contents.getType === 'function' && contents.getType() === 'webview') {
+            if (/^https?:\/\//i.test(url) && typeof contents.loadURL === 'function') {
+                contents.loadURL(url).catch(() => { /* 加载失败就停在这一页，不弹外窗 */ });
+            }
+            return { action: 'deny' };
+        }
         if (/^https?:\/\/localhost:/.test(url)) {
             return { action: 'allow' };
         }

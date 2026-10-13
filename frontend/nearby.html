@@ -180,7 +180,8 @@
                 lat: coords.lat,
                 lng: coords.lng,
                 radius: radius,
-                keyword: document.getElementById('keyword').value.trim()
+                keyword: document.getElementById('keyword').value.trim(),
+                limit: 200          // 店铺不设上限：能翻到多少就返回多少
             }).catch(() => null);
             if (!data) {
                 msg.className = 'hint error';

@@ -43,12 +43,14 @@ public class NearbyService {
     /** 本模块允许的搜索半径：只开放 5km / 10km 两档，避免越界查询 */
     private static final int MIN_RADIUS = 5_000;
     private static final int MAX_RADIUS = 10_000;
-    private static final int MAX_LIMIT = 60;
+    /** 店铺不设上限：单次最多取这么多家（8 页 × 25 条/页，高德单页上限 25） */
+    private static final int MAX_LIMIT = 200;
     /** 本模块承诺至少返回这么多家（不足时自动翻页取） */
     private static final int MIN_RESULT = 35;
-    /** 单页最多 25 条（高德限制），最多翻 3 页 */
+    /** 单页最多 25 条（高德限制） */
     private static final int PAGE_SIZE = 25;
-    private static final int MAX_PAGES = 3;
+    /** 翻页上限：8 页 = 200 家 */
+    private static final int MAX_PAGES = 8;
 
     private static final String AMAP_AROUND =
             "https://restapi.amap.com/v3/place/around?output=JSON&sortrule=distance&extensions=all&location=";

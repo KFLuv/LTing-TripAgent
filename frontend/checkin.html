@@ -27,7 +27,10 @@
                         <input type="text" id="place" placeholder="手填地点，如：汕头小公园">
                         <button class="btn ghost" id="pick"><i class="fas fa-store"></i> 从附近商户选</button>
                     </div>
-                    <div class="hint" id="pick-msg" style="margin-top:6px">选商户后，打卡会同时出现在该商户的详情页。</div>
+                    <div class="hint" id="pick-msg" style="margin-top:6px">
+                        关联到商户的打卡，会同时出现在那家店的详情页；自己手填的地点只记在「打卡」里。
+                    </div>
+                    <div id="poi-linked" class="hint" style="margin-top:6px"></div>
                 </div>
                 <div class="field-row">
                     <div class="field"><label>感受</label>
@@ -63,6 +66,140 @@
         </div>
     </main>
 </div>
+
+<!-- 选商户大页：与「附近吃喝玩乐」同一套卡片（图 / 评分 / 距离 / 城市地址）+ 5 公里内按店名搜 -->
+<div class="poi-picker" id="picker">
+    <div class="picker-head">
+        <div class="picker-title"><i class="fas fa-store"></i> 选一家商户打卡</div>
+        <div class="picker-search">
+            <input type="text" id="picker-keyword" placeholder="搜店名 / 品类，如 麦当劳、火锅（5 公里内）">
+            <button class="btn" id="picker-search"><i class="fas fa-magnifying-glass"></i> 搜索</button>
+        </div>
+        <button class="btn ghost" id="picker-close"><i class="fas fa-xmark"></i> 关闭</button>
+    </div>
+    <div class="picker-status hint" id="picker-status">点「从附近商户选」开始；定位后 5 公里内的商户都在这里。</div>
+    <div class="picker-body"><div class="cards two" id="picker-results"></div></div>
+</div>
+
+<style>
+    /* 全屏选择页：铺满窗口、自己滚动，不再挤在表单里 */
+    .poi-picker {
+        position: fixed;
+        inset: 0;
+        z-index: 1600;
+        display: none;
+        flex-direction: column;
+        background: var(--bg);
+    }
+
+    .poi-picker.show {
+        display: flex;
+    }
+
+    .picker-head {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 22px;
+        background: rgba(255, 255, 255, .96);
+        backdrop-filter: blur(28px) saturate(190%);
+        border-bottom: 1px solid var(--line);
+    }
+
+    .picker-title {
+        font-size: 15px;
+        font-weight: 650;
+        letter-spacing: -.02em;
+        white-space: nowrap;
+    }
+
+    .picker-search {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        gap: 8px;
+    }
+
+    .picker-search input {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .picker-status {
+        flex: none;
+        padding: 10px 22px 0;
+    }
+
+    .picker-body {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 14px 22px 30px;
+    }
+
+    /* 铺满窗口：不限最大宽度，按可用宽度自动决定每行几家（窄屏 2 家、宽屏 5–6 家） */
+    .picker-body .cards.two {
+        max-width: none;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 14px;
+    }
+
+    /* 卡片：大图 + 信息，和「附近吃喝玩乐」一致 */
+    .picker-card {
+        padding: 0;
+        overflow: hidden;
+        cursor: pointer;
+        transition: box-shadow .24s var(--spring), transform .24s var(--spring);
+    }
+
+    .picker-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    .picker-card.on {
+        box-shadow: 0 0 0 2px var(--brand), var(--shadow);
+    }
+
+    .picker-card .cover {
+        width: 100%;
+        height: 132px;
+        object-fit: cover;
+        background: #eef2f7;
+        display: block;
+    }
+
+    .picker-card .info {
+        padding: 12px 14px 14px;
+    }
+
+    .picker-card .name {
+        font-size: 14.5px;
+        font-weight: 650;
+        letter-spacing: -.01em;
+    }
+
+    .picker-card .meta {
+        margin-top: 4px;
+        font-size: 12.5px;
+        color: var(--muted);
+    }
+
+    .picker-card .addr {
+        margin-top: 6px;
+        font-size: 12.5px;
+        color: var(--ink-2);
+        word-break: break-word;
+    }
+
+    .picker-card .pick-hint {
+        margin-top: 10px;
+        font-size: 12.5px;
+        color: var(--brand);
+        font-weight: 600;
+    }
+</style>
 <script src="assets/shell.js"></script>
 <script>
     (async function () {
@@ -71,38 +208,134 @@
 
         let poi = null;       // 选中的附近商户
         let picked = [];      // 图片 data URL
+        let lastPois = [];    // 最近一次查到的附近商户，选中态据此刷新
         const msg = document.getElementById('msg');
+        const linkEl = document.getElementById('poi-linked');
+        const picker = document.getElementById('picker');
+        const pickerResults = document.getElementById('picker-results');
+        const pickerStatus = document.getElementById('picker-status');
 
-        document.getElementById('pick').addEventListener('click', async function () {
-            const info = document.getElementById('pick-msg');
-            info.className = 'hint';
-            info.textContent = '正在定位并查附近商户…';
+        /** 星级显示 */
+        function stars(rating) {
+            const r = Math.round(Number(rating) || 0);
+            return '★★★★★'.slice(0, r) + '☆☆☆☆☆'.slice(0, 5 - r);
+        }
+
+        /**
+         * 关联 / 取消关联商户。
+         * 点卡片即生效（不再有"选完还要再点一次确认"的隐藏步骤——那一步漏掉，
+         * 打卡就会存成没有商户归属，商户详情页自然看不到）。
+         */
+        function setLinked(p) {
+            poi = p ? {poiId: p.poiId, poiName: p.name} : null;
+            if (p) {
+                document.getElementById('place').value = p.name;
+                linkEl.className = 'hint ok';
+                linkEl.innerHTML = '已关联商户：<b>' + Shell.esc(p.name) + '</b>'
+                    + ((p.city || p.address)
+                        ? '（' + Shell.esc([p.city, p.address].filter(Boolean).join(' ')) + '）' : '')
+                    + '　<button class="btn small ghost" id="poi-unlink">取消关联</button>';
+                document.getElementById('poi-unlink').addEventListener('click', () => setLinked(null));
+            } else {
+                linkEl.className = 'hint';
+                linkEl.textContent = '未关联商户：这条打卡只会出现在「打卡」列表里。';
+            }
+            renderResults(lastPois);
+        }
+
+        /** 商户卡片列表：图 + 名 + 评分 + 距离 + 城市地址，和「附近吃喝玩乐」同一套信息 */
+        function renderResults(pois) {
+            lastPois = pois || [];
+            if (!lastPois.length) {
+                pickerResults.innerHTML = '';
+                return;
+            }
+            pickerResults.innerHTML = lastPois.map((p, i) => {
+                const rating = (p.ourRating != null) ? p.ourRating : p.sourceRating;
+                const cover = (p.photos && p.photos.length) ? p.photos[0] : Shell.DEFAULT_AVATAR;
+                const on = poi && poi.poiId === p.poiId;
+                return '<div class="card picker-card' + (on ? ' on' : '') + '" data-pick="' + i + '">'
+                    + '<img class="cover" src="' + cover + '" alt="店铺图">'
+                    + '<div class="info">'
+                    + '<div class="name">' + Shell.esc(p.name || '') + '</div>'
+                    + '<div class="meta">' + (rating != null
+                        ? '<span class="stars">' + stars(rating) + '</span> ' + Shell.esc(rating) + ' · ' : '')
+                    + (p.distance >= 0
+                        ? '距你 ' + (p.distance >= 1000 ? (p.distance / 1000).toFixed(1) + ' km' : p.distance + ' m')
+                        : '距离未知')
+                    + (p.type ? ' · ' + Shell.esc(String(p.type).split(';').pop()) : '')
+                    + '</div>'
+                    + '<div class="addr"><i class="fas fa-location-dot"></i> '
+                    + Shell.esc([p.city, p.address].filter(Boolean).join(' ') || '（无地址信息）') + '</div>'
+                    + '<div class="pick-hint">' + (on ? '✔ 已选这一家' : '点这张卡选它') + '</div>'
+                    + '</div></div>';
+            }).join('');
+            pickerResults.querySelectorAll('[data-pick]').forEach(el => {
+                el.addEventListener('click', () => {
+                    setLinked(lastPois[parseInt(el.getAttribute('data-pick'), 10)]);
+                    closePicker();
+                });
+            });
+        }
+
+        /** 查 5 公里内的商户；带关键词就是按店名/品类搜 */
+        async function loadNearby() {
+            const keyword = (document.getElementById('picker-keyword').value || '').trim();
+            pickerStatus.className = 'picker-status hint';
+            pickerStatus.textContent = keyword ? ('正在搜「' + keyword + '」…') : '正在定位并查附近商户…';
             let coords;
             try {
                 coords = await Shell.locate();
             } catch (e) {
-                info.className = 'hint error';
-                info.textContent = e.message;
+                pickerStatus.className = 'picker-status hint error';
+                pickerStatus.textContent = e.message;
                 return;
             }
-            const data = await Shell.api('nearby/search', {lat: coords.lat, lng: coords.lng, radius: 5000}).catch(() => null);
+            const data = await Shell.api('nearby/search', {
+                lat: coords.lat, lng: coords.lng, radius: 5000, keyword: keyword,
+                limit: 200          // 不设上限：5 公里内能查到多少家就都列出来
+            }).catch(() => null);
             if (!data || data.status !== 'success' || !data.pois.length) {
-                info.className = 'hint error';
-                info.textContent = (data && data.message) || '附近没查到商户';
+                pickerStatus.className = 'picker-status hint error';
+                pickerStatus.textContent = (data && data.message)
+                    || (keyword ? ('5 公里内没搜到「' + keyword + '」，换个词或清空看全部') : '5 公里内没查到商户');
+                renderResults([]);
                 return;
             }
-            info.innerHTML = '选一家：<select id="poi-pick">'
-                + data.pois.slice(0, 20).map((p, i) => '<option value="' + i + '">'
-                    + Shell.esc(p.name) + (p.distance >= 0 ? '（' + p.distance + ' m）' : '') + '</option>').join('')
-                + '</select> <button class="btn small" id="poi-ok">就用这家</button>';
-            document.getElementById('poi-ok').addEventListener('click', () => {
-                const idx = parseInt(document.getElementById('poi-pick').value, 10);
-                const p = data.pois[idx];
-                poi = {poiId: p.poiId, poiName: p.name};
-                document.getElementById('place').value = p.name;
-                info.className = 'hint ok';
-                info.textContent = '已选商户：' + p.name + '（这条打卡会出现在它的详情页）';
-            });
+            renderResults(data.pois);
+            pickerStatus.className = 'picker-status hint';
+            pickerStatus.textContent = '5 公里内共 ' + data.pois.length + ' 家，已全部列出'
+                + '；点一张卡即选中，也可以搜店名缩小范围，或关闭后在「地点」里手填。';
+        }
+
+        function openPicker() {
+            picker.classList.add('show');
+            loadNearby();
+        }
+
+        function closePicker() {
+            picker.classList.remove('show');
+        }
+
+        document.getElementById('pick').addEventListener('click', function () {
+            openPicker();
+        });
+
+        document.getElementById('picker-search').addEventListener('click', loadNearby);
+
+        document.getElementById('picker-close').addEventListener('click', closePicker);
+
+        document.getElementById('picker-keyword').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                loadNearby();
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && picker.classList.contains('show')) {
+                closePicker();
+            }
         });
 
         document.getElementById('images').addEventListener('change', async function (ev) {
@@ -137,7 +370,11 @@
                 return '<div class="meal-row" style="align-items:flex-start">'
                     + '<span class="tag plain">' + ratingCn(l.rating) + '</span>'
                     + '<div style="flex:1;min-width:0">'
-                    + '<div>' + Shell.esc(l.place || '') + '<span class="hint"> · ' + Shell.esc(l.logTime || '') + '</span></div>'
+                    + '<div>' + Shell.esc(l.place || '')
+                    + (l.poiId
+                        ? '<span class="tag" style="margin-left:6px">已关联商户</span>'
+                        : '')
+                    + '<span class="hint"> · ' + Shell.esc(l.logTime || '') + '</span></div>'
                     + (l.note ? '<div class="hint">' + Shell.esc(l.note) + '</div>' : '')
                     + (imgs.length ? '<div class="thumb-grid">'
                         + imgs.map(u => '<img src="' + u + '" alt="打卡图片">').join('') + '</div>' : '')
@@ -173,12 +410,13 @@
                 document.getElementById('note').value = '';
                 document.getElementById('place').value = '';
                 document.getElementById('thumbs').innerHTML = '';
+                setLinked(null);
                 picked = [];
-                poi = null;
                 load();
             }
         });
 
+        setLinked(null);   // 初始化"未关联商户"的提示
         load();
     })();
 </script>
