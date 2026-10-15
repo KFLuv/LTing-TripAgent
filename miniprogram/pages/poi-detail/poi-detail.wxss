@@ -68,3 +68,8 @@
   border-radius: 20rpx;
   font-size: 28rpx;
 }
+
+.imap {
+  width: 100%;
+  height: 420rpx;
+}

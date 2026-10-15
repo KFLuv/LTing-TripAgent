@@ -36,6 +36,15 @@
     <button class="btn btn-ghost" style="flex:1;min-width:300rpx" bindtap="copyForDianping">复制店名+地址去点评搜</button>
   </view>
 
+  <!-- 内嵌地图：不带图标的标记用圆圈 + 连线表达，红小圈=目的地，蓝线=我→店 -->
+  <view class="section-title">位置（内嵌地图）</view>
+  <view class="card" style="padding:0;overflow:hidden">
+    <map class="imap" wx:if="{{poi.lat && poi.lng}}" latitude="{{poi.lat}}" longitude="{{poi.lng}}"
+         scale="15" show-location="{{true}}" circles="{{circles}}" polyline="{{polyline}}"
+         bindtap="navigate" />
+    <view class="empty" wx:else>这家店没有返回坐标，开不了地图。</view>
+  </view>
+
   <view class="section-title">菜单（{{menu.length}}）</view>
   <view class="card card-tight" wx:if="{{menu.length}}">
     <view class="list-item row-between" wx:for="{{menu}}" wx:key="name">

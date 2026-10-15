@@ -49,7 +49,18 @@ Page({
       lng: Number(p.lng) || 0,
       distanceText: p.distance ? Math.round(p.distance) + 'm' : ''
     };
-    this.setData({ poi: poi, menu: d.poi.menu || [] });
+    this.setData({
+      poi: poi,
+      menu: d.poi.menu || [],
+      circles: [{
+        latitude: poi.lat,
+        longitude: poi.lng,
+        radius: 60,
+        color: '#0071e3cc',
+        fillColor: '#0071e333',
+        strokeWidth: 2
+      }]
+    });
     wx.setNavigationBarTitle({ title: poi.name || '商户详情' });
 
     const m = await api.nearbyMenu(this.data.poiId).catch(() => null);
@@ -67,9 +78,30 @@ Page({
       coords: loc,
       locText: loc.real ? '已定位' : '没拿到定位（' + (loc.name || '') + '）；可在下方重新定位'
     });
+    this.drawLine(loc);
     if (loc.real) {
       api.reportLocation({ lat: loc.lat, lng: loc.lng, place: '', accuracy: loc.accuracy || '' });
     }
+  },
+
+  /** 我 → 店 的一条线，让"内嵌地图"不只是个点 */
+  drawLine(loc) {
+    const p = this.data.poi;
+    if (!p || !p.lat || !p.lng || !loc || !loc.real) {
+      this.setData({ polyline: [] });
+      return;
+    }
+    this.setData({
+      polyline: [{
+        points: [
+          { latitude: loc.lat, longitude: loc.lng },
+          { latitude: p.lat, longitude: p.lng }
+        ],
+        color: '#0071e3',
+        width: 4,
+        arrowLine: true
+      }]
+    });
   },
 
   relocate() {
