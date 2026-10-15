@@ -53,6 +53,6 @@
     </view>
   </view>
 
-  <view class="hint">后端：{{baseUrl}}</view>
-  <view class="hint">开发者工具里请勾选「不校验合法域名」，否则本地 http 会被拦截。</view>
+  <view class="hint" bindtap="editBaseUrl">后端：{{baseUrl}}（点这里改）</view>
+  <view class="hint">开发者工具请勾选「不校验合法域名」；真机/体验版必须换成 https 域名。</view>
 </view>

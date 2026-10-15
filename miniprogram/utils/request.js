@@ -1,4 +1,4 @@
-const { baseUrl } = require('../config.js');
+const conf = require('../config.js');
 
 /** 令牌存在本地缓存里：小程序对 Cookie 不可靠（跨站 Set-Cookie 会被丢），身份走这个头 */
 const TOKEN_KEY = 'aitvToken';
@@ -59,7 +59,7 @@ function request(path, options) {
 
   return new Promise(function (resolve, reject) {
     wx.request({
-      url: baseUrl + path,
+      url: conf.getBaseUrl() + path,
       method: method,
       data: isRaw ? opt.raw : (opt.data || {}),
       header: header,
@@ -83,7 +83,7 @@ function request(path, options) {
           msg = '请求超时：后端的 Agent 还在跑，过一会儿看「历史」里的会话';
         } else {
           // 最常见的一种：后端没起来（8078 没人监听）
-          msg = '连不上后端 ' + baseUrl + '：先把后端起起来再登录';
+          msg = '连不上后端 ' + conf.getBaseUrl() + '：先把后端起起来（真机要换服务器地址）';
         }
         console.error('[request] ' + path + ' 失败：' + raw);
         if (!opt.silent) {

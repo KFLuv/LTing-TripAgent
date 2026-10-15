@@ -1,5 +1,5 @@
 const api = require('../../utils/api.js');
-const { baseUrl } = require('../../config.js');
+const conf = require('../../config.js');
 
 Page({
   data: {
@@ -9,7 +9,23 @@ Page({
     password2: '',
     email: '',
     loading: false,
-    baseUrl: baseUrl
+    baseUrl: conf.getBaseUrl()
+  },
+
+  /** 真机 / 体验版要指到 https 域名，这里改完存本地，不用重新上传代码 */
+  editBaseUrl() {
+    wx.showModal({
+      title: '后端地址',
+      editable: true,
+      placeholderText: conf.getBaseUrl(),
+      content: '',
+      success: (r) => {
+        if (!r.confirm) return;
+        const v = conf.setBaseUrl(r.content);
+        this.setData({ baseUrl: v });
+        api.toast('已切到 ' + v);
+      }
+    });
   },
 
   onUser(e) {
