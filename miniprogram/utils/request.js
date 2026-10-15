@@ -47,13 +47,19 @@ function request(path, options) {
       },
       fail: function (err) {
         const raw = (err && err.errMsg) || '网络异常';
-        let msg = '请求失败：' + raw;
+        let msg;
         if (raw.indexOf('domain') >= 0 || raw.indexOf('not in domain') >= 0) {
-          msg = '域名未放行：开发者工具请勾选「不校验合法域名」';
+          msg = '域名未放行：开发者工具里勾上「不校验合法域名」再编译一次';
         } else if (raw.indexOf('timeout') >= 0) {
-          msg = '请求超时，后端的 Agent 还在跑，稍后再看会话记录';
+          msg = '请求超时：后端的 Agent 还在跑，过一会儿看「历史」里的会话';
+        } else {
+          // 最常见的一种：后端没起来（8078 没人监听）
+          msg = '连不上后端 ' + baseUrl + '：先把后端起起来再登录';
         }
-        if (!opt.silent) toast(msg);
+        console.error('[request] ' + path + ' 失败：' + raw);
+        if (!opt.silent) {
+          wx.showToast({ title: msg, icon: 'none', duration: 4000 });
+        }
         reject(new Error(msg));
       }
     });
