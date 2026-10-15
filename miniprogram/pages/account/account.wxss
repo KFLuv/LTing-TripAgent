@@ -1,0 +1,5 @@
+.a-name {
+  font-size: 40rpx;
+  font-weight: 700;
+  margin: 6rpx 0;
+}

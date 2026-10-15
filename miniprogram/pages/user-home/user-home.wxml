@@ -1,0 +1,56 @@
+<view class="page" wx:if="{{profile}}">
+  <view class="card">
+    <view class="row">
+      <view class="avatar">{{initial}}</view>
+      <view class="grow" style="margin-left:24rpx">
+        <view class="u-name">{{profile.nickname || profile.username}}</view>
+        <view class="muted">{{profile.username}}{{isFriend ? ' · 已是好友' : ''}}</view>
+      </view>
+      <button class="btn btn-ghost btn-mini" wx:if="{{!isSelf && !isFriend}}" bindtap="addFriend">加好友</button>
+    </view>
+    <view class="muted" style="margin-top:16rpx" wx:if="{{profile.bio}}">{{profile.bio}}</view>
+    <view class="row" style="gap:10rpx;flex-wrap:wrap;margin-top:12rpx" wx:if="{{profile.tags}}">
+      <view class="tag tag-brand">{{profile.tags}}</view>
+    </view>
+  </view>
+
+  <view class="section-title">动态（{{moments.length}}）</view>
+  <view class="card card-tight" wx:if="{{moments.length}}">
+    <view class="list-item" wx:for="{{moments}}" wx:key="id">
+      <view class="muted">{{item.createTime}}{{item.place ? ' · ' + item.place : ''}}</view>
+      <view class="u-content">{{item.content}}</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>没有对你可看的动态</view>
+
+  <view class="section-title">打卡（{{logs.length}}）</view>
+  <view class="card card-tight" wx:if="{{logs.length}}">
+    <view class="list-item row-between" wx:for="{{logs}}" wx:key="id">
+      <view class="grow">
+        <view class="u-name">{{item.poiName || item.place || '未写地点'}}</view>
+        <view class="muted">{{item.createTime}}</view>
+      </view>
+      <view class="tag tag-warn" wx:if="{{item.rating}}">★ {{item.rating}}</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>没有对你可看的打卡</view>
+
+  <view class="section-title">行程（{{trips.length}}）</view>
+  <view class="card card-tight" wx:if="{{trips.length}}">
+    <view class="list-item" wx:for="{{trips}}" wx:key="id">
+      <view class="u-name">{{item.title}}</view>
+      <view class="muted">{{item.updateTime || item.createTime}}</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>没有对你可看的行程</view>
+
+  <view class="section-title">评价（{{reviews.length}}）</view>
+  <view class="card card-tight" wx:if="{{reviews.length}}">
+    <view class="list-item" wx:for="{{reviews}}" wx:key="id">
+      <view class="u-name">{{item.poiName || item.place || '商户'}}</view>
+      <view class="u-content">{{item.content || item.note}}</view>
+      <view class="muted">{{item.createTime}}</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>没有对你可看的评价</view>
+</view>

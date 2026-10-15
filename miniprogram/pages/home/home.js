@@ -67,6 +67,18 @@ Page({
   goProfile() {
     wx.switchTab({ url: '/pages/profile/profile' });
   },
+  goSquare() {
+    wx.navigateTo({ url: '/pages/square/square' });
+  },
+  goCheckin() {
+    wx.navigateTo({ url: '/pages/checkin/checkin' });
+  },
+  goFriends() {
+    wx.navigateTo({ url: '/pages/friends/friends' });
+  },
+  goAccount() {
+    wx.navigateTo({ url: '/pages/account/account' });
+  },
   openTrip(e) {
     wx.navigateTo({ url: '/pages/trip-detail/trip-detail?id=' + e.currentTarget.dataset.id });
   }

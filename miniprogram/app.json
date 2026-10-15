@@ -6,7 +6,12 @@
     "pages/nearby/nearby",
     "pages/profile/profile",
     "pages/login/login",
-    "pages/trip-detail/trip-detail"
+    "pages/trip-detail/trip-detail",
+    "pages/square/square",
+    "pages/checkin/checkin",
+    "pages/friends/friends",
+    "pages/user-home/user-home",
+    "pages/account/account"
   ],
   "window": {
     "backgroundTextStyle": "light",

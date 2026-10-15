@@ -1,0 +1,73 @@
+<view class="page">
+  <view class="card card-tight" wx:if="{{logs.length}}">
+    <view class="list-item" wx:for="{{logs}}" wx:key="id" data-index="{{index}}" bindlongpress="remove">
+      <view class="row-between">
+        <view class="c-place">{{item.poiName || item.place || '（没写地点）'}}</view>
+        <view class="muted">{{item.createTime}}</view>
+      </view>
+      <view class="muted" wx:if="{{item.note}}">{{item.note}}</view>
+      <view class="row" style="margin-top:10rpx;gap:10rpx;flex-wrap:wrap">
+        <view class="tag tag-warn" wx:if="{{item.rating}}">★ {{item.rating}}</view>
+        <view class="tag" wx:if="{{item.durationMin}}">{{item.durationMin}} 分钟</view>
+        <view class="tag tag-brand" wx:if="{{item.poiId}}">关联店铺</view>
+      </view>
+      <view class="m-imgs" wx:if="{{item.images.length}}">
+        <image wx:for="{{item.images}}" wx:for-item="img" wx:key="*this" class="m-img" src="{{img}}"
+               mode="aspectFill" data-i="{{index}}" data-urls="{{item.images}}" bindtap="previewImage" />
+      </view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>还没有打卡记录。点右下角，选店或手写地点都行。</view>
+  <view class="hint">长按一条可以删除。打卡记录独立于动态，也会出现在该商户的详情里。</view>
+
+  <view class="fab" bindtap="open">＋ 打卡</view>
+
+  <view class="mask" wx:if="{{creating}}" bindtap="close">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title">记录一次打卡</view>
+
+      <view class="field">
+        <view class="field-label">地点</view>
+        <input class="field-input" value="{{draft.place}}" bindinput="onPlace" placeholder="直接写地名，或下面搜店铺" />
+      </view>
+
+      <view class="row" style="gap:16rpx;margin-bottom:12rpx">
+        <input class="field-input grow" style="background:#f0f0f3;border-radius:20rpx;padding:0 24rpx;height:76rpx"
+               value="{{keyword}}" placeholder="搜附近店铺（如 麦当劳）" bindinput="onKeyword" bindconfirm="searchPoi" />
+        <button class="btn btn-ghost btn-mini" style="height:76rpx" bindtap="searchPoi">搜索</button>
+      </view>
+      <view wx:if="{{pois.length}}" class="poi-box">
+        <view class="poi-row" wx:for="{{pois}}" wx:key="poiId" data-index="{{index}}" bindtap="pickPoi">
+          <view class="grow">
+            <view class="c-place ellipsis">{{item.name}}</view>
+            <view class="muted ellipsis">{{item.city}} {{item.address}}{{item.distanceText ? ' · ' + item.distanceText : ''}}</view>
+          </view>
+          <view class="tag" wx:if="{{item.rating}}">★ {{item.rating}}</view>
+        </view>
+      </view>
+
+      <view class="field">
+        <view class="field-label">一句话记录</view>
+        <input class="field-input" value="{{draft.note}}" bindinput="onNote" placeholder="吃了什么 / 值不值" />
+      </view>
+      <view class="row" style="gap:16rpx">
+        <view class="field grow" style="margin:0">
+          <view class="field-label">评分（1-5，可空）</view>
+          <input class="field-input" type="number" value="{{draft.rating}}" bindinput="onRating" />
+        </view>
+        <view class="field grow" style="margin:0">
+          <view class="field-label">停留（分钟，可空）</view>
+          <input class="field-input" type="number" value="{{draft.durationMin}}" bindinput="onDuration" />
+        </view>
+      </view>
+
+      <view class="row" style="gap:16rpx;margin-top:20rpx">
+        <button class="btn btn-ghost" style="flex:1" bindtap="pick">选图（{{draft.images.length}}）</button>
+        <button class="btn btn-primary" style="flex:1" bindtap="submit">保存打卡</button>
+      </view>
+      <view class="m-imgs" wx:if="{{draft.images.length}}">
+        <image wx:for="{{draft.images}}" wx:for-item="img" wx:key="*this" class="m-img" src="{{img}}" mode="aspectFill" />
+      </view>
+    </view>
+  </view>
+</view>

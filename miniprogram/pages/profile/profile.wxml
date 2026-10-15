@@ -44,11 +44,64 @@
   <view class="card empty" wx:else>还没有偏好。点下面的按钮加一条，或在对话里直接说「我不吃辣」。</view>
   <button class="btn btn-ghost" bindtap="addPref">＋ 添加一条偏好</button>
 
+  <view class="section-title">同行人（{{companions.length}}）</view>
+  <view class="card card-tight" wx:if="{{companions.length}}">
+    <view class="list-item" wx:for="{{companions}}" wx:key="id" data-index="{{index}}"
+          bindlongpress="removeCompanion">
+      <view class="pref-tag">{{item.name}}</view>
+      <view class="muted">{{item.preferences || '（没写口味/体力）'}}{{item.vote ? ' · ' + item.vote : ''}}</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>还没有同行人。加上以后，AI 排行程会一并考虑他们的口味与体力。</view>
+  <button class="btn btn-ghost" bindtap="openCompanion">＋ 添加同行人</button>
+
+  <view class="section-title">证件票据（{{documents.length}}）</view>
+  <view class="card card-tight" wx:if="{{documents.length}}">
+    <view class="list-item" wx:for="{{documents}}" wx:key="id" data-index="{{index}}"
+          bindlongpress="removeDocument">
+      <view class="row-between">
+        <view class="pref-tag">{{item.title || item.docType}}</view>
+        <view class="tag" wx:if="{{item.docType}}">{{item.docType}}</view>
+      </view>
+      <view class="muted">{{item.docNo ? '编号 ' + item.docNo : ''}}{{item.expireTime ? ' · 到期 ' + item.expireTime : ''}}</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>还没有证件票据。出发前把证件号、到期日放这里，省得翻相册。</view>
+  <button class="btn btn-ghost" bindtap="openDocument">＋ 添加证件</button>
+
   <view class="section-title">账号</view>
   <view class="card">
+    <button class="btn btn-ghost" style="margin-bottom:16rpx" bindtap="goAccount">账号管理（改密码 / 邮箱 / 注销）</button>
     <button class="btn btn-ghost" bindtap="logout">退出登录</button>
     <view class="muted" style="margin-top:12rpx">
       退出会把这个设备的登录令牌作废（其它设备不受影响）；下次进来重新登录即可。
+    </view>
+  </view>
+
+  <!-- 同行人 / 证件 的填写面板 -->
+  <view class="mask" wx:if="{{sheet}}" bindtap="closeSheet">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title">{{sheet === 'companion' ? '添加同行人' : '添加证件'}}</view>
+      <block wx:if="{{sheet === 'companion'}}">
+        <view class="field"><view class="field-label">称呼</view>
+          <input class="field-input" value="{{cf.name}}" bindinput="onCf" data-k="name" placeholder="例如：妈妈" /></view>
+        <view class="field"><view class="field-label">口味 / 体力 / 忌口</view>
+          <input class="field-input" value="{{cf.preferences}}" bindinput="onCf" data-k="preferences" placeholder="例如：不吃辣，走不了太久" /></view>
+        <view class="field"><view class="field-label">投票 / 备注（可空）</view>
+          <input class="field-input" value="{{cf.vote}}" bindinput="onCf" data-k="vote" /></view>
+        <button class="btn btn-primary" bindtap="saveCompanion">保存</button>
+      </block>
+      <block wx:else>
+        <view class="field"><view class="field-label">类型</view>
+          <input class="field-input" value="{{df.docType}}" bindinput="onDf" data-k="docType" placeholder="身份证 / 护照 / 保单" /></view>
+        <view class="field"><view class="field-label">标题</view>
+          <input class="field-input" value="{{df.title}}" bindinput="onDf" data-k="title" /></view>
+        <view class="field"><view class="field-label">证件号（可空）</view>
+          <input class="field-input" value="{{df.docNo}}" bindinput="onDf" data-k="docNo" /></view>
+        <view class="field"><view class="field-label">到期日（可空）</view>
+          <input class="field-input" value="{{df.expireTime}}" bindinput="onDf" data-k="expireTime" placeholder="2028-06-30" /></view>
+        <button class="btn btn-primary" bindtap="saveDocument">保存</button>
+      </block>
     </view>
   </view>
 </view>

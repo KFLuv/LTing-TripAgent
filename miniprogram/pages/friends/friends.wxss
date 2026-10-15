@@ -1,0 +1,38 @@
+.f-title {
+  font-size: 29rpx;
+  font-weight: 600;
+}
+
+.code {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #0071e3;
+  background: rgba(0, 113, 227, 0.08);
+  border-radius: 999rpx;
+  padding: 10rpx 28rpx;
+}
+
+.avatar-sm {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: rgba(0, 113, 227, 0.1);
+  color: #0071e3;
+  font-size: 30rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chev {
+  color: #c7c7cc;
+  font-size: 40rpx;
+}
+
+.hint {
+  padding: 8rpx 16rpx 0;
+  font-size: 22rpx;
+  color: #86868b;
+}

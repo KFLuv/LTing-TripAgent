@@ -75,20 +75,26 @@ Chromium 系内核（开发者工具就是）会直接丢掉这条 `Set-Cookie`�
 
 ---
 
-## 四、已经搬过来的页面
+## 四、已经搬过来的页面（对齐桌面端 9 个模块）
 
-| 页面 | 对应后端接口 |
-|---|---|
-| 出发（首页） | `myinfo` · `trips/list` · `moment/list` · `travel-log/list` |
-| AI 管家（对话） | `agent/available` · `agent/history` · `agent/chat` · `agent/session/*` |
-| 行程本 / 行程详情 | `trips/list` · `trips/get` · `trips/save` · `trips/delete` · `trips/version/rollback` |
-| 附近吃喝玩乐 | `nearby/search` · `nearby/detail` · `nearby/menu/list` · `nearby/review/list` + `wx.openLocation` 一键导航 |
-| 我的（资料 / 偏好档案） | `profile/get` · `profile/save` · `preference/list` · `preference/item/save-current` |
-| 登录 / 注册 / 游客 | `login` · `reg` · `guest` · `myinfo` |
+桌面端导航：出发 · AI 管家 · 动态广场 · 行程本 · 打卡 · 个人资料 · 偏好档案 · 附近吃喝玩乐 · 账号管理，
+小程序端已全部对上（tabBar 放 5 个常用入口，其余从「出发」进）：
 
-**还没搬的**（后端接口都已就绪，按同样套路加页面即可）：
-动态广场与好友（`moment/*`、`friend/*`、`user/home`）、打卡（`travel-log/*`）、
-同行人与证件（`companion/*`）、预算与行李（`toolbox/*`）、偏好模板（`preference/template/*`）。
+| 小程序页面 | 对应桌面端 | 用到的接口 |
+|---|---|---|
+| 出发（首页） | home | `myinfo` · `trips/list` · `moment/list` · `travel-log/list` |
+| AI 管家 | chat | `agent/available` · `agent/history` · `agent/chat` · `agent/session/*` |
+| 动态广场（+我的动态+发布+好友入口） | square / moments | `moment/square` · `moment/list` · `moment/save` · `moment/delete` |
+| 好友 / 他人主页 | friends / user | `friend/list` · `friend/add` · `friend/delete` · `user/home` |
+| 行程本 / 行程详情（时间线 · 版本回退 · **预算 · 行李**） | trips | `trips/*` · `toolbox/budget/*` · `toolbox/packing/*` |
+| 打卡（可选附近店铺、带图、独立于动态） | checkin | `travel-log/list` · `travel-log/save` · `travel-log/delete` · `nearby/search` |
+| 附近吃喝玩乐（评分/菜单/评价 + 一键导航） | nearby / poi | `nearby/*` + `wx.openLocation` |
+| 我的（资料 · **同行人** · **证件票据** · 偏好档案） | profile / preferences | `profile/*` · `companion/*` · `toolbox/document/*` · `preference/list` · `preference/item/save-current` |
+| 账号管理（改密码 · 邮箱 · 注销） | account | `updateUserInfo` · `account/unbind-email` · `account/delete` |
+| 登录 / 注册 / 游客 | login / reg | `api/auth/*`（令牌）· `reg` |
+
+**有意没搬的两处**：桌面端的「内嵌地图」页在小程序里换成 `wx.openLocation`（直接调起系统地图，
+导航体验更好）；图片走 base64（`images` 字段本来就是 JSON 数组），不依赖任何上传接口。
 
 ---
 

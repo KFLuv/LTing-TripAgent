@@ -1,0 +1,64 @@
+.c-place {
+  font-size: 29rpx;
+  font-weight: 600;
+}
+
+.hint {
+  padding: 8rpx 16rpx 0;
+  font-size: 22rpx;
+  color: #86868b;
+}
+
+.m-imgs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 12rpx;
+}
+
+.m-img {
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 16rpx;
+  background: #f0f0f3;
+}
+
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: flex-end;
+  z-index: 80;
+}
+
+.sheet {
+  width: 100%;
+  max-height: 86vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  margin-bottom: 20rpx;
+}
+
+.poi-box {
+  max-height: 320rpx;
+  overflow-y: auto;
+  background: #f7f7f9;
+  border-radius: 20rpx;
+  margin-bottom: 16rpx;
+}
+
+.poi-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 24rpx;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.05);
+}

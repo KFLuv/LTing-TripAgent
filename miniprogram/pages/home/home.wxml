@@ -34,15 +34,23 @@
     </view>
     <view class="entry" bindtap="goTrips">
       <view class="entry-title">行程本</view>
-      <view class="entry-sub">时间线 · 版本回退</view>
+      <view class="entry-sub">时间线 · 版本回退 · 预算行李</view>
     </view>
     <view class="entry" bindtap="goNearby">
       <view class="entry-title">附近吃喝玩乐</view>
       <view class="entry-sub">5–10km · 一键导航</view>
     </view>
+    <view class="entry" bindtap="goSquare">
+      <view class="entry-title">动态广场</view>
+      <view class="entry-sub">发动态 · 公开 / 仅好友 / 仅自己</view>
+    </view>
+    <view class="entry" bindtap="goCheckin">
+      <view class="entry-title">打卡</view>
+      <view class="entry-sub">选附近店铺 · 独立于动态</view>
+    </view>
     <view class="entry" bindtap="goProfile">
       <view class="entry-title">我的</view>
-      <view class="entry-sub">资料 · 偏好档案</view>
+      <view class="entry-sub">资料 · 同行人 · 证件 · 偏好档案</view>
     </view>
   </view>
 
@@ -62,10 +70,15 @@
     还没有行程，去「管家」里说一句「帮我安排周末两天的广州行程」
   </view>
 
-  <!-- 待搬模块，保持诚实 -->
-  <view class="card todo">
-    <view class="todo-title">小程序端待搬的模块</view>
-    <view class="muted">动态广场 · 打卡日志 · 好友系统 · 他人主页 —— 后端接口都已就绪
-      （/moment/*、/travel-log/*、/friend/*、/user/home），下一步按页面逐个搬过来。</view>
+  <view class="section-title">账号与社交</view>
+  <view class="grid">
+    <view class="entry" bindtap="goFriends">
+      <view class="entry-title">好友</view>
+      <view class="entry-sub">邀请码 / 用户名加好友</view>
+    </view>
+    <view class="entry" bindtap="goAccount">
+      <view class="entry-title">账号管理</view>
+      <view class="entry-sub">改密码 · 邮箱 · 注销</view>
+    </view>
   </view>
 </view>

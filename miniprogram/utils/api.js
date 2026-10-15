@@ -85,12 +85,6 @@ module.exports = {
   tripVersionRollback: function (id, versionId) {
     return request('trips/version/rollback', { data: { id: id, versionId: versionId } });
   },
-  budgetSummary: function () {
-    return request('toolbox/budget/summary');
-  },
-  packingList: function () {
-    return request('toolbox/packing/list');
-  },
 
   // ---------- 附近吃喝玩乐 ----------
   nearbySearch: function (lat, lng, radius, keyword, limit) {
@@ -129,7 +123,102 @@ module.exports = {
   moments: function () {
     return request('moment/list');
   },
+  momentSave: function (data) {
+    return request('moment/save', { data: data });
+  },
+  momentDelete: function (id) {
+    return request('moment/delete', { data: { id: id } });
+  },
   checkins: function () {
     return request('travel-log/list');
+  },
+  checkinSave: function (data) {
+    return request('travel-log/save', { data: data });
+  },
+  checkinDelete: function (id) {
+    return request('travel-log/delete', { data: { id: id } });
+  },
+
+  // ---------- 好友 / 他人主页 ----------
+  friends: function () {
+    return request('friend/list');
+  },
+  friendAdd: function (target) {
+    return request('friend/add', { data: { target: target } });
+  },
+  friendDelete: function (target) {
+    // 注意：这个接口的参数名是 friend，不是 target
+    return request('friend/delete', { data: { friend: target } });
+  },
+  userHome: function (username) {
+    return request('user/home', { data: { username: username } });
+  },
+
+  // ---------- 同行人 / 证件 ----------
+  companions: function () {
+    return request('companion/list');
+  },
+  companionSave: function (data) {
+    return request('companion/save', { data: data });
+  },
+  companionDelete: function (id) {
+    return request('companion/delete', { data: { id: id } });
+  },
+  documents: function () {
+    return request('toolbox/document/list');
+  },
+  documentSave: function (data) {
+    return request('toolbox/document/save', { data: data });
+  },
+  documentDelete: function (id) {
+    return request('toolbox/document/delete', { data: { id: id } });
+  },
+
+  // ---------- 预算 / 行李（绑在行程上） ----------
+  budgetList: function (tripId) {
+    return request('toolbox/budget/list', { data: { tripId: tripId } });
+  },
+  budgetSummary: function (tripId) {
+    return request('toolbox/budget/summary', { data: { tripId: tripId } });
+  },
+  budgetSave: function (data) {
+    return request('toolbox/budget/save', { data: data });
+  },
+  budgetDelete: function (id) {
+    return request('toolbox/budget/delete', { data: { id: id } });
+  },
+  budgetThreshold: function (data) {
+    return request('toolbox/budget/threshold', { data: data });
+  },
+  packingList: function (tripId) {
+    return request('toolbox/packing/list', { data: { tripId: tripId } });
+  },
+  packingSave: function (data) {
+    return request('toolbox/packing/save', { data: data });
+  },
+  packingDelete: function (id) {
+    return request('toolbox/packing/delete', { data: { id: id } });
+  },
+
+  // ---------- 偏好模板 ----------
+  prefTemplates: function () {
+    return request('preference/template/list');
+  },
+  prefTemplateActivate: function (id) {
+    return request('preference/template/activate', { data: { id: id } });
+  },
+  prefTemplateDelete: function (id) {
+    return request('preference/template/delete', { data: { id: id } });
+  },
+  prefTemplateCopy: function (id) {
+    return request('preference/template/copy', { data: { id: id } });
+  },
+
+  // ---------- 账号管理 ----------
+  unbindEmail: function (password) {
+    return request('account/unbind-email', { data: { password: password } });
+  },
+  accountDelete: function (password, confirm) {
+    return request('account/delete', { data: { password: password, confirm: confirm } });
   }
 };

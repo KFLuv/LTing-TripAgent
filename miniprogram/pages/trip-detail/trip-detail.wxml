@@ -29,4 +29,55 @@
     </view>
   </view>
   <view class="card empty" wx:else>还没有保存过版本快照。</view>
+
+  <view class="section-title">预算（合计 ¥{{budgetTotal}}{{threshold ? ' · 阈值 ¥' + threshold : ''}}）</view>
+  <view class="card card-tight" wx:if="{{budget.length}}">
+    <view class="list-item row-between" wx:for="{{budget}}" wx:key="id" data-index="{{index}}"
+          bindlongpress="removeBudget">
+      <view class="grow">
+        <view class="n-title">{{item.item || item.category}}</view>
+        <view class="muted">{{item.category}}{{item.entryDate ? ' · ' + item.entryDate : ''}}</view>
+      </view>
+      <view class="amount">¥{{item.amount}}</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>这笔行程还没有记账。预算跟着行程走，换行程就换一套数。</view>
+  <view class="row" style="gap:16rpx">
+    <button class="btn btn-ghost" style="flex:1" bindtap="openBudget">＋ 记一笔</button>
+    <button class="btn btn-ghost" style="flex:1" bindtap="setThreshold">设告警阈值</button>
+  </view>
+
+  <view class="section-title">行李清单（{{packing.length}}）</view>
+  <view class="card card-tight" wx:if="{{packing.length}}">
+    <view class="list-item" wx:for="{{packing}}" wx:key="id" data-index="{{index}}" bindlongpress="removePacking">
+      <view class="n-title">{{item.name}}</view>
+      <view class="muted clamp-2">{{item.items}}</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>还没有行李清单。写一份，出发前照着勾。</view>
+  <button class="btn btn-ghost" bindtap="openPacking">＋ 新建行李清单</button>
+
+  <view class="mask" wx:if="{{sheet}}" bindtap="closeSheet">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title">{{sheet === 'budget' ? '记一笔' : '新建行李清单'}}</view>
+      <block wx:if="{{sheet === 'budget'}}">
+        <view class="field"><view class="field-label">分类</view>
+          <input class="field-input" value="{{bf.category}}" bindinput="onBf" data-k="category" placeholder="transport / lodging / food / other" /></view>
+        <view class="field"><view class="field-label">项目</view>
+          <input class="field-input" value="{{bf.item}}" bindinput="onBf" data-k="item" placeholder="例如：高铁往返" /></view>
+        <view class="field"><view class="field-label">金额（元）</view>
+          <input class="field-input" type="digit" value="{{bf.amount}}" bindinput="onBf" data-k="amount" /></view>
+        <view class="field"><view class="field-label">日期（可空）</view>
+          <input class="field-input" value="{{bf.entryDate}}" bindinput="onBf" data-k="entryDate" placeholder="2026-10-20" /></view>
+        <button class="btn btn-primary" bindtap="saveBudget">保存</button>
+      </block>
+      <block wx:else>
+        <view class="field"><view class="field-label">清单名</view>
+          <input class="field-input" value="{{pf.name}}" bindinput="onPf" data-k="name" placeholder="例如：海边 3 天" /></view>
+        <view class="field"><view class="field-label">物品（逗号分隔）</view>
+          <input class="field-input" value="{{pf.items}}" bindinput="onPf" data-k="items" placeholder="防晒, 泳衣, 拖鞋" /></view>
+        <button class="btn btn-primary" bindtap="savePacking">保存</button>
+      </block>
+    </view>
+  </view>
 </view>
