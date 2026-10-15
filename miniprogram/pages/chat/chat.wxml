@@ -1,6 +1,7 @@
 <view class="chat">
   <view class="chat-bar">
     <view class="grow ellipsis bar-title" bindlongpress="renameSession">{{title || '新对话'}}</view>
+    <view class="bar-btn" bindtap="locate">我的位置</view>
     <view class="bar-btn" bindtap="newSession">新会话</view>
     <view class="bar-btn" bindtap="openSessions">历史</view>
   </view>
@@ -20,6 +21,9 @@
     <view wx:for="{{msgs}}" wx:key="idx" id="m{{index}}" class="msg msg-{{item.role}}">
       <view class="bubble">
         <text user-select="true">{{item.text}}</text>
+        <view class="nav-row" wx:if="{{item.nav}}">
+          <view class="nav-btn" data-i="{{index}}" bindtap="openMap">在地图里打开（{{item.nav.name || '目的地'}}）</view>
+        </view>
         <view class="actions" wx:if="{{item.actions.length}}">
           <view class="actions-t">本次为你做了 {{item.actions.length}} 件事</view>
           <view class="action" wx:for="{{item.actions}}" wx:for-item="a" wx:key="summary">· {{a.summary}}</view>

@@ -88,13 +88,48 @@ Chromium 系内核（开发者工具就是）会直接丢掉这条 `Set-Cookie`�
 | 好友 / 他人主页 | friends / user | `friend/list` · `friend/add` · `friend/delete` · `user/home` |
 | 行程本 / 行程详情（时间线 · 版本回退 · **预算 · 行李**） | trips | `trips/*` · `toolbox/budget/*` · `toolbox/packing/*` |
 | 打卡（可选附近店铺、带图、独立于动态） | checkin | `travel-log/list` · `travel-log/save` · `travel-log/delete` · `nearby/search` |
-| 附近吃喝玩乐（评分/菜单/评价 + 一键导航） | nearby / poi | `nearby/*` + `wx.openLocation` |
+| 附近吃喝玩乐（评分/菜单/评价 + 一键导航） | nearby | `nearby/search` + 「我的位置」+ `wx.openLocation` |
+| 商户详情页（店铺图 · 评级 · 地址 · 电话 · 菜单 · **打卡记录** · 点评 + 写点评） | poi | `nearby/detail` · `nearby/menu/list` · `nearby/review/list\|save` · `travel-log/by-poi` |
 | 我的（资料 · **同行人** · **证件票据** · 偏好档案） | profile / preferences | `profile/*` · `companion/*` · `toolbox/document/*` · `preference/list` · `preference/item/save-current` |
 | 账号管理（改密码 · 邮箱 · 注销） | account | `updateUserInfo` · `account/unbind-email` · `account/delete` |
 | 登录 / 注册 / 游客 | login / reg | `api/auth/*`（令牌）· `reg` |
 
 **有意没搬的两处**：桌面端的「内嵌地图」页在小程序里换成 `wx.openLocation`（直接调起系统地图，
 导航体验更好）；图片走 base64（`images` 字段本来就是 JSON 数组），不依赖任何上传接口。
+
+---
+
+## 四之二、定位与导航
+
+| 位置 | 行为 |
+|---|---|
+| 附近吃喝玩乐 · 进页面 | 自动 `wx.getLocation`（gcj02）→ 上报 `/agent/location` → 按真实坐标搜店；拿不到就如实显示「没拿到定位」，不再悄悄用兜底坐标 |
+| 附近吃喝玩乐 · 右上「我的位置」 | 重新定位；如果之前被拒过，弹窗引导去系统设置开权限，回来再自动刷新列表 |
+| 商户详情 · 「我的位置」 | 同上，并显示当前位置状态 |
+| 商户详情 / 列表 · 一键导航 | `wx.openLocation(纬度, 经度, 店名, 地址)` 调起系统地图，带目的地名称与详细地址 |
+| AI 管家 · 顶部「我的位置」 | 定位并 `force=true` 上报，管家后续排行程会以当前位置为起点 |
+| AI 管家 · 回答里的「在地图里打开」 | 回答里若带高德导航链接（`position=经度,纬度`），自动解析出坐标并给出按钮 |
+
+> 导航要能"从哪出发"，必须小程序**自身**有定位权限；开发者工具里如果没开位置模拟，
+> 系统地图会提示定位失败——这不是导航地址错了，是"我在哪"没拿到。
+
+---
+
+## 四之三、大众点评为什么不能像桌面端那样内嵌
+
+桌面端是把点评页面**嵌在窗口里**（同源 iframe / Electron 内嵌页）。小程序没有这个东西：
+
+| 手段 | 小程序能不能用 |
+|---|---|
+| `iframe` / 内联网页 | ❌ 小程序没有 DOM，也没有 iframe |
+| `web-view` 组件 | ⚠️ 仅**企业主体**小程序可用，且要求 HTTPS + ICP 备案 + 在后台配置「业务域名」；个人主体用不了 |
+| 抓取点评网页 | ⚠️ 点评没有公开 API，抓取属于绕过反爬，随时失效，也不适合放进要过审的小程序 |
+
+所以小程序端给的是**能落地的那部分**，都放在商户详情页里：
+
+1. **真实点评数据**：`nearby/review/list`（自己写的评价）+ `nearby/menu/list`（菜单）+ 店铺图 / 评级 / 人均 / 地址 / 电话；
+2. **「复制店名+地址去点评搜」**：一键复制 `店名 + 城市 + 详细地址`，用户粘到大众点评 App 里就能搜到——桌面端当初也是靠"店名+地址"去搜的；
+3. 真要做内嵌，只有一条合法路径：企业主体小程序 + HTTPS 备案域名 + `web-view` + 业务域名白名单。
 
 ---
 

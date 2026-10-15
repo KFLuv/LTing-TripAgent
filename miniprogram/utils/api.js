@@ -99,7 +99,21 @@ module.exports = {
     return request('nearby/review/list', { data: { poiId: poiId } });
   },
   nearbyMenu: function (poiId) {
+    // 返回体是 {status, menu:[...]}
     return request('nearby/menu/list', { data: { poiId: poiId } });
+  },
+  nearbyReviewSave: function (data) {
+    return request('nearby/review/save', { data: data });
+  },
+  nearbyReviewDelete: function (id) {
+    return request('nearby/review/delete', { data: { id: id } });
+  },
+  checkinsByPoi: function (poiId) {
+    return request('travel-log/by-poi', { data: { poiId: poiId } });
+  },
+  /** 把当前定位上报给后端（管家排行程、附近搜索都以它为准） */
+  reportLocation: function (data) {
+    return request('agent/location', { data: data, silent: true });
   },
 
   // ---------- 个人资料 / 偏好档案 ----------

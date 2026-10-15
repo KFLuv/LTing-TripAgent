@@ -103,6 +103,19 @@
   border-top: 1rpx dashed rgba(0, 0, 0, 0.1);
 }
 
+.nav-row {
+  margin-top: 16rpx;
+}
+
+.nav-btn {
+  display: inline-block;
+  padding: 14rpx 26rpx;
+  border-radius: 999rpx;
+  background: rgba(0, 113, 227, 0.08);
+  color: #0071e3;
+  font-size: 26rpx;
+}
+
 .actions-t {
   font-size: 22rpx;
   color: #248a3d;

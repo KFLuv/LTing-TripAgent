@@ -20,65 +20,11 @@
   font-weight: 600;
 }
 
-.mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: flex-end;
-  z-index: 80;
-}
-
-.sheet {
-  width: 100%;
-  max-height: 78vh;
-  overflow-y: auto;
-  background: #fff;
-  border-radius: 32rpx 32rpx 0 0;
-  padding: 32rpx;
-  box-sizing: border-box;
-}
-
-.sheet-head {
-  display: flex;
-  align-items: flex-start;
-}
-
-.sheet-title {
-  font-size: 34rpx;
-  font-weight: 700;
-}
-
-.sheet-close {
-  font-size: 26rpx;
-  color: #86868b;
-  padding-left: 20rpx;
-}
-
-.menu-t {
-  font-size: 26rpx;
-  font-weight: 600;
-  margin-bottom: 10rpx;
-}
-
-.menu-row {
-  display: flex;
-  font-size: 26rpx;
-  padding: 10rpx 0;
-  border-bottom: 1rpx solid rgba(0, 0, 0, 0.05);
-}
-
-.review {
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid rgba(0, 0, 0, 0.05);
-}
-
-.review-u {
-  font-size: 26rpx;
-  font-weight: 600;
-}
-
-.review-c {
-  font-size: 26rpx;
-  margin: 6rpx 0;
+.loc-btn {
+  font-size: 24rpx;
+  color: #0071e3;
+  background: rgba(0, 113, 227, 0.08);
+  border-radius: 999rpx;
+  padding: 8rpx 22rpx;
+  flex-shrink: 0;
 }

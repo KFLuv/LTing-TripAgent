@@ -18,6 +18,24 @@ Page({
     this.load();
   },
 
+  /** 从商户详情页「在这里打卡」进来时，直接把店名/坐标预填好，打开表单 */
+  onLoad(options) {
+    if (!options || !options.poiId) return;
+    this.setData({
+      creating: true,
+      draft: {
+        place: decodeURIComponent(options.place || ''),
+        note: '', rating: '', durationMin: '', images: [],
+        poiId: options.poiId,
+        poiName: decodeURIComponent(options.poiName || ''),
+        lat: '', lng: ''
+      }
+    });
+    if (!this.data.coords) {
+      api.currentLocation().then((loc) => this.setData({ coords: loc }));
+    }
+  },
+
   onPullDownRefresh() {
     this.load().then(() => wx.stopPullDownRefresh());
   },

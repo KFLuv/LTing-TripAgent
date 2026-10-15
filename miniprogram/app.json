@@ -11,7 +11,8 @@
     "pages/checkin/checkin",
     "pages/friends/friends",
     "pages/user-home/user-home",
-    "pages/account/account"
+    "pages/account/account",
+    "pages/poi-detail/poi-detail"
   ],
   "window": {
     "backgroundTextStyle": "light",

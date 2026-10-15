@@ -15,6 +15,7 @@ Page({
     pois: [],
     loading: false,
     located: false,
+    locText: '正在定位…',
     coords: null,
     detail: null,
     menu: [],
@@ -32,13 +33,51 @@ Page({
       return;
     }
     if (!this.data.coords) {
-      const loc = await api.currentLocation();
-      this.setData({
-        coords: { lat: loc.lat, lng: loc.lng },
-        located: !!loc.real
-      });
+      await this.locate();
     }
     this.search();
+  },
+
+  /** 自动定位：拿到就把坐标报给后端，拿不到就说清原因（不再悄悄用兜底坐标） */
+  async locate() {
+    const loc = await api.currentLocation();
+    this.setData({
+      coords: { lat: loc.lat, lng: loc.lng },
+      located: !!loc.real,
+      locText: loc.real ? '已定位' : '没拿到定位，暂用兜底坐标（广州塔）'
+    });
+    if (loc.real) {
+      api.reportLocation({ lat: loc.lat, lng: loc.lng, place: '', accuracy: loc.accuracy || '' });
+    }
+    return loc;
+  },
+
+  /** 「我的位置」：被拒过就引导去设置页开权限，再重新定位并刷新列表 */
+  relocate() {
+    wx.getSetting({
+      success: (s) => {
+        if (s.authSetting['scope.userLocation'] === false) {
+          wx.showModal({
+            title: '定位被拒绝了',
+            content: '去「设置」里允许位置信息，才能按真实位置找店、算距离和导航。',
+            confirmText: '去设置',
+            success: (r) => {
+              if (r.confirm) {
+                wx.openSetting({
+                  complete: async () => {
+                    await this.locate();
+                    this.search();
+                  }
+                });
+              }
+            }
+          });
+          return;
+        }
+        this.locate().then(() => this.search());
+      },
+      fail: () => this.locate().then(() => this.search())
+    });
   },
 
   setRadius(e) {
@@ -79,47 +118,8 @@ Page({
     this.setData({ pois: pois });
   },
 
-  async openDetail(e) {
-    const poiId = e.currentTarget.dataset.id;
-    const base = this.data.pois[e.currentTarget.dataset.index] || {};
-    this.setData({ detail: base, menu: [], reviews: [] });
-    const d = await api.nearbyDetail(poiId).catch(() => null);
-    if (d && d.poi) {
-      this.setData({
-        detail: Object.assign({}, base, {
-          address: d.poi.address || base.address,
-          tel: d.poi.tel || base.tel,
-          cost: d.poi.cost || base.cost,
-          sourceRating: d.poi.sourceRating || base.rating,
-          lat: d.poi.lat || base.lat,
-          lng: d.poi.lng || base.lng
-        })
-      });
-    }
-    const m = await api.nearbyMenu(poiId).catch(() => null);
-    if (m && m.items) this.setData({ menu: m.items });
-    const r = await api.nearbyReviews(poiId).catch(() => null);
-    if (r && r.reviews) this.setData({ reviews: r.reviews });
-  },
-
-  closeDetail() {
-    this.setData({ detail: null });
-  },
-
-  noop() {},
-
-  navigate() {
-    const d = this.data.detail || {};
-    if (!d.lat || !d.lng) {
-      api.toast('这家店没有坐标，没法导航');
-      return;
-    }
-    wx.openLocation({
-      latitude: Number(d.lat),
-      longitude: Number(d.lng),
-      name: d.name,
-      address: d.address || '',
-      scale: 16
-    });
+  /** 点一家店 → 进完整详情页（店铺图/评级/地址/菜单/打卡记录/点评/导航） */
+  openDetail(e) {
+    wx.navigateTo({ url: '/pages/poi-detail/poi-detail?poiId=' + e.currentTarget.dataset.id });
   }
 });
