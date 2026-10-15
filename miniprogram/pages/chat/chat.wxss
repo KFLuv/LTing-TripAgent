@@ -27,6 +27,62 @@
   background: rgba(0, 113, 227, 0.08);
 }
 
+.bar-btn.on {
+  background: rgba(52, 199, 89, 0.16);
+  color: #248a3d;
+}
+
+.loc-line {
+  padding: 14rpx 24rpx;
+  font-size: 24rpx;
+  color: #6e6e73;
+  background: #fff;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.05);
+}
+
+.loc-line.ok {
+  color: #248a3d;
+}
+
+.loc-line.fail {
+  color: #a05a00;
+}
+
+.loc-coord {
+  color: #86868b;
+}
+
+.map-card {
+  background: #fff;
+  border-top: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.map-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 16rpx 24rpx;
+}
+
+.map-title {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.map-btn {
+  font-size: 24rpx;
+  color: #0071e3;
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(0, 113, 227, 0.08);
+  flex-shrink: 0;
+}
+
+.imap {
+  width: 100%;
+  height: 420rpx;
+}
+
 .warn {
   margin: 16rpx 24rpx 0;
   padding: 16rpx 24rpx;

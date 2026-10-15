@@ -115,6 +115,14 @@ module.exports = {
   reportLocation: function (data) {
     return request('agent/location', { data: data, silent: true });
   },
+  /** 反查地名：「我的位置」先定位、再显示到具体地点，就是靠它 */
+  reverse: function (lat, lng) {
+    return request('agent/reverse', { data: { lat: lat, lng: lng }, silent: true });
+  },
+  /** 地名 → 坐标：回答里只有地名没有坐标时，用它把地图画出来 */
+  geocode: function (address, city) {
+    return request('agent/geocode', { data: { address: address, city: city || '' }, silent: true });
+  },
 
   // ---------- 个人资料 / 偏好档案 ----------
   profileGet: function () {
