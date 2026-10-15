@@ -1,5 +1,28 @@
 const { baseUrl } = require('../config.js');
 
+/** 令牌存在本地缓存里：小程序对 Cookie 不可靠（跨站 Set-Cookie 会被丢），身份走这个头 */
+const TOKEN_KEY = 'aitvToken';
+
+function getToken() {
+  try {
+    return wx.getStorageSync(TOKEN_KEY) || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function setToken(token) {
+  try {
+    if (token) {
+      wx.setStorageSync(TOKEN_KEY, token);
+    } else {
+      wx.removeStorageSync(TOKEN_KEY);
+    }
+  } catch (e) {
+    // 缓存写不进去就当作未登录
+  }
+}
+
 function toast(title) {
   wx.showToast({ title: title, icon: 'none', duration: 2400 });
 }
@@ -12,7 +35,8 @@ function toast(title) {
  *  - /agent/chat 用 @RequestBody String 接纯文本 → 传 raw
  *
  * 身份：后端靠 JSESSIONID。微信客户端的网络层会自动保存 Set-Cookie 并在后续
- * 请求里带上，所以和浏览器一样「登录一次就够了」，不需要自己维护 token。
+ * 但小程序里 Cookie 很不可靠，所以这里优先带 {@code X-Auth-Token}：
+ * 后端 TokenAuthFilter 会把它翻译成会话里的登录身份，页面代码不用管这层。
  */
 function request(path, options) {
   const opt = options || {};
@@ -26,6 +50,11 @@ function request(path, options) {
   } else if (method !== 'GET') {
     header['Content-Type'] = 'application/x-www-form-urlencoded';
     header['Accept'] = 'application/json';
+  }
+
+  const token = getToken();
+  if (token) {
+    header['X-Auth-Token'] = token;
   }
 
   return new Promise(function (resolve, reject) {
@@ -87,4 +116,10 @@ function currentLocation() {
   });
 }
 
-module.exports = { request: request, toast: toast, currentLocation: currentLocation };
+module.exports = {
+  request: request,
+  toast: toast,
+  currentLocation: currentLocation,
+  getToken: getToken,
+  setToken: setToken
+};

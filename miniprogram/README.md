@@ -30,10 +30,37 @@
    mvn -DskipTests package
    java -jar target/chat-gpt.jar       # → http://localhost:8078/chat/
    ```
+   没装 Java / Maven 的话，用工程自带运行时也行：
+   ```powershell
+   cd AITravelGuide\backend\target
+   ..\..\desktop\build\jre\bin\java.exe -jar chat-gpt.jar --server.port=8078
+   ```
 2. **开发者工具里勾上「不校验合法域名」**：右侧「详情 → 本地设置 → 不校验合法域名、web-view、TLS 版本以及 HTTPS 证书」。
    本地调试用的是 `http://127.0.0.1:8078`，不开这个开关请求会被直接拦掉。
    （`project.config.json` 里已经写成 `"urlCheck": false`，但工具里那个勾选框优先级更高。）
 3. **后端地址**：改 `config.js` 里的 `baseUrl`（默认 `http://127.0.0.1:8078/chat/`）。
+
+---
+
+## 二之二、登录为什么不走 Cookie（重要）
+
+小程序端的身份走**令牌**，不是 Cookie：
+
+| | 桌面端 / 网页端 | 小程序端 |
+|---|---|---|
+| 身份载体 | `JSESSIONID`（服务端会话 + Cookie） | `X-Auth-Token` 请求头（缓存在客户端 storage） |
+| 登录 | `POST /login`（302 → home.html） | `POST /api/auth/login` → 返回 `{token}` |
+| 游客 | `POST /guest` | `POST /api/auth/guest` → 返回 `{token}` |
+| 退出 | 清 Cookie | `POST /api/auth/logout` + 清本地令牌 |
+
+原因是服务端会话 Cookie 带的是 `SameSite=Lax`，而小程序发出去的是跨站请求，
+Chromium 系内核（开发者工具就是）会直接丢掉这条 `Set-Cookie`——表现就是
+「登录接口返回成功，下一个请求又说没登录」，界面上看着像「密码错误 / 游客进不去」。
+后端的 `config/TokenAuthFilter` 会把 `X-Auth-Token` 翻译成会话里的登录身份，
+所以**既有 82 个接口一行都不用改**，桌面端那套 Cookie 机制也完全不受影响。
+
+> 需要后端是**带令牌接口的新版本**（`/api/auth/login`、`/api/auth/guest`、`/api/auth/me`、`/api/auth/logout`）。
+> 老的 jar / 老 exe 里没有这几个接口，小程序登录会提示「登录失败，请重试」。
 
 ---
 

@@ -6,6 +6,22 @@ const request = req.request;
 module.exports = {
   currentLocation: req.currentLocation,
   toast: req.toast,
+  getToken: req.getToken,
+  setToken: req.setToken,
+
+  // ---------- 小程序端登录（令牌版，不依赖 Cookie） ----------
+  tokenLogin: function (username, password) {
+    return request('api/auth/login', { data: { username: username, password: password } });
+  },
+  tokenGuest: function () {
+    return request('api/auth/guest');
+  },
+  tokenLogout: function () {
+    return request('api/auth/logout', { silent: true });
+  },
+  tokenMe: function () {
+    return request('api/auth/me', { silent: true });
+  },
 
   // ---------- 账号 ----------
   login: function (username, password, remember) {

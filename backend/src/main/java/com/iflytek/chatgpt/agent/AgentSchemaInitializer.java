@@ -1,5 +1,6 @@
 package com.iflytek.chatgpt.agent;
 
+import com.iflytek.chatgpt.service.AuthTokenService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -420,6 +421,8 @@ public class AgentSchemaInitializer {
         // 换一台干净的 MySQL，注册（user）、目的地（spot）、行程本（trip）会同时失效。
         // 这里补齐 DDL（if not exists，对已有库零影响），空库也能一次跑通。
         createIfAbsent("user", CREATE_USER);
+        // 小程序端用令牌登录（微信里 Cookie 不可靠），令牌表在这里一起建
+        AuthTokenService.ensureTable();
         createIfAbsent("spot", CREATE_SPOT);
         createIfAbsent("trip", CREATE_TRIP);
         seedSpotsIfEmpty();

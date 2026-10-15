@@ -90,8 +90,11 @@ Page({
   },
 
   logout() {
+    // 先让服务端把这个令牌作废，再清本地
+    api.tokenLogout().catch(() => null);
+    api.setToken('');
     getApp().globalData.user = null;
-    wx.showToast({ title: '已退出本地登录态', icon: 'none' });
+    wx.showToast({ title: '已退出登录', icon: 'none' });
     setTimeout(() => wx.navigateTo({ url: '/pages/login/login' }), 600);
   }
 });

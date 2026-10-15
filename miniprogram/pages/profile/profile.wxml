@@ -48,7 +48,7 @@
   <view class="card">
     <button class="btn btn-ghost" bindtap="logout">退出登录</button>
     <view class="muted" style="margin-top:12rpx">
-      小程序的退出只清本地登录态；服务端会话保留 30 天（和桌面端同一套机制）。
+      退出会把这个设备的登录令牌作废（其它设备不受影响）；下次进来重新登录即可。
     </view>
   </view>
 </view>

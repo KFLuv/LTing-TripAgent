@@ -29,20 +29,17 @@ Page({
   },
 
   async doLogin() {
-    const { username, password } = this.data;
+    const username = (this.data.username || '').trim();
+    const password = this.data.password || '';
     if (!username || !password) {
       api.toast('账号和密码都要填');
       return;
     }
     this.setData({ loading: true });
     try {
-      // /login 成功会 302 到 home.html，wx.request 自动跟随，
-      // 所以这里用 /myinfo 复核登录态，比解析 HTML 稳。
-      await api.login(username, password, true);
-      const ok = await this.confirmLogin();
-      if (!ok) {
-        api.toast('用户名或密码错误');
-      }
+      // 走令牌接口：拿到 token 存本地，后续请求带 X-Auth-Token。
+      // 不再依赖 Cookie（微信对跨站 Set-Cookie 会直接丢，之前「登录了却说没登录」就是它）
+      await this.loginByToken(api.tokenLogin(username, password));
     } catch (e) {
       // request 里已经提示过了
     } finally {
@@ -68,12 +65,8 @@ Page({
         api.toast(text.replace(/<[^>]+>/g, '').slice(0, 40));
         return;
       }
-      // 注册接口会重定向到 login.html，没有自动登录，这里补一次登录
-      await api.login(username, password, true);
-      const ok = await this.confirmLogin();
-      if (!ok) {
-        api.toast('注册成功，请手动登录');
-      }
+      // 注册接口只负责建号（返回 HTML），这里紧接着用令牌接口登录
+      await this.loginByToken(api.tokenLogin(username.trim(), password));
     } catch (e) {
       // 忽略，已提示
     } finally {
@@ -84,8 +77,7 @@ Page({
   async doGuest() {
     this.setData({ loading: true });
     try {
-      await api.guest();
-      await this.confirmLogin();
+      await this.loginByToken(api.tokenGuest());
     } catch (e) {
       // 忽略
     } finally {
@@ -93,13 +85,21 @@ Page({
     }
   },
 
-  async confirmLogin() {
-    const info = await api.myInfo();
-    if (info && info.login === 'true') {
-      getApp().globalData.user = info;
-      wx.switchTab({ url: '/pages/home/home' });
-      return true;
+  /** 统一处理：拿 token → 存起来 → 用 /myinfo 复核 → 进首页 */
+  async loginByToken(promise) {
+    const res = await promise.catch(() => null);
+    if (!res || res.status !== 'success' || !res.token) {
+      api.toast((res && res.message) || '登录失败，请重试');
+      return;
     }
-    return false;
+    api.setToken(res.token);
+    const info = await api.myInfo().catch(() => null);
+    if (!info || info.login !== 'true') {
+      api.setToken('');
+      api.toast('拿到令牌但身份没生效，请检查后端是否是新版本');
+      return;
+    }
+    getApp().globalData.user = info;
+    wx.switchTab({ url: '/pages/home/home' });
   }
 });
