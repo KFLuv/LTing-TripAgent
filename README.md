@@ -145,6 +145,7 @@ ai-travel-assistant/
 
 | 想了解 | 看这份 |
 |---|---|
+| **需求怎么定义（PRD）** | [docs/PRD.md](docs/PRD.md) |
 | **这个项目做什么** | [docs/产品文档.md](docs/产品文档.md) |
 | **怎么实现** | [docs/设计文档.md](docs/设计文档.md) |
 | **为什么这么设计**（含代价） | [docs/产品决策记录.md](docs/产品决策记录.md) |
