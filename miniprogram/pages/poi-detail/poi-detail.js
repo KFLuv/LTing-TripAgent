@@ -146,11 +146,34 @@ Page({
     if (tel) wx.makePhoneCall({ phoneNumber: tel });
   },
 
-  navigate() {
+  /**
+   * 一键导航。注意「定位失败，请手动输入位置」是**内置地图页**在拿不到
+   * "你从哪出发"时的提示——目的地坐标我们是有的。所以这里先确认有起点，
+   * 没有就先把原因讲清楚，别让用户对着地图页干瞪眼。
+   */
+  async navigate() {
     const p = this.data.poi || {};
     if (!p.lat || !p.lng) {
       api.toast('这家店没有坐标，没法导航');
       return;
+    }
+    let me = this.data.coords;
+    if (!me || !me.real) {
+      me = await api.currentLocation();
+      this.setData({ coords: me, locText: me.real ? '已定位' : ('没拿到定位：' + (me.error || '')) });
+    }
+    if (!me.real) {
+      const go = await confirmModal(
+        '地图缺"你在哪"',
+        '目的地已经传过去了，但拿不到你的位置（' + (me.error || '未知原因') + '），'
+          + '地图里就没有起点。先开定位更准，也可以只打开目的地。',
+        '仍然打开',
+        '去开定位'
+      );
+      if (go === 'setting') {
+        wx.openSetting({ complete: () => this.locate() });
+        return;
+      }
     }
     wx.openLocation({
       latitude: p.lat,
@@ -191,3 +214,21 @@ Page({
     }
   }
 });
+
+/** 返回 'ok'(确认) / 'setting'(去设置) / ''(取消) */
+function confirmModal(title, content, confirmText, cancelText) {
+  return new Promise(function (resolve) {
+    wx.showModal({
+      title: title,
+      content: content,
+      confirmText: confirmText,
+      cancelText: cancelText,
+      success: function (r) {
+        resolve(r.confirm ? 'ok' : (r.cancel ? 'setting' : ''));
+      },
+      fail: function () {
+        resolve('');
+      }
+    });
+  });
+}

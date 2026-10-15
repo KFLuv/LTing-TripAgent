@@ -231,10 +231,28 @@ Page({
     this.showMapAt(nav.lat, nav.lng, nav.name || '目的地');
   },
 
-  /** 点内嵌地图才弹全屏（系统地图） */
-  openFullMap() {
+  /** 点内嵌地图才弹全屏（系统地图）。同样先确保有起点，否则内置地图会报"定位失败" */
+  async openFullMap() {
     const m = this.data.map;
     if (!m || !m.lat || !m.lng) return;
+    if (!m.mine && this.data.location.status !== 'ok') {
+      await this.locate();
+      if (this.data.location.status !== 'ok') {
+        const r = await new Promise((resolve) => wx.showModal({
+          title: '地图缺"你在哪"',
+          content: '目的地已经有坐标了，但拿不到你的位置（' + (this.data.location.error || '') +
+            '），地图里会没有起点。开着定位更准，也可以只打开目的地。',
+          confirmText: '仍然打开',
+          cancelText: '去开定位',
+          success: (res) => resolve(res.confirm),
+          fail: () => resolve(false)
+        }));
+        if (!r) {
+          wx.openSetting({ complete: () => this.locate() });
+          return;
+        }
+      }
+    }
     wx.openLocation({
       latitude: m.lat,
       longitude: m.lng,
