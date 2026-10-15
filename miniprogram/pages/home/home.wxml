@@ -1,0 +1,71 @@
+<view class="page">
+  <!-- 我是谁 -->
+  <view class="card hero">
+    <view class="row-between">
+      <view class="grow">
+        <view class="hero-title">你好，{{user.nickname || user.name || '旅行者'}}</view>
+        <view class="hero-sub">今天的行程、偏好与打卡，都记在库里</view>
+      </view>
+      <view class="avatar">{{initial}}</view>
+    </view>
+
+    <view class="stats">
+      <view class="stat" bindtap="goTrips">
+        <view class="stat-num">{{stats.trips}}</view>
+        <view class="stat-label">行程</view>
+      </view>
+      <view class="stat" bindtap="goProfile">
+        <view class="stat-num">{{stats.moments}}</view>
+        <view class="stat-label">动态</view>
+      </view>
+      <view class="stat" bindtap="goProfile">
+        <view class="stat-num">{{stats.logs}}</view>
+        <view class="stat-label">打卡</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 入口 -->
+  <view class="section-title">去哪</view>
+  <view class="grid">
+    <view class="entry" bindtap="goChat">
+      <view class="entry-title">AI 管家</view>
+      <view class="entry-sub">对话式规划，30 个工具</view>
+    </view>
+    <view class="entry" bindtap="goTrips">
+      <view class="entry-title">行程本</view>
+      <view class="entry-sub">时间线 · 版本回退</view>
+    </view>
+    <view class="entry" bindtap="goNearby">
+      <view class="entry-title">附近吃喝玩乐</view>
+      <view class="entry-sub">5–10km · 一键导航</view>
+    </view>
+    <view class="entry" bindtap="goProfile">
+      <view class="entry-title">我的</view>
+      <view class="entry-sub">资料 · 偏好档案</view>
+    </view>
+  </view>
+
+  <!-- 最近行程 -->
+  <view class="section-title">最近的行程</view>
+  <view class="card card-tight" wx:if="{{recentTrips.length}}">
+    <view class="list-item row-between" wx:for="{{recentTrips}}" wx:key="id"
+          data-id="{{item.id}}" bindtap="openTrip">
+      <view class="grow">
+        <view class="item-title ellipsis">{{item.title}}</view>
+        <view class="muted">{{item.statusText}} · {{item.updateTime}}</view>
+      </view>
+      <view class="chev">›</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>
+    还没有行程，去「管家」里说一句「帮我安排周末两天的广州行程」
+  </view>
+
+  <!-- 待搬模块，保持诚实 -->
+  <view class="card todo">
+    <view class="todo-title">小程序端待搬的模块</view>
+    <view class="muted">动态广场 · 打卡日志 · 好友系统 · 他人主页 —— 后端接口都已就绪
+      （/moment/*、/travel-log/*、/friend/*、/user/home），下一步按页面逐个搬过来。</view>
+  </view>
+</view>

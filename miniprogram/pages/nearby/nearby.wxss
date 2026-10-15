@@ -1,0 +1,84 @@
+.poi-img,
+.poi-ph {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 24rpx;
+  flex-shrink: 0;
+  background: #f0f0f3;
+}
+
+.poi-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  color: #86868b;
+}
+
+.poi-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: flex-end;
+  z-index: 80;
+}
+
+.sheet {
+  width: 100%;
+  max-height: 78vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: flex-start;
+}
+
+.sheet-title {
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.sheet-close {
+  font-size: 26rpx;
+  color: #86868b;
+  padding-left: 20rpx;
+}
+
+.menu-t {
+  font-size: 26rpx;
+  font-weight: 600;
+  margin-bottom: 10rpx;
+}
+
+.menu-row {
+  display: flex;
+  font-size: 26rpx;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.05);
+}
+
+.review {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.05);
+}
+
+.review-u {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.review-c {
+  font-size: 26rpx;
+  margin: 6rpx 0;
+}

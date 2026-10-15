@@ -1,0 +1,32 @@
+<view class="page" wx:if="{{trip}}">
+  <view class="card">
+    <view class="d-title">{{trip.title}}</view>
+    <view class="muted">{{trip.createTime}} · {{trip.updateTime}}</view>
+    <view class="d-content" wx:if="{{trip.content}}">
+      <text user-select="true">{{trip.content}}</text>
+    </view>
+    <view class="muted" wx:else>正文是空的，可以回「管家」里让它补排。</view>
+  </view>
+
+  <view class="section-title">时间线（{{nodes.length}} 个节点）</view>
+  <view class="card card-tight" wx:if="{{nodes.length}}">
+    <view class="list-item" wx:for="{{nodes}}" wx:key="id">
+      <view class="n-time">{{item.time}}</view>
+      <view class="n-title">{{item.title}}</view>
+      <view class="muted clamp-2" wx:if="{{item.detail}}">{{item.detail}}</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>还没有节点，管家排好后会出现在这里。</view>
+
+  <view class="section-title">版本（{{versions.length}} 个快照）</view>
+  <view class="card card-tight" wx:if="{{versions.length}}">
+    <view class="list-item row-between" wx:for="{{versions}}" wx:key="id">
+      <view class="grow">
+        <view class="n-title">版本 {{item.versionNo || item.id}}</view>
+        <view class="muted">{{item.createTime}}</view>
+      </view>
+      <view class="btn btn-ghost btn-mini" data-id="{{item.id}}" bindtap="rollback">回退</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>还没有保存过版本快照。</view>
+</view>

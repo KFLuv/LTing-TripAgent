@@ -1,0 +1,40 @@
+.login {
+  padding-top: 80rpx;
+}
+
+.brand {
+  padding: 0 16rpx 48rpx;
+}
+
+.brand-title {
+  font-size: 52rpx;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.brand-sub {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #6e6e73;
+}
+
+.ph {
+  color: #b0b0b5;
+}
+
+.links {
+  margin-top: 28rpx;
+  padding: 0 12rpx;
+}
+
+.link {
+  font-size: 26rpx;
+  color: #0071e3;
+}
+
+.hint {
+  margin: 8rpx 16rpx;
+  font-size: 22rpx;
+  color: #86868b;
+  word-break: break-all;
+}

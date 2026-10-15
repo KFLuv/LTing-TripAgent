@@ -1,0 +1,84 @@
+const { baseUrl } = require('../config.js');
+
+function toast(title) {
+  wx.showToast({ title: title, icon: 'none', duration: 2400 });
+}
+
+/**
+ * 统一请求。
+ *
+ * 后端所有业务接口都是 POST：
+ *  - 大多数用 @RequestParam 接表单 → 默认 content-type: application/x-www-form-urlencoded
+ *  - /agent/chat 用 @RequestBody String 接纯文本 → 传 raw
+ *
+ * 身份：后端靠 JSESSIONID。微信客户端的网络层会自动保存 Set-Cookie 并在后续
+ * 请求里带上，所以和浏览器一样「登录一次就够了」，不需要自己维护 token。
+ */
+function request(path, options) {
+  const opt = options || {};
+  const method = opt.method || 'POST';
+  const isRaw = typeof opt.raw === 'string';
+  const header = Object.assign({}, opt.header);
+
+  if (isRaw) {
+    header['Content-Type'] = 'text/plain;charset=UTF-8';
+    header['Accept'] = opt.accept || 'application/json';
+  } else if (method !== 'GET') {
+    header['Content-Type'] = 'application/x-www-form-urlencoded';
+    header['Accept'] = 'application/json';
+  }
+
+  return new Promise(function (resolve, reject) {
+    wx.request({
+      url: baseUrl + path,
+      method: method,
+      data: isRaw ? opt.raw : (opt.data || {}),
+      header: header,
+      // Agent 一轮最多 12 次工具调用，慢的时候要几十秒，别用默认 60s 卡掉
+      timeout: opt.timeout || 120000,
+      success: function (res) {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(res.data);
+        } else {
+          const msg = '服务返回 ' + res.statusCode;
+          if (!opt.silent) toast(msg);
+          reject(new Error(msg));
+        }
+      },
+      fail: function (err) {
+        const raw = (err && err.errMsg) || '网络异常';
+        let msg = '请求失败：' + raw;
+        if (raw.indexOf('domain') >= 0 || raw.indexOf('not in domain') >= 0) {
+          msg = '域名未放行：开发者工具请勾选「不校验合法域名」';
+        } else if (raw.indexOf('timeout') >= 0) {
+          msg = '请求超时，后端的 Agent 还在跑，稍后再看会话记录';
+        }
+        if (!opt.silent) toast(msg);
+        reject(new Error(msg));
+      }
+    });
+  });
+}
+
+/** 定位：拿不到权限就退回兜底坐标，保证「附近」这类功能有东西可看 */
+function currentLocation() {
+  const { fallbackLocation } = require('../config.js');
+  return new Promise(function (resolve) {
+    wx.getLocation({
+      type: 'gcj02',
+      success: function (res) {
+        resolve({ lat: res.latitude, lng: res.longitude, real: true });
+      },
+      fail: function () {
+        resolve({
+          lat: fallbackLocation.lat,
+          lng: fallbackLocation.lng,
+          real: false,
+          name: fallbackLocation.name
+        });
+      }
+    });
+  });
+}
+
+module.exports = { request: request, toast: toast, currentLocation: currentLocation };

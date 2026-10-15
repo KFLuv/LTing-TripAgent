@@ -1,0 +1,40 @@
+<view class="chat">
+  <view class="chat-bar">
+    <view class="grow ellipsis bar-title" bindlongpress="renameSession">{{title || '新对话'}}</view>
+    <view class="bar-btn" bindtap="newSession">新会话</view>
+    <view class="bar-btn" bindtap="openSessions">历史</view>
+  </view>
+
+  <view class="warn" wx:if="{{agentOff}}">
+    后端没配 ai.api-key，当前是简易模式（仍可规划行程，但不会是真实大模型回答）。
+  </view>
+
+  <scroll-view class="chat-body" scroll-y scroll-into-view="{{intoView}}" scroll-with-animation>
+    <view wx:if="{{!msgs.length}}" class="chat-empty">
+      <view class="chat-empty-t">说一句想去哪，管家会读你的偏好档案再排行程</view>
+      <view class="chips">
+        <view class="chip" wx:for="{{quick}}" wx:key="*this" data-t="{{item}}" bindtap="useQuick">{{item}}</view>
+      </view>
+    </view>
+
+    <view wx:for="{{msgs}}" wx:key="idx" id="m{{index}}" class="msg msg-{{item.role}}">
+      <view class="bubble">
+        <text user-select="true">{{item.text}}</text>
+        <view class="actions" wx:if="{{item.actions.length}}">
+          <view class="actions-t">本次为你做了 {{item.actions.length}} 件事</view>
+          <view class="action" wx:for="{{item.actions}}" wx:for-item="a" wx:key="summary">· {{a.summary}}</view>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{sending}}" class="msg msg-ai">
+      <view class="bubble typing">管家正在查库 / 调工具，最长可能几十秒…</view>
+    </view>
+    <view id="m-end" style="height:24rpx"></view>
+  </scroll-view>
+
+  <view class="chat-input">
+    <input class="chat-input-box" value="{{input}}" placeholder="想去哪、几个人、几天…"
+           confirm-type="send" bindinput="onInput" bindconfirm="send" disabled="{{sending}}" />
+    <button class="btn btn-primary btn-send" bindtap="send" disabled="{{sending || !input}}">发送</button>
+  </view>
+</view>

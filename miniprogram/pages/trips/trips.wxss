@@ -1,0 +1,10 @@
+.t-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.hint {
+  padding: 8rpx 16rpx 0;
+  font-size: 22rpx;
+  color: #86868b;
+}

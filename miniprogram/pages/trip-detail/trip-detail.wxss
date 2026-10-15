@@ -1,0 +1,23 @@
+.d-title {
+  font-size: 38rpx;
+  font-weight: 700;
+  margin-bottom: 6rpx;
+}
+
+.d-content {
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.n-time {
+  font-size: 22rpx;
+  color: #0071e3;
+}
+
+.n-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  margin: 4rpx 0;
+}

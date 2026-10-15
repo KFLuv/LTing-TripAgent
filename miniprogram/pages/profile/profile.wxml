@@ -1,0 +1,54 @@
+<view class="page">
+  <view class="card">
+    <view class="row">
+      <view class="avatar">{{initial}}</view>
+      <view class="grow" style="margin-left:24rpx">
+        <view class="p-name">{{form.nickname || user.name}}</view>
+        <view class="muted">{{user.name}}{{user.email ? ' · ' + user.email : ''}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-title">个人资料</view>
+  <view class="card">
+    <view class="field">
+      <view class="field-label">昵称</view>
+      <input class="field-input" value="{{form.nickname}}" bindinput="onField" data-k="nickname" />
+    </view>
+    <view class="field">
+      <view class="field-label">标签（逗号分隔）</view>
+      <input class="field-input" value="{{form.tags}}" bindinput="onField" data-k="tags" />
+    </view>
+    <view class="field">
+      <view class="field-label">个人简介</view>
+      <input class="field-input" value="{{form.bio}}" bindinput="onField" data-k="bio" />
+    </view>
+    <view class="field">
+      <view class="field-label">兴趣偏好</view>
+      <input class="field-input" value="{{form.interests}}" bindinput="onField" data-k="interests" />
+    </view>
+    <button class="btn btn-primary" bindtap="saveProfile">保存资料</button>
+  </view>
+
+  <view class="section-title">偏好档案（AI 排行程时必读的硬约束）</view>
+  <view class="card card-tight" wx:if="{{prefs.length}}">
+    <view class="list-item row-between" wx:for="{{prefs}}" wx:key="tag"
+          data-tag="{{item.tag}}" data-value="{{item.value}}" bindtap="editPref">
+      <view class="grow">
+        <view class="pref-tag">{{item.tag}}</view>
+        <view class="muted">{{item.value || '（空）'}}</view>
+      </view>
+      <view class="chev">›</view>
+    </view>
+  </view>
+  <view class="card empty" wx:else>还没有偏好。点下面的按钮加一条，或在对话里直接说「我不吃辣」。</view>
+  <button class="btn btn-ghost" bindtap="addPref">＋ 添加一条偏好</button>
+
+  <view class="section-title">账号</view>
+  <view class="card">
+    <button class="btn btn-ghost" bindtap="logout">退出登录</button>
+    <view class="muted" style="margin-top:12rpx">
+      小程序的退出只清本地登录态；服务端会话保留 30 天（和桌面端同一套机制）。
+    </view>
+  </view>
+</view>

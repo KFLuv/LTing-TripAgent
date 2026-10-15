@@ -1,0 +1,76 @@
+<view class="page">
+  <view class="card">
+    <view class="seg">
+      <view class="seg-item {{radius === item.v ? 'on' : ''}}" wx:for="{{radiusOptions}}"
+            wx:key="v" data-v="{{item.v}}" bindtap="setRadius">{{item.label}}</view>
+    </view>
+    <view class="field" style="margin-top:20rpx;margin-bottom:0">
+      <input class="field-input" value="{{keyword}}" placeholder="搜店名 / 品类，如「麦当劳」「咖啡」"
+             confirm-type="search" bindinput="onKeyword" bindconfirm="search" />
+    </view>
+    <view class="muted" style="margin-top:12rpx">
+      {{located ? '已定位' : '没拿到定位，用的是兜底坐标（广州塔）'}} · 查到 {{pois.length}} 家
+    </view>
+  </view>
+
+  <view class="card card-tight" wx:if="{{pois.length}}">
+    <view class="list-item row" wx:for="{{pois}}" wx:key="poiId" data-id="{{item.poiId}}"
+          data-index="{{index}}" bindtap="openDetail">
+      <image class="poi-img" src="{{item.cover}}" mode="aspectFill" wx:if="{{item.cover}}" />
+      <view class="poi-ph" wx:else>{{item.name[0]}}</view>
+      <view class="grow" style="margin-left:20rpx">
+        <view class="poi-name ellipsis">{{item.name}}</view>
+        <view class="muted ellipsis">{{item.city}} {{item.address}}</view>
+        <view class="row" style="margin-top:8rpx">
+          <view class="tag tag-warn" wx:if="{{item.rating}}">★ {{item.rating}}</view>
+          <view class="tag" wx:if="{{item.distanceText}}">{{item.distanceText}}</view>
+          <view class="tag" wx:if="{{item.cost}}">人均 {{item.cost}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <view class="card empty" wx:elif="{{loading}}">正在查附近的店…</view>
+  <view class="card empty" wx:else>这一圈没查到，换个半径或关键词再试。</view>
+
+  <!-- 门店详情面板 -->
+  <view class="mask" wx:if="{{detail}}" bindtap="closeDetail">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-head">
+        <view class="grow">
+          <view class="sheet-title">{{detail.name}}</view>
+          <view class="muted">{{detail.city}} {{detail.address}}</view>
+        </view>
+        <view class="sheet-close" bindtap="closeDetail">关闭</view>
+      </view>
+
+      <view class="row" style="flex-wrap:wrap;gap:10rpx;margin:16rpx 0">
+        <view class="tag tag-warn" wx:if="{{detail.sourceRating}}">★ {{detail.sourceRating}}</view>
+        <view class="tag" wx:if="{{detail.cost}}">人均 {{detail.cost}}</view>
+        <view class="tag" wx:if="{{detail.tel}}">{{detail.tel}}</view>
+      </view>
+
+      <view class="menu" wx:if="{{menu.length}}">
+        <view class="menu-t">菜单</view>
+        <view class="menu-row" wx:for="{{menu}}" wx:key="name">
+          <text class="grow ellipsis">{{item.name}}</text>
+          <text class="muted">{{item.price}}</text>
+        </view>
+      </view>
+
+      <view class="menu-t" style="margin-top:20rpx">用户评价（{{reviews.length}}）</view>
+      <view wx:if="{{reviews.length}}">
+        <view class="review" wx:for="{{reviews}}" wx:key="id">
+          <view class="row-between">
+            <text class="review-u">{{item.username}}</text>
+            <text class="tag tag-warn">★ {{item.rating}}</text>
+          </view>
+          <view class="review-c">{{item.content}}</view>
+          <view class="muted">{{item.createTime}}</view>
+        </view>
+      </view>
+      <view class="muted" wx:else>还没有人点评过这家。</view>
+
+      <button class="btn btn-primary" style="margin-top:24rpx" bindtap="navigate">一键导航</button>
+    </view>
+  </view>
+</view>

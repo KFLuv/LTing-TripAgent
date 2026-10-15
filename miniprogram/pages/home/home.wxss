@@ -1,0 +1,94 @@
+.hero {
+  padding: 40rpx 32rpx 24rpx;
+}
+
+.hero-title {
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.hero-sub {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #86868b;
+}
+
+.avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  background: rgba(0, 113, 227, 0.1);
+  color: #0071e3;
+  font-size: 36rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stats {
+  display: flex;
+  margin-top: 36rpx;
+  background: #f0f0f3;
+  border-radius: 24rpx;
+  padding: 24rpx 0;
+}
+
+.stat {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-num {
+  font-size: 38rpx;
+  font-weight: 700;
+}
+
+.stat-label {
+  font-size: 22rpx;
+  color: #86868b;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.entry {
+  width: calc(50% - 10rpx);
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 32rpx;
+  padding: 32rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04), 0 0 0 1rpx rgba(0, 0, 0, 0.04);
+}
+
+.entry-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.entry-sub {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #86868b;
+}
+
+.item-title {
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.chev {
+  color: #c7c7cc;
+  font-size: 40rpx;
+  margin-left: 16rpx;
+}
+
+.todo-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}

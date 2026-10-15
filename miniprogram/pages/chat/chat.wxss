@@ -1,0 +1,140 @@
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f5f7;
+}
+
+.chat-bar {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 20rpx 24rpx;
+  background: #fff;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.bar-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.bar-btn {
+  font-size: 24rpx;
+  color: #0071e3;
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background: rgba(0, 113, 227, 0.08);
+}
+
+.warn {
+  margin: 16rpx 24rpx 0;
+  padding: 16rpx 24rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 149, 0, 0.12);
+  color: #a05a00;
+  font-size: 24rpx;
+}
+
+.chat-body {
+  flex: 1;
+  min-height: 0;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.chat-empty {
+  padding: 60rpx 20rpx;
+  text-align: center;
+}
+
+.chat-empty-t {
+  font-size: 26rpx;
+  color: #86868b;
+  margin-bottom: 28rpx;
+}
+
+.chips {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.chip {
+  background: #fff;
+  border-radius: 999rpx;
+  padding: 20rpx 28rpx;
+  font-size: 26rpx;
+  color: #0071e3;
+}
+
+.msg {
+  display: flex;
+  margin-bottom: 20rpx;
+}
+
+.msg-user {
+  justify-content: flex-end;
+}
+
+.bubble {
+  max-width: 84%;
+  padding: 22rpx 26rpx;
+  border-radius: 24rpx;
+  font-size: 28rpx;
+  line-height: 1.6;
+  background: #fff;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.04);
+  word-break: break-word;
+}
+
+.msg-user .bubble {
+  background: #0071e3;
+  color: #fff;
+}
+
+.typing {
+  color: #86868b;
+}
+
+.actions {
+  margin-top: 16rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx dashed rgba(0, 0, 0, 0.1);
+}
+
+.actions-t {
+  font-size: 22rpx;
+  color: #248a3d;
+  margin-bottom: 6rpx;
+}
+
+.action {
+  font-size: 22rpx;
+  color: #6e6e73;
+}
+
+.chat-input {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 24rpx 24rpx;
+  background: #fff;
+  border-top: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.chat-input-box {
+  flex: 1;
+  height: 76rpx;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  background: #f0f0f3;
+  font-size: 28rpx;
+}
+
+.btn-send {
+  width: 140rpx;
+  height: 76rpx;
+  font-size: 28rpx;
+  border-radius: 999rpx;
+}

@@ -1,0 +1,58 @@
+<view class="page login">
+  <view class="brand">
+    <view class="brand-title">AI 旅游助手</view>
+    <view class="brand-sub">对话式规划行程，行程 / 动态 / 打卡 / 偏好全部落到库里</view>
+  </view>
+
+  <view class="card">
+    <block wx:if="{{mode === 'login'}}">
+      <view class="field">
+        <view class="field-label">账号</view>
+        <input class="field-input" value="{{username}}" placeholder="用户名" placeholder-class="ph"
+               bindinput="onUser" />
+      </view>
+      <view class="field">
+        <view class="field-label">密码</view>
+        <input class="field-input" password="{{true}}" value="{{password}}" placeholder="密码"
+               placeholder-class="ph" bindinput="onPwd" />
+      </view>
+      <button class="btn btn-primary" bindtap="doLogin" disabled="{{loading}}">
+        {{loading ? '登录中…' : '登录'}}
+      </button>
+    </block>
+
+    <block wx:else>
+      <view class="field">
+        <view class="field-label">账号</view>
+        <input class="field-input" value="{{username}}" placeholder="用户名" placeholder-class="ph"
+               bindinput="onUser" />
+      </view>
+      <view class="field">
+        <view class="field-label">密码</view>
+        <input class="field-input" password="{{true}}" value="{{password}}" placeholder="至少 6 位"
+               placeholder-class="ph" bindinput="onPwd" />
+      </view>
+      <view class="field">
+        <view class="field-label">确认密码</view>
+        <input class="field-input" password="{{true}}" value="{{password2}}" placeholder="再输一次"
+               placeholder-class="ph" bindinput="onPwd2" />
+      </view>
+      <view class="field">
+        <view class="field-label">邮箱（可空）</view>
+        <input class="field-input" value="{{email}}" placeholder="用于绑定 / 找回"
+               placeholder-class="ph" bindinput="onEmail" />
+      </view>
+      <button class="btn btn-primary" bindtap="doReg" disabled="{{loading}}">
+        {{loading ? '提交中…' : '注册并登录'}}
+      </button>
+    </block>
+
+    <view class="row-between links">
+      <text class="link" bindtap="toggleMode">{{mode === 'login' ? '没有账号，去注册' : '已有账号，去登录'}}</text>
+      <text class="link" bindtap="doGuest">游客进入</text>
+    </view>
+  </view>
+
+  <view class="hint">后端：{{baseUrl}}</view>
+  <view class="hint">开发者工具里请勾选「不校验合法域名」，否则本地 http 会被拦截。</view>
+</view>

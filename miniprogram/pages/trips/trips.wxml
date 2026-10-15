@@ -1,0 +1,21 @@
+<view class="page">
+  <view class="card card-tight" wx:if="{{trips.length}}">
+    <view class="list-item" wx:for="{{trips}}" wx:key="id" data-id="{{item.id}}"
+          bindtap="open" bindlongpress="remove">
+      <view class="row-between">
+        <view class="grow">
+          <view class="t-title ellipsis">{{item.title}}</view>
+          <view class="muted">{{item.updateTime || item.createTime}}</view>
+        </view>
+        <view class="tag {{item.status === 'done' ? 'tag-ok' : 'tag-brand'}}">{{item.statusText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card empty" wx:else>
+    还没有行程。去「管家」说一句，或点右下角先建一条空行程。
+  </view>
+
+  <view class="hint">长按一条行程可以删除；点进去能看时间线与版本回退。</view>
+  <view class="fab" bindtap="create">＋ 新建</view>
+</view>
