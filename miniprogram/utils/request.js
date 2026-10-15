@@ -102,14 +102,16 @@ function currentLocation() {
     wx.getLocation({
       type: 'gcj02',
       success: function (res) {
-        resolve({ lat: res.latitude, lng: res.longitude, real: true });
+        resolve({ lat: res.latitude, lng: res.longitude, real: true, error: '' });
       },
-      fail: function () {
+      fail: function (err) {
         resolve({
           lat: fallbackLocation.lat,
           lng: fallbackLocation.lng,
           real: false,
-          name: fallbackLocation.name
+          name: fallbackLocation.name,
+          // 把微信给的原文带出去，页面直接显示，不用猜"为什么定位失败"
+          error: (err && err.errMsg) || 'getLocation:fail'
         });
       }
     });

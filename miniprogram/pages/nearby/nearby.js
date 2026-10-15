@@ -44,7 +44,7 @@ Page({
     this.setData({
       coords: { lat: loc.lat, lng: loc.lng },
       located: !!loc.real,
-      locText: loc.real ? '已定位' : '没拿到定位，暂用兜底坐标（广州塔）'
+      locText: loc.real ? '已定位' : ('没拿到定位：' + (loc.error || '') + '（暂用兜底坐标）')
     });
     if (loc.real) {
       api.reportLocation({ lat: loc.lat, lng: loc.lng, place: '', accuracy: loc.accuracy || '' });

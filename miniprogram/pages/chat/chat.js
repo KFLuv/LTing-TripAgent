@@ -150,7 +150,7 @@ Page({
     if (!loc.real) {
       this.setData({
         'location.status': 'fail',
-        'location.error': '可能是没授权，或被系统限制'
+        'location.error': loc.error || 'getLocation 失败'
       });
       return;
     }
@@ -176,11 +176,24 @@ Page({
     wx.openSetting({ complete: () => this.locate() });
   },
 
+  /** 「地图」按钮：不管有没有导航链接，都能一键在内嵌地图里看自己的位置 */
+  async openLocalMap() {
+    if (this.data.location.status !== 'ok') {
+      await this.locate();
+    }
+    const me = this.data.location;
+    if (me.status !== 'ok') {
+      api.toast('先解决定位，才能在地图上看到自己');
+      return;
+    }
+    this.showMapAt(me.lat, me.lng, '我的位置', true);
+  },
+
   /** 在对话里画出内嵌地图：目的地圆圈 + 我→目的地连线 */
-  showMapAt(lat, lng, name) {
+  showMapAt(lat, lng, name, mine) {
     const me = this.data.location;
     const polyline = [];
-    if (me.status === 'ok' && me.lat && me.lng) {
+    if (!mine && me.status === 'ok' && me.lat && me.lng) {
       polyline.push({
         points: [
           { latitude: me.lat, longitude: me.lng },
@@ -197,7 +210,7 @@ Page({
         lat: lat,
         lng: lng,
         name: name,
-        mine: false,
+        mine: !!mine,
         circles: [{
           latitude: lat, longitude: lng, radius: 80,
           color: '#0071e3cc', fillColor: '#0071e333', strokeWidth: 2
@@ -242,24 +255,48 @@ Page({
   }
 });
 
-/** 从回答文本里抽「打开地图」要用的坐标：兼容 uri.amap.com/marker?position=lng,lat&name=xxx */
+/**
+ * 从回答文本里抽「打开地图」要用的坐标。真实格式（实测）：
+ *   https://www.amap.com/dir?type=car&to%5Blnglat%5D=113.323464,23.106483&to%5Bname%5D=广州塔
+ * 注意 to[lnglat] 的方括号会被 URL 编码成 %5Blnglat%5D —— 不先解码就永远匹配不上。
+ * 另外兼容高德 marker/search 链接：?position=lng,lat&name=xxx
+ */
 function parseNav(text) {
   if (!text) return null;
-  const m = text.match(/position=([\d.]+),([\d.]+)/);
-  if (!m) return null;
-  const lng = Number(m[1]);
-  const lat = Number(m[2]);
-  if (!lat || !lng) return null;
-  let name = '';
-  const n = text.match(/[?&]name=([^&\s)]+)/);
-  if (n) {
-    try {
-      name = decodeURIComponent(n[1]);
-    } catch (err) {
-      name = n[1];
+  let s = String(text);
+  // 先整体解码一次（能解出来更好匹配，解不出来就用原文）
+  try {
+    s = decodeURIComponent(s);
+  } catch (err) {
+    // 文本里可能有非法的 % 序列，忽略即可
+  }
+
+  // 1) 高德路线深链：to[lnglat]=经度,纬度
+  let m = s.match(/to\[lnglat\]=([\d.]+),([\d.]+)/i) || s.match(/position=([\d.]+),([\d.]+)/i);
+  if (m) {
+    const lng = Number(m[1]);
+    const lat = Number(m[2]);
+    if (lat && lng) {
+      const n = s.match(/to\[name\]=([^&\s)]+)/i) || s.match(/[?&]name=([^&\s)]+)/i);
+      return { lat: lat, lng: lng, name: n ? decodeSafe(n[1]) : '' };
     }
   }
-  return { lat: lat, lng: lng, name: name };
+
+  // 2) 只有地名（搜索链接）：交给 /agent/geocode 换坐标
+  const named = s.match(/[?&](?:keyword|query|q|to\[name\]|name)=([^&\s)]+)/i);
+  if (named) {
+    const nm = decodeSafe(named[1]).replace(/\[.*?\]/g, '').trim();
+    if (nm) return { name: nm, lat: 0, lng: 0 };
+  }
+  return null;
+}
+
+function decodeSafe(v) {
+  try {
+    return decodeURIComponent(v);
+  } catch (e) {
+    return v;
+  }
 }
 
 /** 回答里的高德链接（与桌面端同一套判定） */
@@ -291,10 +328,10 @@ function nameFromLink(url) {
  */
 async function resolveNav(text) {
   const withPos = parseNav(text);
-  if (withPos) return withPos;
+  if (withPos && withPos.lat && withPos.lng) return withPos;
   const link = findAmapLink(text);
   if (!link) return null;
-  const name = nameFromLink(link);
+  const name = (withPos && withPos.name) || nameFromLink(link);
   if (name) {
     const g = await api.geocode(name);
     if (g && g.ok && g.lat && g.lng) {

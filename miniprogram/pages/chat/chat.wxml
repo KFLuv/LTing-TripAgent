@@ -4,6 +4,7 @@
     <view class="bar-btn {{location.status === 'ok' ? 'on' : ''}}" bindtap="locate">
       {{location.status === 'locating' ? '定位中…' : (location.status === 'ok' ? '已定位' : '我的位置')}}
     </view>
+    <view class="bar-btn" bindtap="openLocalMap">地图</view>
     <view class="bar-btn" bindtap="newSession">新会话</view>
     <view class="bar-btn" bindtap="openSessions">历史</view>
   </view>
@@ -14,7 +15,7 @@
     📍 {{location.name}}　<text class="loc-coord">{{location.lat}}, {{location.lng}}</text>（点这里重新定位）
   </view>
   <view class="loc-line fail" wx:elif="{{location.status === 'fail'}}">
-    没拿到定位：{{location.error}} —— <text bindtap="locate">重试</text> / <text bindtap="openSetting">去设置</text>
+    没拿到定位：{{location.error}}　<text bindtap="locate">重试</text> / <text bindtap="openSetting">去设置</text>
   </view>
 
   <view class="warn" wx:if="{{agentOff}}">
