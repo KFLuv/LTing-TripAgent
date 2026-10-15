@@ -43,6 +43,13 @@
          scale="15" show-location="{{true}}" circles="{{circles}}" polyline="{{polyline}}"
          bindtap="navigate" />
     <view class="empty" wx:else>这家店没有返回坐标，开不了地图。</view>
+    <view class="origin">
+      <text class="k">起点</text>
+      <text class="grow ellipsis">{{originText}}</text>
+      <input class="origin-input" value="{{originInput}}" placeholder="拿不到定位就手填，如：广州塔"
+             bindinput="onOriginInput" bindconfirm="setOrigin" />
+      <text class="op" bindtap="setOrigin">用这个起点</text>
+    </view>
   </view>
 
   <view class="section-title">菜单（{{menu.length}}）</view>

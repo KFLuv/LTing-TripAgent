@@ -11,7 +11,9 @@ Page({
     myRating: '',
     myContent: '',
     locText: '',
-    coords: null
+    coords: null,
+    originText: '还没起点（可用下面的输入框手填）',
+    originInput: ''
   },
 
   onLoad(options) {
@@ -102,6 +104,42 @@ Page({
         arrowLine: true
       }]
     });
+    this.setData({ originText: '我的位置（自动定位）' });
+  },
+
+  onOriginInput(e) {
+    this.setData({ originInput: e.detail.value });
+  },
+
+  /**
+   * 手填起点：拿不到定位（比如开发者工具没开位置模拟）时，把地名换成坐标当起点，
+   * 页面内的地图照样能看到"从哪到店"的连线——系统地图的起点不受我们控制，这条只救内嵌地图。
+   */
+  async setOrigin() {
+    const kw = (this.data.originInput || '').trim();
+    if (!kw) {
+      api.toast('先写个起点，比如：广州塔');
+      return;
+    }
+    const g = await api.geocode(kw);
+    if (!g || !g.ok || !g.lat || !g.lng) {
+      api.toast('这个地名没解析出坐标，换个更完整的写法');
+      return;
+    }
+    const p = this.data.poi || {};
+    this.setData({
+      originText: (g.name || kw) + '（手填）',
+      polyline: [{
+        points: [
+          { latitude: Number(g.lat), longitude: Number(g.lng) },
+          { latitude: p.lat, longitude: p.lng }
+        ],
+        color: '#ff9500',
+        width: 4,
+        arrowLine: true
+      }]
+    });
+    api.toast('已把「' + (g.name || kw) + '」设为起点');
   },
 
   relocate() {
