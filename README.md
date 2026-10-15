@@ -4,7 +4,7 @@
 
 `Spring Boot 2.7.18` · `Java 11` · `MySQL 8 / 内嵌 H2` · `原生 HTML/CSS/JS` · `Electron 桌面端`
 
-**规模**：后端 33 个类 9,214 行 · 前端 17 个页面 8,338 行 · 23 张表 · 82 个接口 · 30 个 Agent 工具
+**规模**：后端 33 个类 9,214 行 · 桌面端前端 17 个页面 8,338 行 · **微信小程序端 13 个页面 62 个文件** · 23 张表 · 82 个接口（另有 4 个小程序令牌接口）· 30 个 Agent 工具
 
 ---
 
@@ -52,6 +52,26 @@
 ### 可见权限模型
 
 动态、行程、打卡、评价四类内容各自带 `public / friends / private`；广场只聚合 `public`，好友主页按是否为好友过滤，仅自己的内容只有本人可见。过滤逻辑统一走一个 SQL 片段生成器，避免每个查询各写一遍写歪成越权。
+
+---
+
+### 微信小程序端（13 个页面，对齐桌面端 9 个模块）
+
+小程序端是同一套后端接口的第二个客户端（微信不认 HTML，页面必须用 WXML/WXSS 重写一遍）：
+
+| 小程序页面 | 对应桌面端 | 说明 |
+|---|---|---|
+| 出发 / AI 管家 / 行程本 + 详情 | home / chat / trips | 管家带内嵌地图（点它才弹全屏）；行程里带**预算**与**行李** |
+| 动态广场（可发布） / 打卡 | square / checkin | 动态可选公开 · 仅好友 · 仅自己；打卡可搜附近店铺、独立于动态 |
+| 附近吃喝玩乐 / 商户详情 | nearby / poi | 评分 · 菜单 · **打卡记录** · 点评 + 内嵌地图 + 一键导航 + 手填起点 |
+| 好友 / TA 的主页 | friends / user | 用邀请码加好友，主页按权限过滤 |
+| 我的（资料 · 同行人 · 证件 · 偏好档案） / 账号管理 | profile / preferences / account | 改密码 · 绑定解绑邮箱 · 注销账号 |
+
+身份走**令牌**（`X-Auth-Token`）而不是 Cookie：服务端会话 cookie 是 `SameSite=Lax`，小程序发的是跨站请求，
+Chromium 内核会把 `Set-Cookie` 丢掉，表现成"登录成功、下一个请求又说没登录"。后端的 `TokenAuthFilter`
+把这个头翻译成会话身份，**既有 82 个接口一行都没改**，桌面端仍走 Cookie。
+
+导入、真机调试、上线体验版的三关、常见报错，都在 [miniprogram/README.md](miniprogram/README.md)。
 
 ---
 
@@ -104,6 +124,23 @@ npm run dist    # 打包成单文件免安装版
 
 ---
 
+### 方式三：跑微信小程序端
+
+1. 下载打包好的工程 [`release/ai-travel-assistant-miniprogram-v1.0.0.zip`](release/ai-travel-assistant-miniprogram-v1.0.0.zip) 解压（也可以直接用仓库里的 `miniprogram/`）；
+2. 开发者工具「导入项目」选那个目录（里面有 `app.json`），AppID 用自己的或点「测试号」；
+3. **先起后端**（小程序每个页面都要调接口）：双击桌面端，或
+   ```powershell
+   cd backend\target
+   ..\..\desktop\build\jre\bin\java.exe -jar chat-gpt.jar --server.port=8078
+   ```
+4. 「详情 → 本地设置」勾上**不校验合法域名**；后端地址默认写的是电脑的局域网地址，
+   换环境就在登录页点「后端：…（点这里改）」改一下（存在本地缓存，不用重新上传代码）。
+
+> **手机能不能用**：能，但要过三关——后端得能被手机访问（小程序不允许 http / IP 直连，真机调试除外）、
+> request 合法域名、位置接口与隐私指引。完整清单见 [miniprogram/README.md](miniprogram/README.md) 第七节。
+
+---
+
 ## 目录结构
 
 ```
@@ -123,6 +160,8 @@ ai-travel-assistant/
 ├── desktop/                    Electron 桌面端
 │   ├── main.js                 自动拉起后端（优先用自带 JRE）
 │   └── scripts/make-jre.js     用 jlink 裁出自带 JRE
+├── miniprogram/                微信小程序端（原生、零构建，导入开发者工具即用）
+├── release/                    打包好的下载件（小程序工程 zip）
 └── docs/                       产品 / 设计 / 技术文档与开发过程记录
 ```
 
