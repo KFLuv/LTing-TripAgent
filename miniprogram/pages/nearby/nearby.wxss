@@ -16,8 +16,14 @@
 }
 
 .poi-name {
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 600;
+}
+
+.poi-addr {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #86868b;
 }
 
 .loc-btn {

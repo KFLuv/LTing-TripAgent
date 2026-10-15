@@ -108,7 +108,8 @@ Page({
       city: p.city || '',
       address: p.address || '',
       tel: p.tel || '',
-      cost: p.cost || '',
+      // 人均会返回 130.00 这种，去掉没意义的小数，卡片里省几个字
+      cost: trimCost(p.cost),
       lat: p.lat,
       lng: p.lng,
       rating: p.avgRating || p.sourceRating || '',
@@ -123,3 +124,12 @@ Page({
     wx.navigateTo({ url: '/pages/poi-detail/poi-detail?poiId=' + e.currentTarget.dataset.id });
   }
 });
+
+/** 130.00 -> 130；130.50 -> 130.5；非数字原样返回 */
+function trimCost(v) {
+  const s = (v == null ? '' : String(v)).trim();
+  if (!s) return '';
+  const n = Number(s);
+  if (!isFinite(n)) return s;
+  return String(Math.round(n * 10) / 10);
+}

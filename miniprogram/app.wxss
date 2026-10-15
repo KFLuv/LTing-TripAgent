@@ -180,6 +180,26 @@ page {
   color: #a05a00;
 }
 
+/* 标签行：会换行，不会被挤扁（列表里 meta 信息多的时候用这个，不要用 .row） */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 10rpx;
+}
+
+.tag-sm {
+  height: 40rpx;
+  padding: 0 16rpx;
+  font-size: 22rpx;
+  margin-right: 0;
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* ---------- 列表行 ---------- */
 .list-item {
   padding: 28rpx 32rpx;

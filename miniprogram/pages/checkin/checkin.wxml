@@ -6,10 +6,10 @@
         <view class="muted">{{item.createTime}}</view>
       </view>
       <view class="muted" wx:if="{{item.note}}">{{item.note}}</view>
-      <view class="row" style="margin-top:10rpx;gap:10rpx;flex-wrap:wrap">
-        <view class="tag tag-warn" wx:if="{{item.rating}}">★ {{item.rating}}</view>
-        <view class="tag" wx:if="{{item.durationMin}}">{{item.durationMin}} 分钟</view>
-        <view class="tag tag-brand" wx:if="{{item.poiId}}">关联店铺</view>
+      <view class="chips">
+        <view class="tag tag-sm tag-warn" wx:if="{{item.rating}}">★ {{item.rating}}</view>
+        <view class="tag tag-sm" wx:if="{{item.durationMin}}">{{item.durationMin}} 分钟</view>
+        <view class="tag tag-sm tag-brand" wx:if="{{item.poiId}}">关联店铺</view>
       </view>
       <view class="m-imgs" wx:if="{{item.images.length}}">
         <image wx:for="{{item.images}}" wx:for-item="img" wx:key="*this" class="m-img" src="{{img}}"

@@ -21,11 +21,11 @@
       <view class="poi-ph" wx:else>{{item.name[0]}}</view>
       <view class="grow" style="margin-left:20rpx">
         <view class="poi-name ellipsis">{{item.name}}</view>
-        <view class="muted ellipsis">{{item.city}} {{item.address}}</view>
-        <view class="row" style="margin-top:8rpx">
-          <view class="tag tag-warn" wx:if="{{item.rating}}">★ {{item.rating}}</view>
-          <view class="tag" wx:if="{{item.distanceText}}">{{item.distanceText}}</view>
-          <view class="tag" wx:if="{{item.cost}}">人均 {{item.cost}}</view>
+        <view class="poi-addr ellipsis">{{item.city}} {{item.address}}</view>
+        <view class="chips">
+          <view class="tag tag-sm tag-warn" wx:if="{{item.rating}}">★ {{item.rating}}</view>
+          <view class="tag tag-sm" wx:if="{{item.distanceText}}">{{item.distanceText}}</view>
+          <view class="tag tag-sm" wx:if="{{item.cost}}">人均 {{item.cost}}</view>
         </view>
       </view>
     </view>
