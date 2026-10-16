@@ -5,7 +5,7 @@
 | 文档版本 | v1.0 |
 | 产品版本 | 桌面版 1.1.1 |
 | 作者 | 杨博全（Agent 设计 · 产品设计 · 开发） |
-| 状态 | 可运行，开源：github.com/KFLuv/ai-travel-assistant |
+| 状态 | 可运行，开源：github.com/KFLuv/LTing-TripAgent |
 | 关联文档 | `docs/产品文档.md` · `docs/产品决策记录.md` · `docs/设计文档.md` · `docs/analysis/01-诊断与决策.md` |
 
 ---
