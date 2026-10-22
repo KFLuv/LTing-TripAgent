@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统设置 · 出行 Agent</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">系统设置</div>
+                    <div class="page-sub">API Key 只保存在你这台电脑上，不进安装包、不进仓库、不写日志</div>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-key"></i> 配置文件</div>
+                <div class="hint" id="file-line">读取中…</div>
+                <div class="hint" style="margin-top:8px">
+                    保存后需要<strong>重启应用</strong>生效。当前页只接受本机访问（同一 WiFi 的其它设备改不了）。
+                    已经配置过的项会显示打码尾号；输入框留空 = 不修改。
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-robot"></i> 大模型（OpenAI 兼容）</div>
+                <div class="field-row">
+                    <input id="ai.base-url" placeholder="Base URL，如 https://api.deepseek.com">
+                    <input id="ai.model" placeholder="模型名，如 deepseek-chat">
+                    <input id="ai.api-key" type="password" placeholder="API Key（留空=不修改）" autocomplete="new-password">
+                </div>
+                <div class="hint" id="st-ai.api-key"></div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-location-dot"></i> 高德地图（Web 服务）</div>
+                <div class="field-row">
+                    <input id="geo.amap-key" type="password" placeholder="geo.amap-key（逆地理 / 周边 / 路线）" autocomplete="new-password">
+                </div>
+                <div class="hint" id="st-geo.amap-key"></div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-magnifying-glass"></i> 联网检索（博查）</div>
+                <div class="field-row">
+                    <input id="search.api-key" type="password" placeholder="search.api-key（可空）" autocomplete="new-password">
+                </div>
+                <div class="hint" id="st-search.api-key"></div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-map"></i> 高德地图（Web 端 JS API，聊天页内嵌地图）</div>
+                <div class="field-row">
+                    <input id="map.js-key" type="password" placeholder="map.js-key" autocomplete="new-password">
+                    <input id="map.js-security-code" type="password" placeholder="安全密钥 jscode" autocomplete="new-password">
+                </div>
+                <div class="hint" id="st-map.js-key"></div>
+                <div class="hint">这个 Key 会下发给浏览器，建议在高德控制台给它配置<strong>域名白名单</strong>与用量限制。</div>
+            </div>
+
+            <div class="band">
+                <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                    <button class="btn" id="save"><i class="fas fa-check"></i> 保存配置</button>
+                    <button class="btn ghost" id="clear"><i class="fas fa-trash"></i> 清除所有已保存配置</button>
+                    <span class="hint" id="msg"></span>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+    var FIELDS = ['ai.base-url', 'ai.model', 'ai.api-key', 'geo.amap-key',
+                  'search.api-key', 'map.js-key', 'map.js-security-code'];
+    var SECRETS = ['ai.api-key', 'geo.amap-key', 'search.api-key', 'map.js-key', 'map.js-security-code'];
+
+    function el(id) { return document.getElementById(id); }
+    function msg(text, ok) {
+        el('msg').textContent = text || '';
+        el('msg').style.color = ok ? '#248a3d' : '#ff3b30';
+    }
+
+    async function load() {
+        try {
+            var res = await fetch('api/config/keys', {credentials: 'include'});
+            var data = await res.json();
+            if (data.status !== 'success') { msg(data.message || '读取失败', false); return; }
+            el('file-line').textContent = '本机配置文件：' + data.file;
+            (data.items || []).forEach(function (it) {
+                var s = el('st-' + it.key);
+                if (s) {
+                    s.textContent = it.configured
+                        ? ('已配置（' + it.masked + '）' + (it.pendingRestart ? ' · 已保存，重启后生效' : ''))
+                        : '未配置';
+                    s.style.color = it.configured ? '#248a3d' : '#a05a00';
+                }
+            });
+        } catch (e) {
+            msg('读取失败：' + e.message, false);
+        }
+    }
+
+    el('save').addEventListener('click', async function () {
+        var body = {};
+        FIELDS.forEach(function (k) {
+            var v = (el(k).value || '').trim();
+            if (v) { body[k] = v; }
+        });
+        if (!Object.keys(body).length) { msg('没有要保存的内容（输入框都空着）', false); return; }
+        try {
+            var res = await fetch('api/config/keys', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            var data = await res.json();
+            if (data.status === 'success') {
+                FIELDS.forEach(function (k) { el(k).value = ''; });
+                msg('已保存到本机，重启应用后生效', true);
+                load();
+            } else { msg(data.message || '保存失败', false); }
+        } catch (e) { msg('保存失败：' + e.message, false); }
+    });
+
+    el('clear').addEventListener('click', function () {
+        if (!confirm('清除所有已保存的 API 配置？')) return;
+        var body = {};
+        FIELDS.forEach(function (k) { body[k] = ''; });
+        fetch('api/config/keys', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            msg(data.status === 'success' ? '已清除，重启后生效' : (data.message || '清除失败'), data.status === 'success');
+            load();
+        }).catch(function (e) { msg('清除失败：' + e.message, false); });
+    });
+
+    load();
+})();
+</script>
+</body>
+</html>

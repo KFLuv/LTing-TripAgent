@@ -14,7 +14,8 @@
         {href: 'profile.html', icon: 'fa-id-badge', label: '个人资料'},
         {href: 'preferences.html', icon: 'fa-sliders', label: '偏好档案'},
         {href: 'nearby.html', icon: 'fa-utensils', label: '附近吃喝玩乐'},
-        {href: 'account.html', icon: 'fa-user-gear', label: '账号管理'}
+        {href: 'account.html', icon: 'fa-user-gear', label: '账号管理'},
+        {href: 'settings.html', icon: 'fa-gear', label: '系统设置'}
     ];
 
     /** 可见范围三档的下拉（各页面复用同一套选项，避免文案不一致） */
