@@ -151,6 +151,8 @@ npm run dist    # 打包成单文件免安装版
 > `AI_API_KEY` / `GEO_AMAP_KEY` / `SEARCH_API_KEY` / `MAP_JS_KEY` / `MAP_JS_SECURITY_CODE`。
 > 不填也能启动：数据库走内嵌 H2，行程 / 动态 / 打卡 / 附近列表照常可用，只有大模型对话与地图能力降级。
 
+> **密钥核对（2026-11-06）**：已检查当前工作区、全部 Git 历史及拉取后的远端引用，未包含当前实际使用的 DeepSeek Key。真实 Key 只保存在仓库外的 `%USERPROFILE%\.ai-travel-assistant\application.properties`。历史中仍可检索到已经作废的旧 Key 记录，因此不要把旧提交里的值重新启用。
+
 ---
 
 ### 方式三：跑微信小程序端
