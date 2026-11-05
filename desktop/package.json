@@ -14,7 +14,7 @@
   "build": {
     "appId": "com.aitravelguide.desktop",
     "productName": "AITravelGuide",
-    "artifactName": "LTing-${version}-免安装版.${ext}",
+    "artifactName": "LTing-${version}-portable.${ext}",
     "files": [
       "main.js",
       "preload.js",
@@ -41,7 +41,7 @@
         }
       ],
       "icon": "build/icon.ico",
-      "artifactName": "LTing-${version}-免安装版.${ext}"
+      "artifactName": "LTing-${version}-portable.${ext}"
     },
     "electronDownload": {
       "mirror": "https://npmmirror.com/mirrors/electron/"
@@ -51,7 +51,7 @@
       "buildResources": "build"
     },
     "portable": {
-      "artifactName": "LTing-${version}-免安装版.${ext}"
+      "artifactName": "LTing-${version}-portable.${ext}"
     }
   },
   "devDependencies": {

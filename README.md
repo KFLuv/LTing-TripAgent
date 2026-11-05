@@ -96,7 +96,7 @@ Chromium 内核会把 `Set-Cookie` 丢掉，表现成"登录成功、下一个�
 ### 方式一：直接跑桌面端（不需要装 Java / MySQL）
 
 **下载地址**：https://github.com/KFLuv/LTing-TripAgent/releases/latest
-（`LTing-1.1.9-免安装版.exe`）
+（`LTing-1.1.9-portable.exe`）
 
 内置 JRE 与内嵌 H2 数据库（落在 `%USERPROFILE%\.ai-travel-assistant\data`），双击即用。首次运行会自解压到临时目录，稍慢。
 
