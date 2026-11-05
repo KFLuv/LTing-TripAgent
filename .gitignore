@@ -5,6 +5,7 @@ target/
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
+.idea/
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/libraries/
@@ -36,6 +37,10 @@ build/
 !desktop/build/**
 # 例外中的例外：自带 JRE 约 50MB，用 npm run jre 现场生成，不入库
 desktop/build/jre/
+
+### Local-only backups and IDE workspace ###
+_legacy_backup/
+release_artifacts/
 
 ### VS Code ###
 .vscode/

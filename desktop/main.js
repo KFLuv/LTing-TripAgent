@@ -27,9 +27,10 @@ function jarPath() {
  */
 function javaExe() {
     const bundled = app.isPackaged
-        ? path.join(process.resourcesPath, 'jre', 'bin', 'java.exe')
-        : path.join(__dirname, 'build', 'jre', 'bin', 'java.exe');
-    return fs.existsSync(bundled) ? bundled : 'java';
+        ? path.join(process.resourcesPath, 'jre', 'bin', 'javaw.exe')
+        : path.join(__dirname, 'build', 'jre', 'bin', 'javaw.exe');
+    // javaw.exe 是 Windows GUI 子系统启动器，不会为 Spring Boot 后端创建控制台窗口。
+    return fs.existsSync(bundled) ? bundled : 'javaw';
 }
 
 /**
@@ -40,8 +41,46 @@ function javaExe() {
  * 让带分号的 JDBC URL 穿过进程边界既没必要，也容易在某些 shell 下被拆坏。
  * 要连自己的 MySQL 时，设环境变量 DB_URL / DB_USER / DB_PASSWORD 即可覆盖。
  */
+/** 「系统设置」页保存的本机配置：用命令行参数传给后端，优先级高于 jar 内配置 */
+const KEY_FILE = path.join(require('os').homedir(), '.ai-travel-assistant', 'application.properties');
+const PASS_KEYS = ['ai.base-url', 'ai.model', 'ai.api-key', 'geo.amap-key',
+    'search.api-key', 'map.js-key', 'map.js-security-code'];
+
+function localKeyArgs() {
+    const args = [];
+    let text = '';
+    try {
+        text = fs.readFileSync(KEY_FILE, 'utf8');
+    } catch (e) {
+        return args;   // 没有本机配置：后端照旧用 jar 内的值
+    }
+    // .properties 里的值会被 Properties.store 转义（https\://...），这里必须还原
+    const unescape = v => v
+        .replace(/\\u([0-9a-fA-F]{4})/g, (m, h) => String.fromCharCode(parseInt(h, 16)))
+        .replace(/\\([\s:=#!\\])/g, '$1')
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t');
+    const vals = {};
+    text.split(/\r?\n/).forEach(line => {
+        const s = line.trim();
+        if (!s || s.startsWith('#') || s.startsWith('!')) return;
+        const i = s.indexOf('=');
+        if (i > 0) vals[s.slice(0, i).trim()] = unescape(s.slice(i + 1).trim());
+    });
+    const injected = [];
+    PASS_KEYS.forEach(k => {
+        if (vals[k]) {
+            args.push('--' + k + '=' + vals[k]);
+            injected.push(k);
+        }
+    });
+    // 只打印键名，绝不打印值
+    console.log('[backend] 从本机配置注入:', injected.length ? injected.join(', ') : '(无)');
+    return args;
+}
+
 function backendArgs(jar) {
-    return ['-jar', jar, '--server.port=' + PORT];
+    return ['-jar', jar, '--server.port=' + PORT].concat(localKeyArgs());
 }
 
 /** 探测后端是否已经起来（HTTP 200 即视为就绪） */

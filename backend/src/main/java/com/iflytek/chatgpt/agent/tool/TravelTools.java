@@ -1,5 +1,7 @@
 package com.iflytek.chatgpt.agent.tool;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 import util.MySQLUtil;
 
@@ -28,6 +30,7 @@ import java.time.format.DateTimeFormatter;
  */
 @Component
 public class TravelTools {
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     // ==================== 一、动态活行程编排引擎 ====================
 
@@ -130,10 +133,55 @@ public class TravelTools {
         if (safeTitle.length() > 120) {
             safeTitle = safeTitle.substring(0, 120);
         }
-        MySQLUtil.executeUpdate(
-                "insert into trip(username, title, content, create_time) values(?, ?, ?, now())",
-                username, safeTitle, content);
+        int tripId = 0;
+        try (Connection conn = MySQLUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "insert into trip(username, title, content, create_time) values(?, ?, ?, now())",
+                     java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, username);
+            ps.setString(2, safeTitle);
+            ps.setString(3, content);
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    tripId = keys.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("保存行程失败：" + e.getMessage(), e);
+        }
+        if (tripId > 0) {
+            snapshotTrip(username, tripId, "初始版本");
+        }
         return "已保存到行程本，标题：" + safeTitle;
+    }
+
+    /**
+     * 工具：更新已有行程正文。
+     * 修改前和修改后各留一版快照，保证 Agent 的修改可见、可回退。
+     */
+    public String updateTrip(String username, int tripId, String title, String content) {
+        Map<String, Object> current = getTripDetail(username, tripId);
+        if (current == null || current.containsKey("error")) {
+            return "行程不存在或不属于当前用户，未更新";
+        }
+        String newTitle = title == null || title.trim().isEmpty()
+                ? String.valueOf(current.get("title")) : title.trim();
+        if (newTitle.length() > 120) {
+            newTitle = newTitle.substring(0, 120);
+        }
+        String newContent = content == null || content.trim().isEmpty()
+                ? String.valueOf(current.get("content")) : content;
+
+        snapshotTrip(username, tripId, "修改前自动备份");
+        int rows = MySQLUtil.executeUpdate(
+                "update trip set title = ?, content = ?, update_time = now() where id = ? and username = ?",
+                newTitle, newContent, tripId, username);
+        if (rows <= 0) {
+            return "行程不存在或不属于当前用户，未更新";
+        }
+        snapshotTrip(username, tripId, "Agent 修改后");
+        return "已更新行程#" + tripId + "，并保存修改前后版本";
     }
 
     // ==================== 二、用户旅游偏好记忆引擎 ====================
@@ -406,11 +454,12 @@ public class TravelTools {
     public String rollbackTrip(String username, int versionId) {
         String title = null;
         String content = null;
+        String nodesJson = null;
         int tripId = 0;
         int sourceNo = 0;
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "select trip_id, version_no, title, content from trip_version where id = ? and username = ?")) {
+                     "select trip_id, version_no, title, content, nodes_json from trip_version where id = ? and username = ?")) {
             ps.setInt(1, versionId);
             ps.setString(2, username);
             try (ResultSet rs = ps.executeQuery()) {
@@ -419,6 +468,7 @@ public class TravelTools {
                     sourceNo = rs.getInt("version_no");
                     title = rs.getString("title");
                     content = rs.getString("content");
+                    nodesJson = rs.getString("nodes_json");
                 }
             }
         } catch (SQLException e) {
@@ -431,8 +481,11 @@ public class TravelTools {
         MySQLUtil.executeUpdate(
                 "update trip set title = ?, content = ?, update_time = now() where id = ? and username = ?",
                 title, content, tripId, username);
+        boolean nodesRestored = restoreTripNodes(username, tripId, nodesJson);
         snapshotTrip(username, tripId, "回退到版本 v" + sourceNo);
-        return "已把行程#" + tripId + "回退到 v" + sourceNo + "（回退前已自动备份）";
+        return "已把行程#" + tripId + "回退到 v" + sourceNo
+                + (nodesRestored ? "（正文与节点已恢复，回退前已自动备份）"
+                                 : "（正文已恢复；该旧版本没有节点快照）");
     }
 
     /** 存一版快照（内部复用，逻辑与 TripController.snapshot 一致） */
@@ -471,9 +524,87 @@ public class TravelTools {
             // 取不到就默认 1，不影响保存
         }
         MySQLUtil.executeUpdate(
-                "insert into trip_version(trip_id, username, version_no, title, content, change_note, create_time)"
-                        + " values(?, ?, ?, ?, ?, ?, now())",
-                tripId, username, nextNo, title, content, changeNote);
+                "insert into trip_version(trip_id, username, version_no, title, content, nodes_json, change_note, create_time)"
+                        + " values(?, ?, ?, ?, ?, ?, ?, now())",
+                tripId, username, nextNo, title, content, tripNodesJson(username, tripId), changeNote);
+    }
+
+    private String tripNodesJson(String username, int tripId) {
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        String sql = "select node_type, title, detail, node_time, status, cost from trip_node"
+                + " where trip_id = ? and username = ? order by id";
+        try (Connection conn = MySQLUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, tripId);
+            ps.setString(2, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> node = new LinkedHashMap<>();
+                    node.put("nodeType", rs.getString("node_type"));
+                    node.put("title", rs.getString("title"));
+                    node.put("detail", rs.getString("detail"));
+                    node.put("nodeTime", rs.getString("node_time"));
+                    node.put("status", rs.getString("status"));
+                    node.put("cost", rs.getBigDecimal("cost"));
+                    nodes.add(node);
+                }
+            }
+            return JSON.writeValueAsString(nodes);
+        } catch (Exception e) {
+            throw new RuntimeException("生成行程节点快照失败：" + e.getMessage(), e);
+        }
+    }
+
+    private boolean restoreTripNodes(String username, int tripId, String nodesJson) {
+        if (nodesJson == null || nodesJson.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            JsonNode nodes = JSON.readTree(nodesJson);
+            if (!nodes.isArray()) {
+                return false;
+            }
+            try (Connection conn = MySQLUtil.getConnection()) {
+                conn.setAutoCommit(false);
+                try {
+                    try (PreparedStatement del = conn.prepareStatement(
+                            "delete from trip_node where trip_id = ? and username = ?")) {
+                        del.setInt(1, tripId);
+                        del.setString(2, username);
+                        del.executeUpdate();
+                    }
+                    try (PreparedStatement ins = conn.prepareStatement(
+                            "insert into trip_node(trip_id, username, node_type, title, detail, node_time, status, cost, create_time)"
+                                    + " values(?, ?, ?, ?, ?, ?, ?, ?, now())")) {
+                        for (JsonNode node : nodes) {
+                            ins.setInt(1, tripId);
+                            ins.setString(2, username);
+                            ins.setString(3, node.path("nodeType").asText("note"));
+                            ins.setString(4, node.path("title").asText(""));
+                            ins.setString(5, node.path("detail").asText(""));
+                            ins.setString(6, node.path("nodeTime").asText(""));
+                            ins.setString(7, node.path("status").asText(""));
+                            if (node.path("cost").isNumber()) {
+                                ins.setBigDecimal(8, node.path("cost").decimalValue());
+                            } else {
+                                ins.setBigDecimal(8, null);
+                            }
+                            ins.addBatch();
+                        }
+                        ins.executeBatch();
+                    }
+                    conn.commit();
+                    return true;
+                } catch (Exception e) {
+                    conn.rollback();
+                    throw e;
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("恢复行程节点失败：" + e.getMessage(), e);
+        }
     }
 
     // —— 5.3 旅途轨迹日志：打卡 / 评价 / 耗时 / 实拍 ——

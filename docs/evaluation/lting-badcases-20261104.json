@@ -1,0 +1,76 @@
+{
+  "project": "LTing",
+  "date": "2026-11-04",
+  "badcases": [
+    {
+      "id": "BUG-001",
+      "type": "evaluator",
+      "symptom": "评测创建会话后把 JSON 字节串当字典读取",
+      "fix": "解析 sessionId 前先 decode 并 json.loads",
+      "status": "fixed"
+    },
+    {
+      "id": "BUG-002",
+      "type": "configuration",
+      "symptom": "https\\:// 被环境变量原样传入，导致 Illegal character in scheme name",
+      "fix": "评测注入前规范化 URL 转义",
+      "status": "fixed"
+    },
+    {
+      "id": "BUG-003",
+      "type": "versioning",
+      "symptom": "Agent 新建行程没有初始版本快照",
+      "fix": "saveTrip 使用 generated key 后写入初始版本",
+      "status": "fixed"
+    },
+    {
+      "id": "BUG-004",
+      "type": "versioning",
+      "symptom": "缺少更新已有行程的工具，模型重复新建行程",
+      "fix": "新增 updateTrip，修改前后各生成版本",
+      "status": "fixed"
+    },
+    {
+      "id": "BUG-005",
+      "type": "persistence",
+      "symptom": "Tomcat JDBCStore 在 H2/MySQL 下出现 max_inactive * 1000 整数溢出",
+      "fix": "max_inactive 升级 BIGINT，并修正 session timeout 单位",
+      "status": "fixed"
+    },
+    {
+      "id": "BUG-006",
+      "type": "evaluation",
+      "symptom": "预算用例把只读 getBudgetSummary 当成写工具",
+      "fix": "期望值只保留 saveBudgetEntry 和 setBudgetThreshold",
+      "status": "fixed"
+    },
+    {
+      "id": "BUG-007",
+      "type": "navigation",
+      "symptom": "多链接回答中，链接目的地与文案实体可能不一致",
+      "fix": "按链接文案和 navigateTo 目的地匹配替换",
+      "status": "fixed"
+    },
+    {
+      "id": "BUG-008",
+      "type": "rollback",
+      "symptom": "回退只恢复行程正文，不恢复 trip_node",
+      "fix": "版本快照保存 nodes_json，回退时恢复节点",
+      "status": "fixed"
+    },
+    {
+      "id": "BUG-009",
+      "type": "build",
+      "symptom": "手工编译缺少 -parameters，Spring 无法解析 @RequestParam 参数名",
+      "fix": "按 Maven 行为使用 -parameters 编译控制器",
+      "status": "fixed"
+    },
+    {
+      "id": "BUG-010",
+      "type": "tool-routing",
+      "symptom": "trip(action=get) 使用 tripId，底层实现只读 id",
+      "fix": "兼容读取 id 或 tripId",
+      "status": "fixed"
+    }
+  ]
+}

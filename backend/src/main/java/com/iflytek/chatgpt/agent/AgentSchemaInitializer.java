@@ -170,6 +170,7 @@ public class AgentSchemaInitializer {
                     + " version_no int not null,"
                     + " title varchar(120) null,"
                     + " content mediumtext null,"
+                    + " nodes_json mediumtext null,"
                     + " change_note varchar(255) null,"
                     + " create_time datetime null,"
                     + " key idx_trip_version (trip_id, username)"
@@ -407,7 +408,7 @@ public class AgentSchemaInitializer {
             "create table if not exists tomcat_sessions ("
                     + " session_id varchar(100) not null primary key,"
                     + " valid_session char(1) not null,"
-                    + " max_inactive int not null,"
+                    + " max_inactive bigint not null,"
                     + " last_access bigint not null,"
                     + " app_name varchar(255) null,"
                     + " session_data mediumblob null,"
@@ -432,11 +433,13 @@ public class AgentSchemaInitializer {
         createIfAbsent("chat_message", CREATE_CHAT_MESSAGE);
         createIfAbsent("chat_session", CREATE_CHAT_SESSION);
         createIfAbsent("tomcat_sessions", CREATE_TOMCAT_SESSIONS);
+        ensureTomcatSessionMaxInactiveBigInt();
         // 给老的 chat_message 补 session_id 列，并把无归属的历史消息收进一个「历史对话」会话（老数据不丢）
         addColumnIfAbsent("chat_message", "session_id", "bigint null");
         migrateLegacyMessages();
         // —— 五大资产 Tab ——
         createIfAbsent("trip_version", CREATE_TRIP_VERSION);
+        addColumnIfAbsent("trip_version", "nodes_json", "mediumtext null");
         createIfAbsent("trip_node", CREATE_TRIP_NODE);
         createIfAbsent("preference_template", CREATE_PREFERENCE_TEMPLATE);
         createIfAbsent("preference_item", CREATE_PREFERENCE_ITEM);
@@ -476,6 +479,28 @@ public class AgentSchemaInitializer {
             log.info("Agent 附表已就绪：{}", table);
         } catch (Exception e) {
             log.warn("初始化附表 {} 失败（不影响启动，偏好/协同功能暂不可用）：{}", table, why(e));
+        }
+    }
+
+    /**
+     * Tomcat JDBCStore 的过期 SQL 会计算 max_inactive * 1000。
+     * H2/MySQL 下 INT 可能溢出，所以统一升级为 BIGINT；老库在启动时自动迁移。
+     */
+    private void ensureTomcatSessionMaxInactiveBigInt() {
+        try {
+            MySQLUtil.executeUpdate(
+                    "alter table tomcat_sessions alter column max_inactive bigint not null");
+            log.info("tomcat_sessions.max_inactive 已升级为 BIGINT");
+            return;
+        } catch (Exception ignored) {
+            // MySQL 使用 MODIFY COLUMN，继续尝试第二种语法
+        }
+        try {
+            MySQLUtil.executeUpdate(
+                    "alter table tomcat_sessions modify column max_inactive bigint not null");
+            log.info("tomcat_sessions.max_inactive 已升级为 BIGINT");
+        } catch (Exception e) {
+            log.warn("tomcat_sessions.max_inactive 升级 BIGINT 失败（可能已是 BIGINT）：{}", why(e));
         }
     }
 

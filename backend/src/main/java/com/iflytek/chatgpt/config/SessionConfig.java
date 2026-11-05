@@ -74,12 +74,16 @@ public class SessionConfig {
     private static final int IDLE_SWAP_MINUTES = 1;
 
     /**
-     * 会话有效期（秒）：30 天。
+     * 会话有效期（秒）：24 天。
      * <p>必须在这里显式设置：本类手写了 {@code ServletWebServerFactory} Bean，
      * 会绕过 Spring Boot 读取 {@code server.servlet.session.timeout} 的那一步，
      * 不写的话会话仍是容器默认的 30 分钟。
+     * <p>不能继续使用 30 天：H2 下 JDBCStore 清理 SQL 会计算
+     * {@code max_inactive * 1000}，30 天结果超过 int 上限并持续报 numeric overflow。
      */
-    private static final int SESSION_TIMEOUT_SECONDS = 30 * 24 * 60 * 60;
+    private static final int SESSION_TIMEOUT_SECONDS = 24 * 24 * 60 * 60;
+    /** StandardContext.setSessionTimeout 的单位是分钟。 */
+    private static final int SESSION_TIMEOUT_MINUTES = SESSION_TIMEOUT_SECONDS / 60;
 
     @Bean
     public ServletWebServerFactory servletContainer() {
@@ -120,8 +124,8 @@ public class SessionConfig {
 
                 std.setManager(manager);
                 std.setUseHttpOnly(true);
-                // 30 天：容器级别的会话有效期（秒），JDBCStore 会把它写进 max_inactive 列
-                std.setSessionTimeout(SESSION_TIMEOUT_SECONDS);
+                // 24 天：容器级别的会话有效期（秒），避免 H2 下 max_inactive * 1000 溢出
+                std.setSessionTimeout(SESSION_TIMEOUT_MINUTES);
             }
         };
 
@@ -129,6 +133,7 @@ public class SessionConfig {
         // 放到 postProcessContext 里会抛
         // IllegalStateException: Property [max age] cannot be added ... as the context has been initialised。
         // 浏览器不带 JSESSIONID，重启后就恢复不了会话，所以这一步不能省。
+        factory.getSession().setTimeout(java.time.Duration.ofSeconds(SESSION_TIMEOUT_SECONDS));
         factory.getSession().getCookie().setMaxAge(java.time.Duration.ofSeconds(SESSION_TIMEOUT_SECONDS));
         factory.getSession().getCookie().setHttpOnly(true);
         factory.getSession().getCookie().setPath("/chat");

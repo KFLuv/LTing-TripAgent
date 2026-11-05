@@ -81,6 +81,9 @@
                   'search.api-key', 'map.js-key', 'map.js-security-code'];
     var SECRETS = ['ai.api-key', 'geo.amap-key', 'search.api-key', 'map.js-key', 'map.js-security-code'];
 
+    // 和别的页面一样：先渲染左侧导航，再校验登录
+    Shell.renderNav('settings.html');
+
     function el(id) { return document.getElementById(id); }
     function msg(text, ok) {
         el('msg').textContent = text || '';
@@ -145,7 +148,11 @@
         }).catch(function (e) { msg('清除失败：' + e.message, false); });
     });
 
-    load();
+    (async function () {
+        var me = await Shell.currentUser();
+        if (!me) return;
+        load();
+    })();
 })();
 </script>
 </body>

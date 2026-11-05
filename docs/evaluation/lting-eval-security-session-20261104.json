@@ -1,0 +1,81 @@
+{
+  "base_url": "http://127.0.0.1:8078/chat",
+  "available": {
+    "available": true,
+    "loggedIn": true,
+    "configured": true
+  },
+  "generated_at": "2026-11-04T22:15:57+0800",
+  "cases": [
+    {
+      "id": "LT-06",
+      "category": "unauthorized",
+      "type": "cross_user",
+      "turns": [
+        {
+          "prompt": "访客A创建私有行程，访客B尝试按ID读取",
+          "answer": "{\"status\": \"error\", \"message\": \"行程不存在\"}",
+          "actions": [],
+          "elapsed_ms": 0
+        }
+      ],
+      "created_trip_id": 1,
+      "expected_write_tools": [],
+      "observed_write_tools": [],
+      "auto_check": "cross_user_blocked",
+      "manual_checks": [
+        "访客B无法读取访客A的行程",
+        "接口返回不存在或无权限",
+        "不泄露行程标题和正文"
+      ],
+      "manual_result": "pending"
+    },
+    {
+      "id": "LT-07",
+      "category": "multi_session",
+      "type": "multi_session",
+      "session_ids": [
+        1,
+        2
+      ],
+      "turns": [
+        {
+          "prompt": "记住我不吃辣。",
+          "answer": "已把这条写入你的偏好档案（忌口 = 不吃辣），之后推荐餐厅、排行程点位时，我会默认避开辣味主打店和辣的招牌菜，并优先挑清汤、清蒸、白灼类的本地做法。\n\n📌 已记住：忌口=不吃辣\n\n顺带问一句，方便我把这条约束定得更准：\n1. 是「完全不能碰辣」，还是「微辣能接受、别给我爆辣」？\n2. 是口味偏好，还是有胃病、过敏这类必须避开的情况（这条我会更严格地当作必须遵守的限制）？\n\n另外如果你近期有在做行程，告诉我目的地和天数，我可以直接按不吃辣的口味筛一遍餐厅和点位。",
+          "actions": [
+            {
+              "tool": "savePreference",
+              "summary": "记住偏好：忌口 = 不吃辣"
+            }
+          ],
+          "elapsed_ms": 0
+        },
+        {
+          "prompt": "记住我步行耐受比较低。",
+          "answer": "已经记好了，以后为你排路线会按这条规则来：\n\n- 单段步行尽量压缩在 10 分钟内，景点之间优先选打车或直达公交，尽量少换乘、少走回头路。\n- 同一天少安排“大园区暴走”类点位（比如超大公园、古镇长街这类），必要时可以拆成多个时段，或在途中安排可休息的点。\n- 遇到只能靠走的段落，我会提前告诉你要走多少米、大约几分钟，并给出打车上车点作为替代方案。\n\n📌 已记住：步行耐受=低\n\n需要我现在按这个约束帮你排一条行程吗？告诉我目的地和天数，或者我直接读你现有的行程改一版。",
+          "actions": [
+            {
+              "tool": "savePreference",
+              "summary": "记住偏好：步行耐受 = 低（怕久走，单段步行尽量控制在10分钟内，优先少换乘的直达方式）"
+            }
+          ],
+          "elapsed_ms": 0
+        }
+      ],
+      "expected_write_tools": [
+        "savePreference"
+      ],
+      "observed_write_tools": [
+        "savePreference"
+      ],
+      "auto_check": "multi_session_isolated",
+      "manual_checks": [
+        "同一用户可创建多个独立会话",
+        "两个会话的历史互不串线",
+        "两个会话都能完成偏好写入"
+      ],
+      "manual_result": "pending"
+    }
+  ],
+  "status": "executed"
+}

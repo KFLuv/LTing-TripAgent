@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -50,6 +51,9 @@ public class TravelAgentService {
     /** 回答里可能出现的高德链接（uri.amap.com / ditu.amap.com / www.amap.com 等） */
     private static final Pattern AMAP_URL =
             Pattern.compile("https?://[^\\s)\\]\"'>]*amap\\.com[^\\s)\\]\"'>]*", Pattern.CASE_INSENSITIVE);
+    private static final Pattern AMAP_MARKDOWN_LINK =
+            Pattern.compile("\\[([^\\]]+)\\]\\((https?://[^\\s)]*amap\\.com[^\\s)]*)\\)",
+                    Pattern.CASE_INSENSITIVE);
 
     /**
      * 旅游管家系统人设：约束四大子能力联动、禁止答成百科、强制带时间与风险。
@@ -61,9 +65,9 @@ public class TravelAgentService {
                     + "铁律1 凡涉及行程变更、画像更新、同行人记录、收藏、预算、清单、打卡、游记的需求，"
                     + "必须先调用对应工具把改动写入真实数据，再给出文字说明；"
                     + "禁止只用文字给出建议而不落库——用户会在对应页面里发现「你根本没做」。\n"
-                    + "铁律2 每次回答前，先用 listTrips / listTripNodes / listPreferences 读取当前真实状态，"
+                    + "铁律2 工具已按领域合并为 12 个入口，细分操作用 action 参数。每次回答前，先用 trip(action=list) / tripNodes(action=list) / preferences(action=list) 读取当前真实状态，"
                     + "铁律6 用户的「偏好档案」是硬约束：任何行程方案、点位与商家推荐都必须先满足画像里的饮食（忌口/辣度/过敏）、体力（怕累/怕爬山/怕久走）、环境（怕冷/怕热/怕吵）、出行（公交/打车/自驾）偏好；与偏好冲突时必须点明冲突并给折中方案。"
-                    + "用户在任何一句话里提到这类信息时（不吃辣、走不了太久、怕吵、想坐地铁…），立即用 savePreference 写入画像，不要等他明说「记一下」。"
+                    + "用户在任何一句话里提到这类信息时（不吃辣、走不了太久、怕吵、想坐地铁…），立即用 preferences(action=save) 写入画像，不要等他明说「记一下」。"
                     + "不要凭记忆或凭想象回答用户已有的行程与画像。\n"
                     + "铁律3 写入成功后必须回报「已写入什么」，让用户能在对应页面看到变化，不要长篇复述工具返回值。\n"
                     + "铁律4 凡涉及空间距离，必须基于真实坐标算出的距离作答（报出米数），禁止用「附近」这类模糊说法，"
@@ -77,7 +81,7 @@ public class TravelAgentService {
                     + "自动剔除无法按时抵达的项目、替换同风格备选点位、顺延后续全部节点、标记变更项，"
                     + "并输出风险清单：哪些票需退改、哪些新点位需预约、预约截止时间、超时风险。\n"
                     + "2) 用户旅游偏好记忆引擎：从对话/行程选择/投票中提取旅行相关偏好，"
-                    + "用 savePreference 写入画像（禁止记忆与旅行无关的信息）；出方案前先 listPreferences 对照画像；"
+                    + "用 preferences(action=save) 写入画像（禁止记忆与旅行无关的信息）；出方案前先 preferences(action=list) 对照画像；"
                     + "写入后必须在回答末尾用一行短句回显，格式固定：「📌 已记住：维度=取值 · 维度=取值」"
                     + "（例如「📌 已记住：步行耐受=低 · 偏好品类=逛吃 · 忌口=不吃辣」）；"
                     + "一条回答最多回显 1 次，没有新增或更新偏好时不要回显，禁止每轮都刷；"
@@ -105,21 +109,23 @@ public class TravelAgentService {
                     + "用户问「怎么去 / 导航到 / 带我去 某地」时，必须调用 navigateTo 生成导航链接，"
                     + "并用 Markdown 链接形式输出（如 [🚗 导航到广州塔](链接)），不要自己编路线、也不要只贴纯文本地址；"
                     + "只要用户表达了想去某地/怎么去的意思，就一定要调 navigateTo，不得只给文字描述跳过导航链接。\n"
-                    + "4) 多人行程协同仲裁引擎：接收全体同行人的偏好与诉求（用 listCompanions/saveCompanion 记录），"
+                    + "4) 多人行程协同仲裁引擎：接收全体同行人的偏好与诉求（用 companions(action=list/save) 记录），"
                     + "识别冲突后给出带投票项的备选方案，标注每套方案满足的人群、妥协项、牺牲内容；"
                     + "任何人改动即重算并同步全员；禁止为每人生成互不兼容的独立路线，目标产出一份全员可对齐、可共同执行的公共行程。\n"
                     + "5) 五大资产管理员（可读可写，必须用工具而不是空谈）："
-                    + "「行程库」——用 setTripStatus 变更行程状态（规划中/进行中/已结束），用 saveTripNode/listTripNodes 管理时间线节点"
-                    + "（订单 order、预约 booking、风险 risk、备注 note、备选路线 route），用 listTripVersions/rollbackTrip 查看并回退版本快照；"
+                    + "「行程库」——新建用 trip(action=save)；修改已有行程必须先用 trip(action=get) 读取现状，再调用 trip(action=update)，"
+                    + "不要每改一次就新建行程。用 trip(action=status) 变更状态，用 tripNodes(action=list/save) 管理节点"
+                    + "（订单 order、预约 booking、风险 risk、备注 note、备选路线 route），用 tripVersions(action=list/rollback) 查看并回退版本快照；"
                     + "用户说「出发了/玩完了/结束了/撤销/回退上一个版本」时必须落到这些工具。"
-                    + "「旅途轨迹日志」——用户报告在某地打卡、喜欢或避雷某处、花了多少时间时，用 logCheckin 记录；"
-                    + "用户说「生成游记/总结这次旅行」或行程标记「已结束」时，用 genTravelog 生成结构化游记草稿（亮点/踩坑）。"
-                    + "「偏好档案」——涉及用户画像时先 listPreferences，也可用 listPreferenceTemplates/activatePreferenceTemplate 切换模板。"
-                    + "「工具箱」——用户报账用 saveBudgetEntry，问花销/超支用 getBudgetSummary（含告警阈值），设阈值用 setBudgetThreshold，"
-                    + "整行李用 savePackingTemplate/listPackingTemplates，归档票据证件用 saveDocument。"
+                    + "「旅途轨迹日志」——用户报告打卡、喜欢或避雷某处、花了多少时间时，用 travelLog(action=checkin)；"
+                    + "用户说「生成游记/总结这次旅行」或行程标记「已结束」时，用 travelLog(action=travelog)。"
+                    + "「偏好档案」——涉及画像时先 preferences(action=list)，也可用 preferences(action=templates/activate) 切换模板。"
+                    + "「个人资产」——用户报账用 personalAssets(action=budget_save)，问花销用 personalAssets(action=budget_summary)，"
+                    + "设阈值用 personalAssets(action=budget_threshold)，行李模板用 personalAssets(action=packing_save/packing_list)，"
+                    + "票据证件用 personalAssets(action=document_save)。"
                     + "写入成功后，只需一句话确认存到了哪个资产，不要长篇复述工具返回值。\n"
-                    + "「朋友圈」与「个人资料」同样归你管：用户说「记一下今天…」「发个动态」时用 moment(action=save) 落库；"
-                    + "问「我是谁 / 我的标签 / 我的兴趣」时用 profile(action=get) 读，要求改资料时用 profile(action=set)。"
+                    + "「朋友圈」与「个人资料」同样归你管：发动态用 personalAssets(action=moment_save)，读动态用 personalAssets(action=moment_list)；"
+                    + "读个人资料用 personalAssets(action=profile_get)，修改用 personalAssets(action=profile_set)。"
                     + "这两类数据与其它资产一样必须先写库再回话，不要只在对话里答应。\n"
                     + "全局强制规则：\n"
                     + "- 禁止把景点介绍/历史百科/网上游记当主体；用户若提出这类问题，先结合其行程、位置、画像给落地建议，科普仅作附属补充。\n"
@@ -138,17 +144,17 @@ public class TravelAgentService {
                     + "需要事实数据（行程本、用户画像、同行人、景点库）时，先调用工具获取，不要凭空猜测。\n"
                     + "【四大子能力 —— 什么情况触发、必须调哪些工具】（放在末尾，请优先遵守）\n"
                     + "① 动态活行程编排：用户说「起晚了/加个地方/下雨了/堵车/景点闭园/换交通方式」，"
-                    + "或要求修改既有行程时触发。必调：listPreferences（先看画像）→ listTripNodes（先看现有时序）→ "
-                    + "（需要外部信息时）searchWeb/getLocationGuide 查开放与预约 → saveTripNode（写回调整后的节点）→ "
-                    + "必要时 setTripStatus。输出必须含风险清单（哪些票要退改、哪些新点位要预约、预约截止时间、超时风险）。\n"
+                    + "或要求修改既有行程时触发。必调：trip(action=list/get)（定位要修改的行程）→ preferences(action=list)（先看画像）→ tripNodes(action=list)（先看现有时序）→ "
+                    + "（需要外部信息时）searchWeb/getLocationGuide 查开放与预约 → trip(action=update)（写回行程正文）→ tripNodes(action=save)（补充预约/风险/备选节点）→ "
+                    + "必要时 trip(action=status)。输出必须含风险清单（哪些票要退改、哪些新点位要预约、预约截止时间、超时风险）。\n"
                     + "② 用户旅游偏好记忆引擎：用户提到任何旅行相关的习惯/限制/口味/预算/作息时触发。"
-                    + "必调：savePreference 写入，并在回答末尾按固定格式回显「📌 已记住：…」。"
-                    + "出方案前必调 listPreferences；用户说「设置/我的偏好」时也应先 listPreferences 再答复。\n"
+                    + "必调：preferences(action=save) 写入，并在回答末尾按固定格式回显「📌 已记住：…」。"
+                    + "出方案前必调 preferences(action=list)；用户说「设置/我的偏好」时也应先 preferences(action=list) 再答复。\n"
                     + "③ GPS 位置触发现场向导：涉及「在哪/附近/周边/怎么走/导航」时触发。"
                     + "必调：附近类先 searchNearby（按真实米数作答）；问某地现场情况先 getLocationGuide；"
                     + "问怎么去必调 navigateTo 并输出 Markdown 链接。库中没有的现场数据标注「需现场确认」，不得编造。\n"
                     + "④ 多人行程协同仲裁：用户提到同行人、家庭出游、多人偏好、投票、有人不满意时触发。"
-                    + "必调：listCompanions 看现有记录 → saveCompanion 登记新偏好或投票 → 重新计算后给出"
+                    + "必调：companions(action=list) 看现有记录 → companions(action=save) 登记新偏好或投票 → 重新计算后给出"
                     + "带投票项的备选方案（标注每套满足谁、妥协什么、牺牲什么）。"
                     + "禁止给每个人单独生成互不兼容的路线，最终只交付一份全员可对齐的公共行程。";
 
@@ -202,7 +208,7 @@ public class TravelAgentService {
      * 与 {@link #dispatch} 的 case 名保持一致。
      */
     private static final List<String> WRITE_TOOLS = Arrays.asList(
-            "saveTrip", "savePreference", "saveCompanion", "setTripStatus", "saveTripNode",
+            "saveTrip", "updateTrip", "savePreference", "saveCompanion", "setTripStatus", "saveTripNode",
             "rollbackTrip", "logCheckin", "genTravelog",
             "activatePreferenceTemplate", "saveBudgetEntry", "setBudgetThreshold",
             "savePackingTemplate", "saveDocument", "moment", "profile");
@@ -318,8 +324,7 @@ public class TravelAgentService {
                            List<Map<String, String>> actions) {
         String toolsJson = toolsJson();
         // navigateTo 生成的链接是唯一权威来源，记下来；回答返回前用它覆盖模型自己写的链接
-        String navUri = null;
-        String navName = null;
+        Map<String, String> navUris = new LinkedHashMap<>();
 
         for (int round = 0; round < MAX_ROUNDS; round++) {
             String raw;
@@ -342,7 +347,7 @@ public class TravelAgentService {
                 if (content.isEmpty()) {
                     content = "抱歉，我没能整理出方案，请补充更具体的条件再试一次。";
                 }
-                return alignNavigationLink(content, navUri, navName, lat, lng);
+                return alignNavigationLink(content, navUris, lat, lng);
             }
 
             // 情况 B：模型要调工具 → 把它的"调用请求"原样放进历史
@@ -356,12 +361,13 @@ public class TravelAgentService {
                 // ★ 这里才是"真正干活"，结果作为 role=tool 塞回，模型下一轮才能看到
                 String result = dispatch(username, toolName, arguments, lat, lng);
 
-                // 写操作摘要：供前端渲染「本次为你做了 N 件事」，读操作不记录（避免刷屏）
-                if (actions != null && WRITE_TOOLS.contains(toolName)) {
-                    String summary = describeAction(toolName, arguments);
+                // 写操作摘要：把领域入口解包回底层写工具，保持评测和前端动作卡口径一致。
+                String writeTool = canonicalWriteTool(toolName, arguments);
+                if (actions != null && writeTool != null) {
+                    String summary = describeAction(writeTool, arguments);
                     if (summary != null) {
                         Map<String, String> item = new java.util.LinkedHashMap<>();
-                        item.put("tool", toolName);
+                        item.put("tool", writeTool);
                         item.put("summary", summary);
                         actions.add(item);
                     }
@@ -372,8 +378,10 @@ public class TravelAgentService {
                     JsonNode nav = parse(result);
                     String uri = nav.path("uri").asText("");
                     if (!uri.isEmpty()) {
-                        navUri = uri;
-                        navName = nav.path("destination").asText("");
+                        String navDestination = nav.path("destination").asText("");
+                        if (!navDestination.isEmpty()) {
+                            navUris.put(navDestination, uri);
+                        }
                     }
                 }
 
@@ -385,7 +393,7 @@ public class TravelAgentService {
         }
 
         return alignNavigationLink("这次需求涉及的步骤较多，我先给出已确认的部分；"
-                + "你可以补充更具体的条件（城市、天数、同行人、预算）我再继续安排。", navUri, navName, lat, lng);
+                + "你可以补充更具体的条件（城市、天数、同行人、预算）我再继续安排。", navUris, lat, lng);
     }
 
     /**
@@ -398,37 +406,58 @@ public class TravelAgentService {
      * 若本轮压根没调 navigateTo（模型自己拼了链接），则从它写的链接里还原目的地名，重新生成权威链接；
      * 还原不出来就保持原文不动，绝不让"修链接"本身把回答改坏。
      */
-    private String alignNavigationLink(String answer, String uri, String destinationName,
+    private String alignNavigationLink(String answer, Map<String, String> navUris,
                                        Double lat, Double lng) {
         String text = answer == null ? "" : answer;
-        Matcher matcher = AMAP_URL.matcher(text);
-        boolean hasLink = matcher.find();
+        if (navUris == null || navUris.isEmpty()) {
+            return text;
+        }
 
-        String finalUri = uri;
-        if (finalUri == null || finalUri.isEmpty()) {
-            if (hasLink) {
-                String guess = destinationFromNavigationUrl(text.substring(matcher.start(), matcher.end()));
-                if (guess != null && !guess.isEmpty()) {
-                    // 只认通过地名重新解析出来的“真导航链接”，解析失败降级成的搜索链接不替换
-                    String rebuilt = String.valueOf(
-                            navigationService.buildNavigation(guess, "", "", lat, lng).get("uri"));
-                    // 新版深链是 www.amap.com/dir，老版是 uri.amap.com/navigation，两种都算真导航
-                    if (rebuilt.contains("/dir") || rebuilt.contains("/navigation")) {
-                        finalUri = rebuilt;
-                    }
+        Matcher matcher = AMAP_MARKDOWN_LINK.matcher(text);
+        StringBuffer out = new StringBuffer();
+        java.util.Set<String> used = new java.util.HashSet<>();
+        while (matcher.find()) {
+            String label = matcher.group(1);
+            String replacement = matcher.group(0);
+            for (Map.Entry<String, String> entry : navUris.entrySet()) {
+                if (!used.contains(entry.getKey()) && sameDestination(label, entry.getKey())) {
+                    replacement = "[" + label + "](" + entry.getValue() + ")";
+                    used.add(entry.getKey());
+                    break;
                 }
             }
-            if (finalUri == null || finalUri.isEmpty()) {
-                return text;
+            matcher.appendReplacement(out, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(out);
+        String aligned = out.toString();
+
+        for (Map.Entry<String, String> entry : navUris.entrySet()) {
+            if (!used.contains(entry.getKey()) && !aligned.contains(entry.getValue())) {
+                if (!aligned.isEmpty()) {
+                    aligned += "\n\n";
+                }
+                aligned += "[🚗 导航到" + entry.getKey() + "](" + entry.getValue() + ")";
             }
         }
+        return aligned;
+    }
 
-        if (hasLink) {
-            return text.substring(0, matcher.start()) + finalUri + text.substring(matcher.end());
+    private boolean sameDestination(String label, String destination) {
+        String a = normalizeDestination(label);
+        String b = normalizeDestination(destination);
+        if (a.isEmpty() || b.isEmpty()) {
+            return false;
         }
-        String name = destinationName == null || destinationName.isEmpty() ? "目的地" : destinationName;
-        String prefix = text.isEmpty() ? "" : text + "\n\n";
-        return prefix + "[🚗 导航到" + name + "](" + finalUri + ")";
+        return a.equals(b) || a.contains(b) || b.contains(a);
+    }
+
+    private String normalizeDestination(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("(导航到|导航|带我去|怎么去|地图|路线)", "")
+                .replaceAll("[\\s\\p{Punct}，。；：！？、（）【】《》]+", "")
+                .toLowerCase();
     }
 
     /**
@@ -495,8 +524,106 @@ public class TravelAgentService {
         return tools.toString();
     }
 
-    /** 四大子能力对应的全部工具 */
+    /** 暴露给模型的受控领域入口：12 个，细分操作放在 action 参数中。 */
     private List<AgentTool> buildTools() {
+        return Arrays.asList(
+                new AgentTool("searchDestination",
+                        "按城市、景点或分类搜索目的地景点。",
+                        schema("keyword", "string", "搜索关键词")),
+                new AgentTool("trip",
+                        "行程主入口。action=list 列出；get 读取；save 新建；update 更新已有正文；status 修改状态。",
+                        schemaAllOptional(
+                                "action", "string", "list/get/save/update/status",
+                                "tripId", "integer", "行程ID，get/update/status 时使用",
+                                "title", "string", "save/update 时使用",
+                                "content", "string", "save/update 时使用",
+                                "status", "string", "规划中/进行中/已结束")),
+                new AgentTool("tripNodes",
+                        "行程节点入口。action=list 读取；save 新增订单、预约、风险、备注、时间线或备选路线。",
+                        schemaAllOptional(
+                                "action", "string", "list/save",
+                                "tripId", "integer", "行程ID",
+                                "nodeType", "string", "timeline/order/booking/risk/note/route",
+                                "title", "string", "节点标题",
+                                "detail", "string", "节点详情",
+                                "nodeTime", "string", "节点时间",
+                                "status", "string", "节点状态",
+                                "cost", "number", "金额")),
+                new AgentTool("tripVersions",
+                        "行程版本入口。action=list 查看历史；rollback 回退到 versionId。",
+                        schemaAllOptional(
+                                "action", "string", "list/rollback",
+                                "tripId", "integer", "list 时使用",
+                                "versionId", "integer", "rollback 时使用")),
+                new AgentTool("preferences",
+                        "偏好档案入口。action=list 读取；save 写入；templates 列出模板；activate 启用模板。",
+                        schemaAllOptional(
+                                "action", "string", "list/save/templates/activate",
+                                "tag", "string", "save 时的画像维度",
+                                "value", "string", "save 时的取值",
+                                "templateId", "integer", "activate 时的模板ID")),
+                new AgentTool("getLocationGuide",
+                        "获取指定点位的现场资料；实时数据缺失时必须如实说明。",
+                        schema("place", "string", "地点名称")),
+                new AgentTool("searchNearby",
+                        "按用户当前定位搜索真实周边商户和景点，返回距离与地址；无定位时失败并要求用户上报。",
+                        schema("keywords", "string", "搜索关键词，多个用 | 分隔",
+                               "radius", "integer", "半径米，默认2000",
+                               "limit", "integer", "返回条数，默认10")),
+                new AgentTool("searchWeb",
+                        "检索本地库没有的最新或长尾信息，返回标题、摘要和链接。",
+                        schema("query", "string", "检索关键词")),
+                new AgentTool("navigateTo",
+                        "生成高德导航链接。用户问怎么去、导航到、带我去时使用。",
+                        schema("destination", "string", "目的地",
+                               "city", "string", "城市，可空",
+                               "mode", "string", "car/walk/bus/ride")),
+                new AgentTool("companions",
+                        "同行人入口。action=list 读取；save 登记或更新同行人偏好与投票。",
+                        schemaAllOptional(
+                                "action", "string", "list/save",
+                                "name", "string", "同行人称呼",
+                                "preferences", "string", "偏好",
+                                "vote", "string", "投票或诉求")),
+                new AgentTool("travelLog",
+                        "旅途记录入口。action=list 查看；checkin 打卡；travelog 生成游记草稿。",
+                        schemaAllOptional(
+                                "action", "string", "list/checkin/travelog",
+                                "tripId", "integer", "行程ID",
+                                "place", "string", "打卡地点",
+                                "rating", "string", "like/avoid/neutral",
+                                "note", "string", "备注",
+                                "durationMin", "integer", "游玩分钟",
+                                "photos", "string", "实拍说明")),
+                new AgentTool("personalAssets",
+                        "个人资产入口。支持预算、行李模板、证件归档、朋友圈和个人资料；用 action 区分具体操作。",
+                        schemaAllOptional(
+                                "action", "string", "budget_save/budget_summary/budget_threshold/packing_save/packing_list/document_save/moment_list/moment_save/profile_get/profile_set",
+                                "tripId", "integer", "关联行程，可空",
+                                "category", "string", "预算分类",
+                                "amount", "number", "金额或阈值",
+                                "item", "string", "预算项目",
+                                "entryDate", "string", "日期",
+                                "name", "string", "模板名称",
+                                "items", "string", "行李条目",
+                                "docType", "string", "归档类型",
+                                "title", "string", "标题",
+                                "docNo", "string", "凭证号",
+                                "detail", "string", "详情",
+                                "expireTime", "string", "有效期",
+                                "content", "string", "动态正文",
+                                "place", "string", "地点",
+                                "visibility", "string", "public/friends/private",
+                                "limit", "integer", "列表条数",
+                                "nickname", "string", "昵称",
+                                "tags", "string", "标签",
+                                "bio", "string", "简介",
+                                "interests", "string", "兴趣"))
+        );
+    }
+
+    /** 旧版细分工具保留为后端实现参考，不再直接暴露给模型。 */
+    private List<AgentTool> buildLegacyTools() {
         return Arrays.asList(
                 // —— 行程编排引擎 ——
                 new AgentTool("searchDestination",
@@ -509,9 +636,14 @@ public class TravelAgentService {
                         "读取某条行程的完整正文，用于在其基础上修改、顺延或补排。",
                         schema("id", "integer", "行程ID，来自 listTrips 的返回")),
                 new AgentTool("saveTrip",
-                        "把最终确定（或已变更）的行程方案保存到用户的行程本。",
+                        "新建一份行程并保存到行程本。只用于第一次创建；修改已有行程不要重复调用 saveTrip。",
                         schema("title", "string", "行程标题，30字以内",
                                "content", "string", "行程正文，按天/按时间列出")),
+                new AgentTool("updateTrip",
+                        "更新已有行程的标题或正文。修改已有行程时应先 getTripDetail 读取原文，再调用 updateTrip；会自动保存修改前后两个版本。",
+                        schema("tripId", "integer", "要修改的行程ID",
+                               "title", "string", "新标题；不传则保留原标题",
+                               "content", "string", "修改后的完整行程正文")),
                 // —— 偏好记忆引擎 ——
                 new AgentTool("listPreferences",
                         "读取用户长期画像标签（步行耐受、预算、作息、偏好品类、忌口、出行限制等），出方案前应先读。",
@@ -701,6 +833,10 @@ public class TravelAgentService {
         try {
             JsonNode args = objectMapper.readTree(
                     arguments == null || arguments.trim().isEmpty() ? "{}" : arguments);
+            String routedTool = routeAggregateTool(toolName, args);
+            if (routedTool != null) {
+                return dispatch(username, routedTool, args.toString(), lat, lng);
+            }
 
             switch (toolName) {
                 case "searchDestination":
@@ -708,10 +844,15 @@ public class TravelAgentService {
                 case "listTrips":
                     return toJson(travelTools.listTrips(username));
                 case "getTripDetail":
-                    return toJson(travelTools.getTripDetail(username, args.path("id").asInt(0)));
+                    return toJson(travelTools.getTripDetail(username,
+                            args.has("id") ? args.path("id").asInt(0) : args.path("tripId").asInt(0)));
                 case "saveTrip":
                     return travelTools.saveTrip(username,
                             args.path("title").asText(""), args.path("content").asText(""));
+                case "updateTrip":
+                    return travelTools.updateTrip(username,
+                            args.path("tripId").asInt(0), args.path("title").asText(""),
+                            args.path("content").asText(""));
                 case "listPreferences":
                     return toJson(travelTools.listPreferences(username));
                 case "savePreference":
@@ -818,6 +959,98 @@ public class TravelAgentService {
         }
     }
 
+    /**
+     * 把 12 个领域入口解包成旧版细分工具名。只影响后端路由，
+     * 不改变工具实现，也不把旧工具重新暴露给模型。
+     */
+    private String routeAggregateTool(String toolName, JsonNode args) {
+        String action = args.path("action").asText("").trim().toLowerCase();
+        if ("trip".equals(toolName)) {
+            if ("list".equals(action)) return "listTrips";
+            if ("get".equals(action)) return "getTripDetail";
+            if ("save".equals(action)) return "saveTrip";
+            if ("update".equals(action)) return "updateTrip";
+            if ("status".equals(action)) return "setTripStatus";
+        } else if ("tripNodes".equals(toolName)) {
+            if ("list".equals(action)) return "listTripNodes";
+            if ("save".equals(action)) return "saveTripNode";
+        } else if ("tripVersions".equals(toolName)) {
+            if ("list".equals(action)) return "listTripVersions";
+            if ("rollback".equals(action)) return "rollbackTrip";
+        } else if ("preferences".equals(toolName)) {
+            if ("list".equals(action)) return "listPreferences";
+            if ("save".equals(action)) return "savePreference";
+            if ("templates".equals(action)) return "listPreferenceTemplates";
+            if ("activate".equals(action)) return "activatePreferenceTemplate";
+        } else if ("companions".equals(toolName)) {
+            if ("list".equals(action)) return "listCompanions";
+            if ("save".equals(action)) return "saveCompanion";
+        } else if ("travelLog".equals(toolName)) {
+            if ("list".equals(action)) return "listTravelLogs";
+            if ("checkin".equals(action)) return "logCheckin";
+            if ("travelog".equals(action)) return "genTravelog";
+        } else if ("personalAssets".equals(toolName)) {
+            if ("budget_save".equals(action)) return "saveBudgetEntry";
+            if ("budget_summary".equals(action)) return "getBudgetSummary";
+            if ("budget_threshold".equals(action)) return "setBudgetThreshold";
+            if ("packing_save".equals(action)) return "savePackingTemplate";
+            if ("packing_list".equals(action)) return "listPackingTemplates";
+            if ("document_save".equals(action)) return "saveDocument";
+            if ("moment_list".equals(action) || "moment_save".equals(action)) {
+                if (args instanceof ObjectNode) {
+                    ((ObjectNode) args).put("action", "moment_save".equals(action) ? "save" : "list");
+                }
+                return "moment";
+            }
+            if ("profile_get".equals(action) || "profile_set".equals(action)) {
+                if (args instanceof ObjectNode) {
+                    ((ObjectNode) args).put("action", "profile_set".equals(action) ? "set" : "get");
+                }
+                return "profile";
+            }
+        }
+        return null;
+    }
+
+    /** 把领域入口中的写操作映射成原写工具名，供动作卡和评测使用。 */
+    private String canonicalWriteTool(String toolName, String arguments) {
+        if (WRITE_TOOLS.contains(toolName)) {
+            return toolName;
+        }
+        try {
+            JsonNode args = objectMapper.readTree(
+                    arguments == null || arguments.trim().isEmpty() ? "{}" : arguments);
+            String action = args.path("action").asText("").trim().toLowerCase();
+            if ("trip".equals(toolName)) {
+                if ("save".equals(action)) return "saveTrip";
+                if ("update".equals(action)) return "updateTrip";
+                if ("status".equals(action)) return "setTripStatus";
+            } else if ("tripNodes".equals(toolName)) {
+                return "save".equals(action) ? "saveTripNode" : null;
+            } else if ("tripVersions".equals(toolName)) {
+                return "rollback".equals(action) ? "rollbackTrip" : null;
+            } else if ("preferences".equals(toolName)) {
+                if ("save".equals(action)) return "savePreference";
+                if ("activate".equals(action)) return "activatePreferenceTemplate";
+            } else if ("companions".equals(toolName)) {
+                return "save".equals(action) ? "saveCompanion" : null;
+            } else if ("travelLog".equals(toolName)) {
+                if ("checkin".equals(action)) return "logCheckin";
+                if ("travelog".equals(action)) return "genTravelog";
+            } else if ("personalAssets".equals(toolName)) {
+                if ("budget_save".equals(action)) return "saveBudgetEntry";
+                if ("budget_threshold".equals(action)) return "setBudgetThreshold";
+                if ("packing_save".equals(action)) return "savePackingTemplate";
+                if ("document_save".equals(action)) return "saveDocument";
+                if ("moment_save".equals(action)) return "moment";
+                if ("profile_set".equals(action)) return "profile";
+            }
+            return null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     // ==================== 动作摘要（给前端的「本次为你做了 N 件事」） ====================
 
     /**
@@ -833,6 +1066,8 @@ public class TravelAgentService {
             switch (toolName) {
                 case "saveTrip":
                     return "保存行程：" + arg(args, "title");
+                case "updateTrip":
+                    return "更新行程 #" + args.path("tripId").asInt(0) + "：" + arg(args, "title");
                 case "savePreference":
                     return "记住偏好：" + arg(args, "tag") + " = " + arg(args, "value");
                 case "saveCompanion":

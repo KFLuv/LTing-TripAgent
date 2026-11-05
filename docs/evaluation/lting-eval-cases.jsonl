@@ -1,0 +1,10 @@
+{"id":"LT-01","category":"planning","turns":["帮我规划广州两天行程，第一天看城市地标，第二天安排室内备选，按时间段输出。"],"expected_write_tools":["saveTrip"],"manual_checks":["回答包含两天可执行行程和时间段","行程结果已写入行程库","不编造实时开放时间或票务信息"]}
+{"id":"LT-02","category":"memory","turns":["记住我不吃辣，步行耐受比较低。"],"expected_write_tools":["savePreference"],"manual_checks":["偏好被写入并可见回显","回显包含不吃辣和步行耐受低","没有记录与旅行无关的信息"]}
+{"id":"LT-03","category":"trip_edit","turns":["帮我安排广州两天游，第一天广州塔和珠江边，第二天博物馆。","第二天下午下雨了，改成室内备选，并保留后续行程时间。"],"expected_write_tools":["saveTrip","updateTrip","saveTripNode"],"manual_checks":["先读取已有行程和偏好","修改写回原行程而不是新建重复行程","输出变更项和时间风险"]}
+{"id":"LT-04","category":"rollback","turns":["帮我创建一份广州两天行程。","把第二天改成室内景点。","回退到上一个版本。"],"expected_write_tools":["saveTrip","updateTrip","saveTripNode","rollbackTrip"],"manual_checks":["生成版本快照","回退动作可见","回退后行程恢复到修改前"]}
+{"id":"LT-05","category":"tool_failure","turns":["我附近有什么好吃的？"],"expected_write_tools":[],"manual_checks":["附近工具因缺少定位失败时不伪造结果","清晰说明失败原因和恢复动作","要求用户上报位置或提供具体地点"]}
+{"id":"LT-06","category":"unauthorized","type":"cross_user","setup":{"title":"越权测试私有行程","content":"仅创建者可见"},"expected_write_tools":[],"manual_checks":["访客B无法读取访客A的行程","接口返回不存在或无权限","不泄露行程标题和正文"]}
+{"id":"LT-07","category":"multi_session","type":"multi_session","turns":["记住我不吃辣。","记住我步行耐受比较低。"],"expected_write_tools":["savePreference"],"manual_checks":["同一用户可创建多个独立会话","两个会话的历史互不串线","两个会话都能完成偏好写入"]}
+{"id":"LT-08","category":"companion_conflict","turns":["我和朋友去广州一天，我想逛博物馆，他想逛街和吃东西。帮我做一份两个人都能接受的行程。"],"expected_write_tools":["saveCompanion"],"manual_checks":["记录或读取同行人偏好","输出一份共同行程","明确说明双方各自妥协了什么"]}
+{"id":"LT-09","category":"factuality","turns":["广州塔今天现场排队多少分钟？"],"expected_write_tools":[],"manual_checks":["不编造实时排队时长","说明需要现场确认或给出可验证来源","不要把推测写成事实"]}
+{"id":"LT-10","category":"budget","turns":["记一下广州塔门票150元，这次总预算1000元，帮我看还剩多少。"],"expected_write_tools":["saveBudgetEntry","setBudgetThreshold"],"manual_checks":["预算条目和总预算被写入","回答或工具结果返回剩余额度","没有只做口头计算而不落库"]}

@@ -2,9 +2,12 @@
 
 > 一个**多页面分层的 AI 旅行工作台**：对话式规划行程，并把行程、动态、打卡、偏好这些旅行资产落到库里、在界面上看得见。
 
+**产品主线**：旅行规划 → 行程修改 → 用户确认 → 版本回退。
+附近、地图、社交和旅途记录是辅助资产，不替代这条核心闭环。
+
 `Spring Boot 2.7.18` · `Java 11` · `MySQL 8 / 内嵌 H2` · `原生 HTML/CSS/JS` · `Electron 桌面端`
 
-**规模**：后端 33 个类 9,214 行 · 桌面端前端 17 个页面 8,338 行 · **微信小程序端 13 个页面 62 个文件** · 23 张表 · 82 个接口（另有 4 个小程序令牌接口）· 30 个 Agent 工具
+**规模**：后端 33 个类 9,214 行 · 桌面端前端 17 个页面 8,338 行 · **微信小程序端 13 个页面 62 个文件** · 23 张表 · 82 个接口（另有 4 个小程序令牌接口）· 12 个受控 Agent 工具入口
 
 ---
 
@@ -40,9 +43,9 @@
 | **账号管理** | 改密码、绑定 / 换绑 / 解绑邮箱、注销账号 |
 | 登录 / 注册 / 地图 | 登录注册、Electron 内嵌地图页 |
 
-### Agent：30 个工具 + 12 轮循环
+### Agent：12 个受控工具入口 + 12 轮循环
 
-`LLM（大脑）+ Tools（30 个手脚）+ Loop（最多 12 轮）+ Memory（会话记忆，存库）`
+`LLM（大脑）+ Tools（12 个领域入口）+ Loop（最多 12 轮）+ Memory（会话记忆，存库）`
 
 - **写操作可见**：`/agent/chat` 除了 `answer` 还返回 `actions`，前端渲染成「本次为你做了 N 件事」
 - **偏好是硬约束**：任何行程方案、点位与商户推荐都必须先满足画像；冲突要点明并给折中方案
@@ -93,7 +96,7 @@ Chromium 内核会把 `Set-Cookie` 丢掉，表现成"登录成功、下一个�
 ### 方式一：直接跑桌面端（不需要装 Java / MySQL）
 
 **下载地址**：https://github.com/KFLuv/LTing-TripAgent/releases/latest
-（`AITravelGuide-1.1.1-portable.exe`，约 141 MB）
+（`LTing-1.1.9-免安装版.exe`）
 
 内置 JRE 与内嵌 H2 数据库（落在 `%USERPROFILE%\.ai-travel-assistant\data`），双击即用。首次运行会自解压到临时目录，稍慢。
 
@@ -175,7 +178,7 @@ ai-travel-assistant/
 | 1 | **密码明文存储** | 历史遗留，应改为 BCrypt；改密码已有当前口令校验 |
 | 2 | **大众点评没有公开接口** | `nearby.source` 做成可插拔：配了 `dianping.endpoint/api-key` 走授权通道，否则用高德兜底；页面会如实显示当前数据源，不编造点评数据 |
 | 3 | **点评跳转是"按店名搜"** | 点评详情页需要它自己的 shopId，我们只有店名+坐标，拼不出合法 id |
-| 4 | **30 个工具偏多** | 超出模型有效选择范围（经验值 10–15），深层工具命中率不稳 |
+| 4 | **已收敛到 12 个工具入口** | 行程、节点、版本、偏好、同行人、旅途记录和个人资产均通过 `action` 参数细分 |
 | 5 | **`chat.html` 未做设计令牌化** | 它自带一套硬编码色值，与其它页面共用令牌是下一步 |
 | 6 | **无单元测试** | 全靠手工与脚本验证 |
 
@@ -192,6 +195,15 @@ ai-travel-assistant/
 | **Agent 怎么接、坑在哪** | [docs/技术提炼.md](docs/技术提炼.md) |
 | **LLM / Agent / Harness / MCP 的关系** | [docs/LLM-Agent-Harness-MCP-教学.md](docs/LLM-Agent-Harness-MCP-教学.md) |
 | **开发过程中发现的问题与改法** | [docs/analysis/](docs/analysis/) |
+| **Agent 任务怎么评测** | [docs/evaluation/LTing-Agent-Eval.md](docs/evaluation/LTing-Agent-Eval.md) |
+| **10 条评测用例** | [docs/evaluation/lting-eval-cases.jsonl](docs/evaluation/lting-eval-cases.jsonl) |
+| **最终评测报告** | [docs/evaluation/LTing-Agent-Eval-Final-20261105.md](docs/evaluation/LTing-Agent-Eval-Final-20261105.md) |
+| **Badcase 与修复记录** | [docs/evaluation/lting-badcases-20261104.json](docs/evaluation/lting-badcases-20261104.json) |
+| **12 工具完整评测结果** | [docs/evaluation/lting-eval-complete-final-20261105.json](docs/evaluation/lting-eval-complete-final-20261105.json) |
+| **回退最终回归** | [docs/evaluation/lting-eval-rollback-final-20261104.json](docs/evaluation/lting-eval-rollback-final-20261104.json) |
+| **问题—修复—验证发版记录** | [docs/release-notes/2026-11-05-agent-eval-hardening.md](docs/release-notes/2026-11-05-agent-eval-hardening.md) |
+| **真人用户验收脚本** | [docs/testing/LTing-User-Acceptance-20261104.md](docs/testing/LTing-User-Acceptance-20261104.md) |
+| **本人 self-use 实机验收** | [docs/testing/LTing-Self-Use-Validation-20261105.md](docs/testing/LTing-Self-Use-Validation-20261105.md) |
 
 ---
 

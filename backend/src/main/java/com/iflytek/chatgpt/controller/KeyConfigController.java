@@ -188,11 +188,16 @@ public class KeyConfigController {
     private void writeFile(Properties p) throws Exception {
         Path f = file();
         Files.createDirectories(f.getParent());
-        try (OutputStream out = Files.newOutputStream(f)) {
-            out.write(("# 本机 API Key 配置（由「系统设置」页写入，不要提交到任何仓库）\n"
-                    + "# 修改后重启应用生效\n").getBytes(StandardCharsets.UTF_8));
-            p.store(new java.io.OutputStreamWriter(out, StandardCharsets.UTF_8),
-                    "AI Travel Guide · local keys");
+        // 手写 key=value，不用 Properties.store：后者会把 https:// 转义成 https\://，
+        // 桌面端按行解析时容易带进反斜杠，导致 "Illegal character in scheme name"。
+        StringBuilder sb = new StringBuilder();
+        sb.append("# 本机 API Key 配置（由「系统设置」页写入，不要提交到任何仓库）\n");
+        sb.append("# 修改后重启应用生效\n");
+        java.util.List<String> keys = new java.util.ArrayList<>(p.stringPropertyNames());
+        java.util.Collections.sort(keys);
+        for (String k : keys) {
+            sb.append(k).append('=').append(p.getProperty(k, "")).append('\n');
         }
+        Files.write(f, sb.toString().getBytes(StandardCharsets.UTF_8));
     }
 }

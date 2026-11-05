@@ -1,5 +1,7 @@
 package com.iflytek.chatgpt.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +35,7 @@ import java.util.Map;
 public class TripController {
 
     private static final Logger log = LoggerFactory.getLogger(TripController.class);
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -377,7 +380,7 @@ public class TripController {
         }
 
         Map<String, Object> version = null;
-        String sql = "select id, trip_id, version_no, title, content from trip_version where id = ? and username = ?";
+        String sql = "select id, trip_id, version_no, title, content, nodes_json from trip_version where id = ? and username = ?";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, versionId);
@@ -389,6 +392,7 @@ public class TripController {
                     version.put("versionNo", rs.getInt("version_no"));
                     version.put("title", rs.getString("title"));
                     version.put("content", rs.getString("content"));
+                    version.put("nodesJson", rs.getString("nodes_json"));
                 }
             }
         } catch (SQLException e) {
@@ -408,12 +412,15 @@ public class TripController {
         MySQLUtil.executeUpdate(
                 "update trip set title = ?, content = ?, update_time = now() where id = ? and username = ?",
                 version.get("title"), version.get("content"), tripId, username);
+        boolean nodesRestored = restoreTripNodes(username, tripId, (String) version.get("nodesJson"));
         // 3) 记一版，注明回退来源
         int no = snapshot(tripId, username, "回退到版本 v" + sourceNo);
 
         result.put("status", "success");
         result.put("versionNo", no);
-        result.put("message", "已回退到 v" + sourceNo + "（回退前已自动备份）");
+        result.put("message", "已回退到 v" + sourceNo
+                + (nodesRestored ? "（正文与节点已恢复，回退前已自动备份）"
+                                 : "（正文已恢复；该旧版本没有节点快照）"));
         return result;
     }
 
@@ -440,10 +447,89 @@ public class TripController {
             log.warn("计算版本号失败：{}", e.getMessage());
         }
         MySQLUtil.executeUpdate(
-                "insert into trip_version(trip_id, username, version_no, title, content, change_note, create_time)"
-                        + " values(?, ?, ?, ?, ?, ?, now())",
-                tripId, username, nextNo, trip.get("title"), trip.get("content"), trim(changeNote, 255));
+                "insert into trip_version(trip_id, username, version_no, title, content, nodes_json, change_note, create_time)"
+                        + " values(?, ?, ?, ?, ?, ?, ?, now())",
+                tripId, username, nextNo, trip.get("title"), trip.get("content"),
+                tripNodesJson(username, tripId), trim(changeNote, 255));
         return nextNo;
+    }
+
+    private String tripNodesJson(String username, int tripId) {
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        String sql = "select node_type, title, detail, node_time, status, cost from trip_node"
+                + " where trip_id = ? and username = ? order by id";
+        try (Connection conn = MySQLUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, tripId);
+            ps.setString(2, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> node = new LinkedHashMap<>();
+                    node.put("nodeType", rs.getString("node_type"));
+                    node.put("title", rs.getString("title"));
+                    node.put("detail", rs.getString("detail"));
+                    node.put("nodeTime", rs.getString("node_time"));
+                    node.put("status", rs.getString("status"));
+                    node.put("cost", rs.getBigDecimal("cost"));
+                    nodes.add(node);
+                }
+            }
+            return JSON.writeValueAsString(nodes);
+        } catch (Exception e) {
+            throw new RuntimeException("生成行程节点快照失败：" + e.getMessage(), e);
+        }
+    }
+
+    private boolean restoreTripNodes(String username, int tripId, String nodesJson) {
+        if (nodesJson == null || nodesJson.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            JsonNode nodes = JSON.readTree(nodesJson);
+            if (!nodes.isArray()) {
+                return false;
+            }
+            try (Connection conn = MySQLUtil.getConnection()) {
+                conn.setAutoCommit(false);
+                try {
+                    try (PreparedStatement del = conn.prepareStatement(
+                            "delete from trip_node where trip_id = ? and username = ?")) {
+                        del.setInt(1, tripId);
+                        del.setString(2, username);
+                        del.executeUpdate();
+                    }
+                    try (PreparedStatement ins = conn.prepareStatement(
+                            "insert into trip_node(trip_id, username, node_type, title, detail, node_time, status, cost, create_time)"
+                                    + " values(?, ?, ?, ?, ?, ?, ?, ?, now())")) {
+                        for (JsonNode node : nodes) {
+                            ins.setInt(1, tripId);
+                            ins.setString(2, username);
+                            ins.setString(3, node.path("nodeType").asText("note"));
+                            ins.setString(4, node.path("title").asText(""));
+                            ins.setString(5, node.path("detail").asText(""));
+                            ins.setString(6, node.path("nodeTime").asText(""));
+                            ins.setString(7, node.path("status").asText(""));
+                            if (node.path("cost").isNumber()) {
+                                ins.setBigDecimal(8, node.path("cost").decimalValue());
+                            } else {
+                                ins.setBigDecimal(8, null);
+                            }
+                            ins.addBatch();
+                        }
+                        ins.executeBatch();
+                    }
+                    conn.commit();
+                    return true;
+                } catch (Exception e) {
+                    conn.rollback();
+                    throw e;
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("恢复行程节点失败：" + e.getMessage(), e);
+        }
     }
 
     private List<Map<String, Object>> listVersions(String username, int tripId) {
