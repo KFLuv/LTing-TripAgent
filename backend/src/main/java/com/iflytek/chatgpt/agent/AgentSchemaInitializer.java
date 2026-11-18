@@ -70,6 +70,17 @@ public class AgentSchemaInitializer {
                     + " create_time datetime not null,"
                     + " status varchar(20) not null default '规划中',"
                     + " update_time datetime null,"
+                + " destination varchar(100) null,"
+                + " start_date varchar(20) null,"
+                + " end_date varchar(20) null,"
+                + " days int not null default 1,"
+                + " budget varchar(100) null,"
+                + " people varchar(50) null,"
+                + " pace varchar(20) null,"
+                + " plan_step int not null default 1,"
+                + " plan_data mediumtext null,"
+                + " plan_revision int not null default 0,"
+                + " version int not null default 0,"
                     + " key idx_trip_user (username)"
                     + ") default charset=utf8mb4";
 
@@ -159,6 +170,66 @@ public class AgentSchemaInitializer {
                     + " unique key uk_owner_name (owner, name)"
                     + ") default charset=utf8mb4";
 
+    private static final String CREATE_TRIP_COLLABORATOR =
+            "create table if not exists trip_collaborator ("
+                    + " id int not null auto_increment primary key,"
+                    + " trip_id int not null,"
+                    + " owner varchar(64) not null,"
+                    + " username varchar(64) not null,"
+                    + " role varchar(20) not null default 'editor',"
+                    + " status varchar(20) not null default 'active',"
+                    + " joined_at datetime not null,"
+                    + " last_action_at datetime null,"
+                    + " unique key uk_trip_collaborator (trip_id, username)"
+                    + ") default charset=utf8mb4";
+
+    private static final String CREATE_TRIP_VOTE =
+            "create table if not exists trip_vote ("
+                    + " id int not null auto_increment primary key,"
+                    + " trip_id int not null,"
+                    + " username varchar(64) not null,"
+                    + " node_key varchar(255) not null,"
+                    + " vote varchar(20) not null,"
+                    + " note varchar(500) null,"
+                    + " update_time datetime not null,"
+                    + " unique key uk_trip_vote (trip_id, username, node_key)"
+                    + ") default charset=utf8mb4";
+
+    private static final String CREATE_TRIP_ACTIVITY =
+            "create table if not exists trip_activity ("
+                    + " id bigint not null auto_increment primary key,"
+                    + " trip_id int not null,"
+                    + " username varchar(64) not null,"
+                    + " action varchar(40) not null,"
+                    + " detail varchar(1000) null,"
+                    + " create_time datetime not null,"
+                    + " key idx_trip_activity (trip_id, create_time)"
+                    + ") default charset=utf8mb4";
+
+    /** 外部补充 POI：OSM / Wikidata / Wikivoyage / 地方文旅导入，统一保留来源与授权。 */
+    private static final String CREATE_EXTERNAL_POI =
+            "create table if not exists external_poi ("
+                    + " id bigint not null auto_increment primary key,"
+                    + " source varchar(20) not null,"
+                    + " source_id varchar(120) not null,"
+                    + " name varchar(180) not null,"
+                    + " category varchar(40) null,"
+                    + " city varchar(100) null,"
+                    + " region varchar(120) null,"
+                    + " address varchar(255) null,"
+                    + " lat double null,"
+                    + " lng double null,"
+                    + " description text null,"
+                    + " url varchar(500) null,"
+                    + " license varchar(120) null,"
+                    + " attribution varchar(255) null,"
+                    + " tags_json mediumtext null,"
+                    + " updated_time datetime not null,"
+                    + " unique key uk_external_poi_source (source, source_id),"
+                    + " key idx_external_poi_city (city),"
+                    + " key idx_external_poi_coord (lat, lng)"
+                    + ") default charset=utf8mb4";
+
     // ==================== 五大资产 Tab 所需表 ====================
 
     /** 行程版本快照：每次修改行程自动存一版，支持回退 */
@@ -171,9 +242,33 @@ public class AgentSchemaInitializer {
                     + " title varchar(120) null,"
                     + " content mediumtext null,"
                     + " nodes_json mediumtext null,"
+                    + " candidates_json mediumtext null,"
+                    + " plan_data mediumtext null,"
+                    + " plan_revision int not null default 0,"
                     + " change_note varchar(255) null,"
                     + " create_time datetime null,"
                     + " key idx_trip_version (trip_id, username)"
+                    + ") default charset=utf8mb4";
+
+    /** 候选池是规划草稿的可重建投影，同时纳入版本快照以支持一致回退。 */
+    private static final String CREATE_TRIP_CANDIDATE =
+            "create table if not exists trip_candidate ("
+                    + " id int not null auto_increment primary key,"
+                    + " username varchar(50) not null,"
+                    + " trip_id int not null default 0,"
+                    + " poi_id varchar(64) null,"
+                    + " name varchar(128) not null,"
+                    + " type varchar(32) null,"
+                    + " city varchar(64) null,"
+                    + " address varchar(255) null,"
+                    + " lat double null,"
+                    + " lng double null,"
+                    + " duration_min int not null default 0,"
+                    + " cost varchar(40) null,"
+                    + " evidence varchar(512) null,"
+                    + " photo text null,"
+                    + " create_time datetime not null,"
+                    + " key idx_trip_candidate_user (username, trip_id)"
                     + ") default charset=utf8mb4";
 
     /**
@@ -191,6 +286,10 @@ public class AgentSchemaInitializer {
                     + " node_time varchar(60) null,"
                     + " status varchar(20) null,"
                     + " cost decimal(10,2) null,"
+                + " photo text null,"
+                + " lat double null,"
+                + " lng double null,"
+                + " sort_order int not null default 0,"
                     + " create_time datetime null,"
                     + " key idx_trip_node (trip_id, username, node_type)"
                     + ") default charset=utf8mb4";
@@ -415,6 +514,48 @@ public class AgentSchemaInitializer {
                     + " key kapp_name (app_name)"
                     + ") default charset=utf8mb4";
 
+    /** 当前界面上下文，供 AI 和点击操作共用同一 Trip/节点/版本信息。 */
+    private static final String CREATE_PLAN_CONTEXT =
+            "create table if not exists plan_context ("
+                    + " id varchar(64) not null primary key,"
+                    + " username varchar(64) not null,"
+                    + " trip_id int not null,"
+                    + " page varchar(32) null,"
+                    + " selected_day int not null default 0,"
+                    + " selected_slot varchar(20) null,"
+                    + " selected_node_key varchar(255) null,"
+                    + " context_json mediumtext null,"
+                    + " plan_revision int not null default 0,"
+                    + " expires_at datetime not null,"
+                    + " create_time datetime not null,"
+                    + " key idx_plan_context_user (username, trip_id)"
+                    + ") default charset=utf8mb4";
+
+    /** PlanOps 预览、审批、执行和审计记录。 */
+    private static final String CREATE_PLAN_OPERATION =
+            "create table if not exists plan_operation ("
+                    + " id varchar(64) not null primary key,"
+                    + " context_id varchar(64) not null,"
+                    + " username varchar(64) not null,"
+                    + " trip_id int not null,"
+                    + " operation_type varchar(32) not null,"
+                    + " risk_level varchar(8) null,"
+                    + " source varchar(16) null,"
+                    + " expected_revision int not null default 0,"
+                    + " operation_json mediumtext null,"
+                    + " after_plan_data mediumtext null,"
+                    + " preview_json mediumtext null,"
+                    + " approval_token varchar(64) null,"
+                    + " status varchar(24) not null,"
+                    + " error_message varchar(512) null,"
+                    + " before_version_id int null,"
+                    + " result_version_id int null,"
+                    + " expires_at datetime not null,"
+                    + " create_time datetime not null,"
+                    + " applied_at datetime null,"
+                    + " key idx_plan_operation_user (username, trip_id, create_time)"
+                    + ") default charset=utf8mb4";
+
     @PostConstruct
     public void init() {
         // —— 基础表：账号 / 目的地 / 行程本 ——
@@ -426,13 +567,32 @@ public class AgentSchemaInitializer {
         AuthTokenService.ensureTable();
         createIfAbsent("spot", CREATE_SPOT);
         createIfAbsent("trip", CREATE_TRIP);
+    addColumnIfAbsent("trip", "destination", "varchar(100) null");
+    addColumnIfAbsent("trip", "start_date", "varchar(20) null");
+    addColumnIfAbsent("trip", "end_date", "varchar(20) null");
+    addColumnIfAbsent("trip", "days", "int not null default 1");
+    addColumnIfAbsent("trip", "budget", "varchar(100) null");
+    addColumnIfAbsent("trip", "people", "varchar(50) null");
+    addColumnIfAbsent("trip", "pace", "varchar(20) null");
+    addColumnIfAbsent("trip", "plan_step", "int not null default 1");
+    addColumnIfAbsent("trip", "plan_data", "mediumtext null");
+    addColumnIfAbsent("trip", "plan_revision", "int not null default 0");
+    addColumnIfAbsent("trip", "version", "int not null default 0");
         seedSpotsIfEmpty();
         createIfAbsent("user_preference", CREATE_PREFERENCE);
         createIfAbsent("trip_companion", CREATE_COMPANION);
+        createIfAbsent("trip_collaborator", CREATE_TRIP_COLLABORATOR);
+        createIfAbsent("trip_vote", CREATE_TRIP_VOTE);
+        createIfAbsent("trip_activity", CREATE_TRIP_ACTIVITY);
+        createIfAbsent("external_poi", CREATE_EXTERNAL_POI);
         createIfAbsent("spot_guide", CREATE_SPOT_GUIDE);
         createIfAbsent("chat_message", CREATE_CHAT_MESSAGE);
         createIfAbsent("chat_session", CREATE_CHAT_SESSION);
         createIfAbsent("tomcat_sessions", CREATE_TOMCAT_SESSIONS);
+        createIfAbsent("plan_context", CREATE_PLAN_CONTEXT);
+        createIfAbsent("plan_operation", CREATE_PLAN_OPERATION);
+        addColumnIfAbsent("plan_operation", "before_version_id", "int null");
+        addColumnIfAbsent("plan_operation", "result_version_id", "int null");
         ensureTomcatSessionMaxInactiveBigInt();
         // 给老的 chat_message 补 session_id 列，并把无归属的历史消息收进一个「历史对话」会话（老数据不丢）
         addColumnIfAbsent("chat_message", "session_id", "bigint null");
@@ -440,7 +600,15 @@ public class AgentSchemaInitializer {
         // —— 五大资产 Tab ——
         createIfAbsent("trip_version", CREATE_TRIP_VERSION);
         addColumnIfAbsent("trip_version", "nodes_json", "mediumtext null");
+        addColumnIfAbsent("trip_version", "candidates_json", "mediumtext null");
+        addColumnIfAbsent("trip_version", "plan_data", "mediumtext null");
+        addColumnIfAbsent("trip_version", "plan_revision", "int not null default 0");
+        createIfAbsent("trip_candidate", CREATE_TRIP_CANDIDATE);
         createIfAbsent("trip_node", CREATE_TRIP_NODE);
+    addColumnIfAbsent("trip_node", "photo", "text null");
+    addColumnIfAbsent("trip_node", "lat", "double null");
+    addColumnIfAbsent("trip_node", "lng", "double null");
+    addColumnIfAbsent("trip_node", "sort_order", "int not null default 0");
         createIfAbsent("preference_template", CREATE_PREFERENCE_TEMPLATE);
         createIfAbsent("preference_item", CREATE_PREFERENCE_ITEM);
         createIfAbsent("travel_log", CREATE_TRAVEL_LOG);

@@ -199,6 +199,23 @@ public class WebSearchService {
         return result;
     }
 
+    public Map<String, Object> healthSnapshot() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        boolean bocha = apiKey != null && !apiKey.trim().isEmpty();
+        out.put("key", "search");
+        out.put("label", "联网检索");
+        out.put("configured", true);
+        out.put("status", "configured");
+        out.put("provider", bocha ? "博查 AI 搜索" : "必应中国兜底");
+        out.put("primaryConfigured", bocha);
+        out.put("cacheEntries", cache.size());
+        out.put("proxy", proxy == null || proxy.trim().isEmpty() ? "direct" : "configured");
+        out.put("message", bocha
+                ? "博查为主源，失败时自动切换必应"
+                : "未配置博查 Key，使用必应网页兜底");
+        return out;
+    }
+
     // ==================== 首选：博查 AI 搜索 ====================
 
     private List<Map<String, String>> searchBocha(String query, int limit) throws Exception {

@@ -46,13 +46,13 @@ const KEY_FILE = path.join(require('os').homedir(), '.ai-travel-assistant', 'app
 const PASS_KEYS = ['ai.base-url', 'ai.model', 'ai.api-key', 'geo.amap-key',
     'search.api-key', 'map.js-key', 'map.js-security-code'];
 
-function localKeyArgs() {
-    const args = [];
+function localKeyEnv() {
+    const env = {};
     let text = '';
     try {
         text = fs.readFileSync(KEY_FILE, 'utf8');
     } catch (e) {
-        return args;   // 没有本机配置：后端照旧用 jar 内的值
+        return env;   // 没有本机配置：后端照旧用 jar 内的值
     }
     // .properties 里的值会被 Properties.store 转义（https\://...），这里必须还原
     const unescape = v => v
@@ -70,17 +70,18 @@ function localKeyArgs() {
     const injected = [];
     PASS_KEYS.forEach(k => {
         if (vals[k]) {
-            args.push('--' + k + '=' + vals[k]);
+            const envKey = k.toUpperCase().replace(/[.-]/g, '_');
+            env[envKey] = vals[k];
             injected.push(k);
         }
     });
-    // 只打印键名，绝不打印值
+    // 只打印键名，绝不打印值；值只通过子进程环境传入，不出现在命令行。
     console.log('[backend] 从本机配置注入:', injected.length ? injected.join(', ') : '(无)');
-    return args;
+    return env;
 }
 
 function backendArgs(jar) {
-    return ['-jar', jar, '--server.port=' + PORT].concat(localKeyArgs());
+    return ['-jar', jar, '--server.port=' + PORT];
 }
 
 /** 探测后端是否已经起来（HTTP 200 即视为就绪） */
@@ -115,6 +116,7 @@ function startBackend() {
     backend = spawn(java, backendArgs(jar), {
         cwd: path.dirname(jar),
         windowsHide: true,
+        env: Object.assign({}, localKeyEnv(), process.env),
         stdio: ['ignore', 'pipe', 'pipe']
     });
     spawnedBackend = true;
@@ -193,6 +195,13 @@ app.on('web-contents-created', (_event, contents) => {
 });
 
 app.whenReady().then(async () => {
+    // Portable updates reuse the same Electron profile. Clear old HTTP assets so
+    // a new exe never renders stale HTML/CSS from the previous package.
+    try {
+        await session.defaultSession.clearCache();
+    } catch (e) {
+        console.warn('清理旧页面缓存失败:', e.message);
+    }
     // 内嵌高德地图的 <webview> 需要定位权限，否则画不出「我的位置」（普通 iframe 用 allow 属性委托）
     session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
         callback(permission === 'geolocation');

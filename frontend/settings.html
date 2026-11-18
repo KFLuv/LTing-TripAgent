@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script src="assets/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>系统设置 · 出行 Agent</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/icons.css">
     <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
@@ -47,6 +48,16 @@
             </div>
 
             <div class="band">
+                <div class="band-title"><i class="fas fa-layer-group"></i> 商用地点补充</div>
+                <div class="field-row">
+                    <input id="geo.baidu-key" type="password" placeholder="geo.baidu-key（百度 Place API）" autocomplete="new-password">
+                    <input id="geo.tencent-key" type="password" placeholder="geo.tencent-key（腾讯位置服务）" autocomplete="new-password">
+                </div>
+                <div class="hint" id="st-geo.baidu-key"></div>
+                <div class="hint" id="st-geo.tencent-key"></div>
+            </div>
+
+            <div class="band">
                 <div class="band-title"><i class="fas fa-magnifying-glass"></i> 联网检索（博查）</div>
                 <div class="field-row">
                     <input id="search.api-key" type="password" placeholder="search.api-key（可空）" autocomplete="new-password">
@@ -78,8 +89,10 @@
 <script>
 (function () {
     var FIELDS = ['ai.base-url', 'ai.model', 'ai.api-key', 'geo.amap-key',
+                  'geo.baidu-key', 'geo.tencent-key',
                   'search.api-key', 'map.js-key', 'map.js-security-code'];
-    var SECRETS = ['ai.api-key', 'geo.amap-key', 'search.api-key', 'map.js-key', 'map.js-security-code'];
+    var SECRETS = ['ai.api-key', 'geo.amap-key', 'geo.baidu-key', 'geo.tencent-key',
+                   'search.api-key', 'map.js-key', 'map.js-security-code'];
 
     // 和别的页面一样：先渲染左侧导航，再校验登录
     Shell.renderNav('settings.html');

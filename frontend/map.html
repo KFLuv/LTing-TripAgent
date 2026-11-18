@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script src="assets/theme.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>我的位置</title>
@@ -38,11 +39,34 @@
   #locate { position: absolute; right: 16px; bottom: 208px; z-index: 20; width: 38px; height: 38px;
             border: 0; border-radius: 8px; background: #fff; color: #1a73e8; font-size: 19px;
             line-height: 1; cursor: pointer; box-shadow: 0 2px 8px rgba(0, 0, 0, .16); }
+  #back { position: absolute; right: 16px; bottom: 254px; z-index: 20; width: 38px; height: 38px;
+          border: 0; border-radius: 8px; background: #fff; color: #5b6673; font-size: 18px;
+          line-height: 1; cursor: pointer; box-shadow: 0 2px 8px rgba(0, 0, 0, .16); }
 
   /* 底部信息条：路线摘要 */
   #tip { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 20; min-height: 0;
          background: #fff; color: #20252b; font-size: 12px; line-height: 1.6; padding: 9px 12px;
          border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, .18); }
+  #nav-panel { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 24;
+               background: #fff; border-radius: 12px; padding: 12px 14px;
+               box-shadow: 0 6px 24px rgba(0, 0, 0, .2); }
+  #nav-panel .nav-top { display: flex; align-items: flex-start; gap: 12px; }
+  #nav-panel .nav-step { flex: 1; min-width: 0; font-size: 16px; line-height: 1.4;
+                         font-weight: 700; color: #20252b; }
+  #nav-panel.active .nav-step { color: #0b6b48; }
+  #nav-panel .nav-dest { margin-top: 3px; font-size: 11.5px; color: #8a949e; }
+  #nav-panel .nav-stats { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
+  #nav-panel .nav-stats span { padding: 4px 8px; border-radius: 7px; background: #f2f4f7;
+                               color: #5b6673; font-size: 11.5px; }
+  #nav-panel .nav-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+                            justify-content: flex-end; margin-top: 10px; }
+  #nav-panel button { border: 0; border-radius: 8px; padding: 8px 12px; font-size: 12.5px;
+                      cursor: pointer; }
+  #nav-panel .start { background: #0b8f5a; color: #fff; }
+  #nav-panel .start[disabled] { background: #c7ced6; cursor: default; }
+  #nav-panel .external { background: #1a73e8; color: #fff; }
+  #nav-panel .stop { background: #ffebe9; color: #b42318; }
+  #nav-panel .voice { background: #f2f4f7; color: #5b6673; }
   /* 点击地图后的地址卡片 */
   #card { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 25; background: #fff;
           border-radius: 10px; box-shadow: 0 4px 16px rgba(0, 0, 0, .22); padding: 12px 14px;
@@ -59,6 +83,19 @@
           background: #eef1f5; color: #5b6673; font-size: 13px; line-height: 1.7; text-align: center; }
   #mask a { color: #1a73e8; text-decoration: none; }
   .hide { display: none !important; }
+  html.theme-dark { color-scheme: dark; }
+  html.theme-dark body, html.theme-dark #mask { background: #0f1420; color: #e8edf7; }
+  html.theme-dark #search, html.theme-dark #modes, html.theme-dark #modes button,
+  html.theme-dark #layers button, html.theme-dark #locate, html.theme-dark #back, html.theme-dark #tip,
+  html.theme-dark #card, html.theme-dark #nav-panel { background: #171e2e; color: #e8edf7; border-color: #26304a; }
+  html.theme-dark #nav-panel .nav-step { color: #e8edf7; }
+  html.theme-dark #nav-panel .nav-dest { color: #8b96ad; }
+  html.theme-dark #nav-panel .nav-stats span, html.theme-dark #nav-panel .voice { background: #111827; color: #b7c1d6; }
+  html.theme-dark #search input { background: transparent; color: #e8edf7; }
+  html.theme-dark #modes button + button { border-left-color: #26304a; }
+  html.theme-dark #card .text { color: #e8edf7; }
+  html.theme-dark #card .text small { color: #8b96ad; }
+  html.theme-dark #card .close { background: #111827; color: #b7c1d6; }
 </style>
 </head>
 <body>
@@ -74,6 +111,7 @@
   <button type="button" data-mode="driving" class="on">驾车</button>
   <button type="button" data-mode="transit">公交</button>
   <button type="button" data-mode="walking">步行</button>
+  <button type="button" data-mode="bicycling">骑行</button>
 </div>
 
 <div id="layers">
@@ -83,8 +121,24 @@
 </div>
 
 <button id="locate" type="button" title="回到我的位置">&#9678;</button>
+<button id="back" type="button" title="返回">&#8592;</button>
 
 <div id="tip" class="hide">正在定位…</div>
+<div id="nav-panel" class="hide">
+  <div class="nav-top">
+    <div style="flex:1;min-width:0">
+      <div class="nav-step" id="nav-instruction">正在规划路线…</div>
+      <div class="nav-dest" id="nav-destination"></div>
+    </div>
+  </div>
+  <div class="nav-stats" id="nav-stats"></div>
+  <div class="nav-actions">
+    <button type="button" class="voice" id="nav-voice" title="语音播报">语音开</button>
+    <button type="button" class="external" id="nav-external">高德接管</button>
+    <button type="button" class="start" id="nav-start" disabled>开始导航</button>
+    <button type="button" class="stop hide" id="nav-stop">结束导航</button>
+  </div>
+</div>
 <div id="card" class="hide"></div>
 <div id="mask">正在加载地图…</div>
 
@@ -94,6 +148,14 @@
   var tip = document.getElementById('tip');
   var mask = document.getElementById('mask');
   var card = document.getElementById('card');
+  var navPanel = document.getElementById('nav-panel');
+  var navInstruction = document.getElementById('nav-instruction');
+  var navDestination = document.getElementById('nav-destination');
+  var navStats = document.getElementById('nav-stats');
+  var navStart = document.getElementById('nav-start');
+  var navStop = document.getElementById('nav-stop');
+  var navExternal = document.getElementById('nav-external');
+  var navVoice = document.getElementById('nav-voice');
 
   function fail(html) {
     mask.classList.remove('hide');
@@ -136,8 +198,10 @@
       fail('无法连接后端服务，请稍后重试。');
     });
 
-  var MODE_LABEL = { driving: '驾车', transit: '公交', walking: '步行' };
-  var MODE_COLOR = { driving: '#1a73e8', transit: '#00a06d', walking: '#f2a20c' };
+  var MODE_LABEL = { driving: '驾车', transit: '公交', walking: '步行', bicycling: '骑行' };
+  var MODE_COLOR = { driving: '#1a73e8', transit: '#00a06d', walking: '#f2a20c', bicycling: '#7c3aed' };
+  var QUERY = new URLSearchParams(location.search);
+  var AUTO_NAV = QUERY.get('nav') === '1';
 
   // 2) JS API 就绪：建图 + 实时蓝点 + 搜索 + 图层 + 路线 + 点选地址
   function boot(ctx) {
@@ -216,6 +280,9 @@
     var myGcj = null;        // 最近一次定位的 GCJ-02，用于"回到我的位置"
     var destMarker = null, destPos = null, destName = '';
     var routeLine = null, currentMode = 'driving';
+    var routeResult = null, routeAt = 0, routeOrigin = null;
+    var navActive = false, navStepIndex = -1, autoStarted = false;
+    var voiceEnabled = true, lastSpoken = '';
     var modesEl = document.getElementById('modes');
 
     function label(name) {
@@ -226,6 +293,13 @@
     function setDest(lng, lat, name) {
       destPos = [lng, lat];
       destName = name || '目的地';
+      if (navActive) stopNavigation();
+      routeResult = null;
+      navStart.disabled = true;
+      navPanel.classList.remove('hide');
+      navInstruction.textContent = '正在规划到目的地的路线…';
+      navDestination.textContent = '目的地 · ' + destName;
+      navStats.innerHTML = '';
       if (!destMarker) {
         destMarker = new AMap.Marker({
           position: destPos, title: destName, zIndex: 180, label: label(destName)
@@ -255,6 +329,97 @@
       return Math.max(1, min) + ' 分钟';
     }
 
+    function distanceMeters(lat1, lng1, lat2, lng2) {
+      var rad = Math.PI / 180;
+      var dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+          + Math.cos(lat1 * rad) * Math.cos(lat2 * rad)
+          * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function polylinePoints(value) {
+      return (value || '').split(';').map(function (point) {
+        var parts = point.split(',');
+        return parts.length === 2 ? [parseFloat(parts[0]), parseFloat(parts[1])] : null;
+      }).filter(Boolean);
+    }
+
+    function stepIndexAt(steps, gcj) {
+      if (!steps || !steps.length || !gcj) return 0;
+      for (var i = 0; i < steps.length; i++) {
+        var pts = polylinePoints(steps[i].polyline);
+        if (!pts.length) continue;
+        var end = pts[pts.length - 1];
+        if (distanceMeters(gcj[1], gcj[0], end[1], end[0]) > 20) return i;
+      }
+      return Math.max(0, steps.length - 1);
+    }
+
+    function speakInstruction(text) {
+      if (!voiceEnabled || !text || text === lastSpoken
+          || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+      lastSpoken = text;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+    }
+
+    function updateGuidance(result) {
+      if (!result || !result.ok) return;
+      routeResult = result;
+      var steps = result.steps || [];
+      navStepIndex = stepIndexAt(steps, myGcj);
+      var step = steps[navStepIndex] || {};
+      var instruction = step.instruction || ('前往 ' + destName);
+      navInstruction.textContent = instruction;
+      navDestination.textContent = '目的地 · ' + destName;
+      var arrival = new Date(Date.now() + (result.durationSeconds || 0) * 1000);
+      navStats.innerHTML = '<span>剩余 ' + fmtDist(result.distanceMeters || 0) + '</span>'
+          + '<span>约 ' + fmtDur(result.durationSeconds || 0) + '</span>'
+          + '<span>预计 ' + arrival.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})
+          + ' 到达</span>'
+          + (result.cost ? '<span>票价 ' + result.cost + ' 元</span>' : '');
+      navStart.disabled = false;
+      if (navActive) speakInstruction(instruction);
+    }
+
+    function startNavigation(silent) {
+      if (!routeResult || !myGcj) return;
+      navActive = true;
+      navPanel.classList.add('active');
+      navStart.classList.add('hide');
+      navStop.classList.remove('hide');
+      map.setZoomAndCenter(17, myGcj);
+      updateGuidance(routeResult);
+      if (!silent) speakInstruction(navInstruction.textContent);
+    }
+
+    function stopNavigation() {
+      navActive = false;
+      navPanel.classList.remove('active');
+      navStop.classList.add('hide');
+      navStart.classList.remove('hide');
+      navStart.disabled = !routeResult;
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    navStart.addEventListener('click', function () { startNavigation(false); });
+    navStop.addEventListener('click', stopNavigation);
+    navVoice.addEventListener('click', function () {
+      voiceEnabled = !voiceEnabled;
+      navVoice.textContent = voiceEnabled ? '语音开' : '语音关';
+      if (!voiceEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
+    });
+    navExternal.addEventListener('click', function () {
+      if (!destPos) return;
+      var modeMap = { driving: 'car', walking: 'walk', bicycling: 'ride', transit: 'bus' };
+      location.href = 'https://uri.amap.com/navigation?to=' + destPos[0] + ',' + destPos[1]
+          + ',' + encodeURIComponent(destName) + '&mode=' + (modeMap[currentMode] || 'car')
+          + '&coordinate=gaode'
+          + (myGcj ? '&from=' + myGcj[0] + ',' + myGcj[1] + ',我的位置' : '')
+          + '&callnative=1';
+    });
+
     // 由后端「Web 服务」Key 规划（前端 JS API 的服务调用更易受密钥限制），前端只负责画线
     function drawRoute() {
       if (!myWgs || !destPos) return;
@@ -271,6 +436,8 @@
         if (!res || !res.ok) {
           tip.textContent = MODE_LABEL[currentMode] + '路线获取失败：'
               + ((res && res.error) || '未知原因') + '（已标出目的地）';
+          navInstruction.textContent = '路线获取失败';
+          navStart.disabled = true;
           return;
         }
         if (routeLine) { map.remove(routeLine); routeLine = null; }
@@ -287,9 +454,24 @@
             + fmtDist(res.distanceMeters) + ' · ' + fmtDur(res.durationSeconds);
         if (currentMode === 'transit' && res.cost) summary += ' · 票价 ' + res.cost + ' 元';
         tip.textContent = summary;
-        map.setFitView([dot, destMarker, routeLine], false, [70, 70, 70, 70]);
+        tip.classList.add('hide');
+        routeResult = res;
+        routeAt = Date.now();
+        routeOrigin = myWgs ? {lat: myWgs.lat, lng: myWgs.lng} : null;
+        updateGuidance(res);
+        if (navActive || AUTO_NAV) {
+          map.setZoomAndCenter(17, myGcj || destPos);
+        } else {
+          map.setFitView([dot, destMarker, routeLine], false, [70, 70, 70, 70]);
+        }
+        if (AUTO_NAV && !autoStarted && myGcj) {
+          autoStarted = true;
+          startNavigation(true);
+        }
       }).catch(function () {
         tip.textContent = '路线获取失败：无法连接后端（已标出目的地）';
+        navInstruction.textContent = '路线获取失败';
+        navStart.disabled = true;
       });
     }
 
@@ -300,7 +482,12 @@
         Array.prototype.forEach.call(modesEl.querySelectorAll('button'), function (b) {
           b.classList.toggle('on', b === btn);
         });
-        if (destPos) drawRoute();
+        routeResult = null;
+        navStart.disabled = true;
+        if (destPos) {
+          navInstruction.textContent = '正在重新规划' + MODE_LABEL[currentMode] + '路线…';
+          drawRoute();
+        }
       });
     });
 
@@ -333,12 +520,20 @@
       if (myGcj) { map.setZoomAndCenter(16, myGcj); }
       else { tip.textContent = '还没定位到：请允许浏览器定位后重试'; }
     });
+    document.getElementById('back').addEventListener('click', function () {
+      if (history.length > 1) history.back();
+      else location.href = 'nearby.html';
+    });
 
     // 点击地图任意点 → 查地址（走后端逆地理，坐标已是 GCJ-02）
-    function hideCard() { card.classList.add('hide'); }
+    function hideCard() {
+      card.classList.add('hide');
+      if (destPos) navPanel.classList.remove('hide');
+    }
     function showCard(html) {
       card.innerHTML = html;
       card.classList.remove('hide');
+      navPanel.classList.add('hide');
     }
     map.on('click', function (e) {
       var lng = e.lnglat.getLng(), lat = e.lnglat.getLat();
@@ -381,13 +576,22 @@
     }
 
     // 目的地（可选）：map.html?dest=lng,lat&name=xxx
-    var q = new URLSearchParams(location.search);
-    var dest = q.get('dest');
+    var requestedMode = QUERY.get('mode');
+    if (MODE_LABEL[requestedMode]) {
+      currentMode = requestedMode;
+      Array.prototype.forEach.call(modesEl.querySelectorAll('button'), function (b) {
+        b.classList.toggle('on', b.getAttribute('data-mode') === currentMode);
+      });
+    }
+    var dest = QUERY.get('dest');
     if (dest) {
       var dp = dest.split(',');
       if (dp.length >= 2) {
-        setDest(parseFloat(dp[0]), parseFloat(dp[1]), q.get('name') || '目的地');
+        setDest(parseFloat(dp[0]), parseFloat(dp[1]), QUERY.get('name') || '目的地');
       }
+    } else if (QUERY.get('keyword')) {
+      kw.value = QUERY.get('keyword');
+      doSearch();
     }
 
     if (!navigator.geolocation) {
@@ -411,8 +615,16 @@
       halo.setRadius(pos.coords.accuracy || 0);
 
       if (destPos) {
-        // 首次定位后规划「我 → 目的地」路线；之后不抢镜头，蓝点仍实时更新
-        if (!fitted) { fitted = true; drawRoute(); }
+        if (navActive) {
+          map.setZoomAndCenter(17, myGcj);
+          if (routeResult) updateGuidance(routeResult);
+          var moved = routeOrigin
+              ? distanceMeters(routeOrigin.lat, routeOrigin.lng, myWgs.lat, myWgs.lng) : 999;
+          if (moved > 60 || Date.now() - routeAt > 20000) drawRoute();
+        } else if (!fitted) {
+          fitted = true;
+          drawRoute();
+        }
       } else {
         map.setCenter(myGcj);
         tip.textContent = '已定位 · 精度约 ' + Math.round(pos.coords.accuracy || 0) + ' 米';

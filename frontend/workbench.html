@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <script src="assets/theme.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出行工作台 · LTing</title>
+    <link rel="stylesheet" href="assets/icons.css">
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div>
+                    <div class="page-title">出行工作台</div>
+                    <div class="page-sub">先看这里能做什么、怎么用；真正规划时点下面的场景进入</div>
+                </div>
+            </div>
+
+            <div class="cards two">
+                <a class="card" href="plan.html" style="text-decoration:none;color:inherit">
+                    <div class="card-head"><i class="fas fa-map-location-dot" style="color:var(--brand)"></i>
+                        <span class="card-title">去一个地方旅行</span></div>
+                    <div class="card-body">确定目的地 → 时间与天数 → 景点与吃喝玩乐 → 生成可编辑的行程</div>
+                </a>
+                <a class="card" href="shorttrip.html" style="text-decoration:none;color:inherit">
+                    <div class="card-head"><i class="fas fa-clock" style="color:var(--accent)"></i>
+                        <span class="card-title">附近短途</span></div>
+                    <div class="card-body">按时间、交通、目的和距离生成 2-3 个附近空间组合，可直接保存为短途行程</div>
+                </a>
+                <a class="card" href="trips.html" style="text-decoration:none;color:inherit">
+                    <div class="card-head"><i class="fas fa-book" style="color:var(--ink-2)"></i>
+                        <span class="card-title">我的行程</span></div>
+                    <div class="card-body">按天查看已保存方案，继续编辑节点、预算、行李与版本回退</div>
+                </a>
+            </div>
+
+            <div class="band" style="margin-top:22px">
+                <div class="band-title"><i class="fas fa-users"></i> 多人协作</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                    <input id="collab-trip-id" type="number" placeholder="行程 ID" style="width:130px">
+                    <input id="collab-code" placeholder="邀请码" style="width:150px">
+                    <button class="btn small" id="collab-join">加入同行</button>
+                    <span class="hint" id="collab-msg"></span>
+                </div>
+                <div id="collab-trips" style="margin-top:12px"></div>
+                <div id="collab-detail" style="margin-top:12px"></div>
+            </div>
+
+            <div class="band" style="margin-top:22px">
+                <div class="band-title"><i class="fas fa-star"></i> 特色功能</div>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+                    <div><b>候选池 ≠ 行程</b><div class="hint">先大量收藏比较，只有你确定加入某一天的才进正式行程</div></div>
+                    <div><b>共享地图层</b><div class="hint">吃喝玩乐选完去定住宿，已选点位不会消失，可叠加区域与路线</div></div>
+                    <div><b>推荐带证据</b><div class="hint">每条推荐至少 3 条依据；数据缺失会如实标注，不编造评分和价格</div></div>
+                    <div><b>修改可见、可回退</b><div class="hint">点击和 AI 改的是同一份行程，每次修改产生新版本，可一键回退</div></div>
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-circle-info"></i> 能做什么 / 做不到什么</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+                    <div><b style="color:var(--brand)">能做到</b>
+                        <div class="hint" style="line-height:2">
+                            · 按日期+你的权重推荐城市<br>
+                            · 按天生成可编辑行程骨架<br>
+                            · 景点/吃喝玩乐候选池，可增删改查<br>
+                            · 地图标记、按区域聚类<br>
+                            · 住宿区域建议（这轮不含酒店价格库存）
+                        </div>
+                    </div>
+                    <div><b style="color:var(--accent)">暂时做不到</b>
+                        <div class="hint" style="line-height:2">
+                            · 不自动订机票/酒店/门票<br>
+                            · 不提供实时房价与库存<br>
+                            · 不保证全网最低价<br>
+                            · 不批量抓取小红书/大众点评<br>
+                            · 不编造坐标、距离、营业时间
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="band" style="margin-top:22px">
+                <div class="band-title"><i class="fas fa-list-check"></i> 使用引导</div>
+                <div class="hint" style="line-height:2">
+                    ① 选一个场景（去旅行 / 附近短途）<br>
+                    ② 按步骤补齐信息：目的地、时间天数、想去的景点和吃喝玩乐（推荐和你自己加的都可以）<br>
+                    ③ 生成行程后进入「行程本」的行程模块——按天时间线，可增删改
+                </div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-clock-rotate-left"></i> 继续上次规划</div>
+                <div class="hint" id="drafts">读取中…</div>
+            </div>
+
+            <div class="band">
+                <div class="band-title"><i class="fas fa-book"></i> 最近的行程</div>
+                <div class="hint" id="recent">读取中…</div>
+            </div>
+
+            <div class="hint" style="padding:0 8px">遇到复杂修改或查不到的内容，点右下角「AI 助手」，它不参与上面的主流程。</div>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+    Shell.renderNav('workbench.html');
+    (async function () {
+        if (!await Shell.currentUser()) return;
+        try {
+            var results = await Promise.all([
+                Shell.api('plan/draft/list'),
+                Shell.api('trips/list')
+            ]);
+            var draftData = results[0];
+            var data = results[1];
+            var drafts = (draftData && draftData.drafts) || [];
+            document.getElementById('drafts').innerHTML = drafts.length
+                ? drafts.slice(0, 3).map(function (d) {
+                    return '<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)">'
+                        + '<div style="flex:1;min-width:0"><b>' + Shell.esc(d.title || '未命名规划') + '</b>'
+                        + '<div class="hint">' + Shell.esc(d.destination || '未选目的地') + ' · '
+                        + Shell.esc(d.days || 1) + ' 天 · 进行到第 ' + Shell.esc(d.planStep || 1) + ' 步</div></div>'
+                        + '<a class="btn small" href="plan.html?draft=' + encodeURIComponent(d.id) + '">继续规划</a></div>';
+                }).join('')
+                : '<div class="hint">没有未完成规划。选择“去一个地方旅行”开始。</div>';
+            var list = (data && data.trips) || [];
+            document.getElementById('recent').innerHTML = list.length
+                ? list.slice(0, 4).map(function (t) {
+                    return '<div style="padding:8px 0;border-bottom:1px solid var(--line)">'
+                        + '<a href="trips.html?id=' + encodeURIComponent(t.id) + '" style="color:inherit;text-decoration:none"><b>'
+                        + Shell.esc(t.title || '未命名行程') + '</b>　<span class="hint">'
+                        + Shell.esc(t.updateTime || t.createTime || '') + '</span></a></div>';
+                }).join('')
+                : '<a class="btn ghost small" href="plan.html">还没有行程，开始规划 →</a>';
+        } catch (e) {
+            document.getElementById('drafts').textContent = '未完成规划读取失败';
+            document.getElementById('recent').textContent = '行程读取失败';
+        }
+        loadCollabTrips();
+    })();
+
+    async function loadCollabTrips() {
+        var host = document.getElementById('collab-trips');
+        try {
+            var data = await Shell.api('collaboration/my-trips');
+            var trips = (data && data.trips) || [];
+            host.innerHTML = trips.length ? trips.slice(0, 8).map(function (trip) {
+                return '<div style="display:flex;gap:9px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)">'
+                    + '<div style="flex:1;min-width:0"><b>' + Shell.esc(trip.title || '未命名行程') + '</b>'
+                    + '<div class="hint">#' + Shell.esc(trip.id) + ' · '
+                    + (trip.role === 'owner' ? '发起人' : '协作者') + '</div></div>'
+                    + '<button class="btn small ghost" data-collab-open="' + Shell.esc(trip.id) + '">协作面板</button></div>';
+            }).join('') : '<div class="hint">暂无多人协作行程。</div>';
+            host.querySelectorAll('[data-collab-open]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    showCollab(parseInt(button.dataset.collabOpen, 10));
+                });
+            });
+        } catch (e) {
+            host.innerHTML = '<div class="hint error">协作行程读取失败</div>';
+        }
+    }
+
+    document.getElementById('collab-join').addEventListener('click', async function () {
+        var tripId = parseInt(document.getElementById('collab-trip-id').value, 10);
+        var code = document.getElementById('collab-code').value.trim();
+        var msg = document.getElementById('collab-msg');
+        if (!tripId || !code) {
+            msg.textContent = '请填写行程 ID 和邀请码';
+            return;
+        }
+        this.disabled = true;
+        try {
+            var result = await Shell.api('collaboration/join', {tripId: tripId, inviteCode: code});
+            if (!result || result.status !== 'success') throw new Error((result && result.message) || '加入失败');
+            msg.textContent = '已加入协作行程';
+            await loadCollabTrips();
+            await showCollab(tripId);
+        } catch (e) {
+            msg.textContent = e.message || '加入失败';
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+    async function showCollab(tripId) {
+        var host = document.getElementById('collab-detail');
+        host.innerHTML = '<div class="hint">正在读取协作信息...</div>';
+        try {
+            var data = await Shell.api('collaboration/info', {tripId: tripId});
+            if (!data || data.status !== 'success') throw new Error((data && data.message) || '读取失败');
+            var votes = data.votes || [];
+            var nodes = data.nodes || [];
+            var conflicts = data.conflicts || [];
+            var membership = {};
+            (data.members || []).forEach(function (m) { membership[m.username] = m; });
+            host.innerHTML = '<div style="display:flex;gap:14px;flex-wrap:wrap"><b>#' + tripId + '</b>'
+                + '<span class="hint">发起人：' + Shell.esc(data.owner) + '</span>'
+                + '<span class="tag plain">邀请码 ' + Shell.esc(data.inviteCode) + '</span>'
+                + '<span class="hint">成员 ' + (data.members || []).length + '</span></div>'
+                + '<div class="hint" style="margin-top:7px">' + (data.members || []).map(function (m) {
+                    return Shell.esc(m.username) + '（' + (m.role === 'owner' ? '发起人' : '协作者') + '）';
+                }).join(' · ') + '</div>'
+                + '<div style="margin-top:12px">' + nodes.map(function (node) {
+                    var mine = votes.find(function (v) {
+                        return v.nodeKey === node.nodeKey && v.username === data.currentUser;
+                    });
+                    return '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)">'
+                        + '<div style="flex:1;min-width:0"><b>' + Shell.esc(node.name) + '</b>'
+                        + '<div class="hint">第' + node.day + '天 · ' + node.slot + '</div></div>'
+                        + ['must', 'can', 'skip'].map(function (value) {
+                            var label = value === 'must' ? '必去' : (value === 'can' ? '可去' : '不去');
+                            return '<button class="btn small ' + (mine && mine.vote === value ? '' : 'ghost')
+                                + '" data-vote="' + value + '" data-node="' + Shell.esc(node.nodeKey) + '">'
+                                + label + '</button>';
+                        }).join('') + '</div>';
+                }).join('') + '</div>'
+                + (conflicts.length ? '<div class="band" style="margin-top:12px"><div class="band-title"><i class="fas fa-triangle-exclamation"></i> 冲突与折中</div>'
+                    + conflicts.map(function (c) {
+                        return '<div style="padding:8px 0"><b>' + Shell.esc(c.name) + '</b>'
+                            + '<div class="hint">必去：' + (c.must || []).join('、') + ' · 不去：'
+                            + (c.skip || []).join('、') + '</div></div>';
+                    }).join('')
+                    + (data.proposals || []).map(function (p) {
+                        return '<div class="hint" style="margin-top:6px"><b>' + Shell.esc(p.name) + '</b>：'
+                            + (p.options || []).map(function (o) {
+                                return o.title + '（' + o.satisfies + '，代价：' + o.tradeoff + '）';
+                            }).join('；') + '</div>';
+                    }).join('') + '</div>' : '<div class="hint ok" style="margin-top:10px">当前没有必去/不去冲突。</div>')
+                + '<div class="hint" style="margin-top:12px"><b>最近协作活动</b><br>'
+                + (data.activity || []).slice(0, 10).map(function (a) {
+                    return Shell.esc(a.username) + ' · ' + Shell.esc(a.action) + ' · '
+                        + Shell.esc(a.detail || '') + ' · ' + Shell.esc(a.createTime || '');
+                }).join('<br>') + '</div>';
+            host.querySelectorAll('[data-vote]').forEach(function (button) {
+                button.addEventListener('click', async function () {
+                    try {
+                        var result = await Shell.api('collaboration/vote', {
+                            tripId: tripId,
+                            nodeKey: button.dataset.node,
+                            vote: button.dataset.vote
+                        });
+                        if (!result || result.status !== 'success') {
+                            throw new Error((result && result.message) || '投票失败');
+                        }
+                        await showCollab(tripId);
+                    } catch (e) {
+                        alert(e.message || '投票失败');
+                    }
+                });
+            });
+        } catch (e) {
+            host.innerHTML = '<div class="hint error">' + Shell.esc(e.message || '协作信息读取失败') + '</div>';
+        }
+    }
+})();
+</script>
+</body>
+</html>

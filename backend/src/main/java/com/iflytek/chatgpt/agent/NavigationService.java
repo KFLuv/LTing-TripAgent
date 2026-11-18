@@ -280,6 +280,12 @@ public class NavigationService {
      */
     public Map<String, Object> planRoute(double fromLat, double fromLng,
                                          double toLat, double toLng, String mode) {
+        return planRoute(fromLat, fromLng, toLat, toLng, mode, false);
+    }
+
+    public Map<String, Object> planRoute(double fromLat, double fromLng,
+                                         double toLat, double toLng, String mode,
+                                         boolean fromIsGcj) {
         Map<String, Object> result = new LinkedHashMap<>();
 
         String key = amapKey == null ? "" : amapKey.trim();
@@ -292,7 +298,9 @@ public class NavigationService {
         // 驾车才支持策略参数，步行/骑行加了会报错
         String extra = "driving".equals(path) ? "&strategy=0" : "";
 
-        double[] from = CoordConverter.wgs84ToGcj02(fromLat, fromLng);
+        double[] from = fromIsGcj
+                ? new double[]{fromLat, fromLng}
+                : CoordConverter.wgs84ToGcj02(fromLat, fromLng);
 
         try {
             String url = ROUTE_BASE + path + "?output=JSON&extensions=base" + extra
@@ -329,8 +337,19 @@ public class NavigationService {
 
             // 各段折线拼起来：每段是 "lng,lat;lng,lat;..."，段间用 ';' 连接
             StringBuilder polyline = new StringBuilder();
+            List<Map<String, Object>> steps = new ArrayList<>();
             for (JsonNode step : routePlan.path("steps")) {
-                appendPolyline(polyline, step.path("polyline").asText(""));
+                String stepPolyline = step.path("polyline").asText("");
+                appendPolyline(polyline, stepPolyline);
+                Map<String, Object> stepView = new LinkedHashMap<>();
+                stepView.put("instruction", step.path("instruction").asText(""));
+                stepView.put("road", step.path("road").asText(""));
+                stepView.put("action", step.path("action").asText(""));
+                stepView.put("assistAction", step.path("assist_action").asText(""));
+                stepView.put("distanceMeters", parseIntSafe(step.path("distance").asText("0")));
+                stepView.put("durationSeconds", parseIntSafe(step.path("duration").asText("0")));
+                stepView.put("polyline", stepPolyline);
+                steps.add(stepView);
             }
             if (polyline.length() == 0) {
                 result.put("error", "路径规划返回为空");
@@ -342,6 +361,7 @@ public class NavigationService {
             result.put("distanceMeters", parseIntSafe(routePlan.path("distance").asText("0")));
             result.put("durationSeconds", parseIntSafe(routePlan.path("duration").asText("0")));
             result.put("polyline", polyline.toString());
+            result.put("steps", steps);
             return result;
         } catch (Exception e) {
             log.warn("高德路径规划异常：{}", e.getMessage());
@@ -358,6 +378,12 @@ public class NavigationService {
      */
     public Map<String, Object> planTransit(double fromLat, double fromLng,
                                            double toLat, double toLng, String city) {
+        return planTransit(fromLat, fromLng, toLat, toLng, city, false);
+    }
+
+    public Map<String, Object> planTransit(double fromLat, double fromLng,
+                                           double toLat, double toLng, String city,
+                                           boolean fromIsGcj) {
         Map<String, Object> result = new LinkedHashMap<>();
 
         String key = amapKey == null ? "" : amapKey.trim();
@@ -370,7 +396,9 @@ public class NavigationService {
             return result;
         }
 
-        double[] from = CoordConverter.wgs84ToGcj02(fromLat, fromLng);
+        double[] from = fromIsGcj
+                ? new double[]{fromLat, fromLng}
+                : CoordConverter.wgs84ToGcj02(fromLat, fromLng);
 
         try {
             String url = TRANSIT_ENDPOINT
@@ -408,14 +436,40 @@ public class NavigationService {
 
             JsonNode transit = transits.get(0);
             StringBuilder polyline = new StringBuilder();
+            List<Map<String, Object>> steps = new ArrayList<>();
             for (JsonNode segment : transit.path("segments")) {
                 // 步行段
                 for (JsonNode step : segment.path("walking").path("steps")) {
-                    appendPolyline(polyline, step.path("polyline").asText(""));
+                    String stepPolyline = step.path("polyline").asText("");
+                    appendPolyline(polyline, stepPolyline);
+                    Map<String, Object> stepView = new LinkedHashMap<>();
+                    stepView.put("instruction", step.path("instruction").asText(""));
+                    stepView.put("road", step.path("road").asText(""));
+                    stepView.put("action", "walk");
+                    stepView.put("distanceMeters", parseIntSafe(step.path("distance").asText("0")));
+                    stepView.put("durationSeconds", parseIntSafe(step.path("duration").asText("0")));
+                    stepView.put("polyline", stepPolyline);
+                    steps.add(stepView);
                 }
                 // 公交/地铁段
                 for (JsonNode busline : segment.path("bus").path("buslines")) {
-                    appendPolyline(polyline, busline.path("polyline").asText(""));
+                    String stepPolyline = busline.path("polyline").asText("");
+                    appendPolyline(polyline, stepPolyline);
+                    Map<String, Object> stepView = new LinkedHashMap<>();
+                    String lineName = busline.path("name").asText("公交");
+                    String departure = busline.path("departure_stop").path("name").asText("");
+                    String arrival = busline.path("arrival_stop").path("name").asText("");
+                    stepView.put("instruction", "乘坐 " + lineName
+                            + (departure.isEmpty() ? "" : "，从 " + departure + " 上车")
+                            + (arrival.isEmpty() ? "" : "，到 " + arrival + " 下车"));
+                    stepView.put("road", lineName);
+                    stepView.put("action", "bus");
+                    stepView.put("distanceMeters", parseIntSafe(busline.path("distance").asText("0")));
+                    stepView.put("durationSeconds", parseIntSafe(
+                            busline.path("duration").asText(
+                                    segment.path("bus").path("duration").asText("0"))));
+                    stepView.put("polyline", stepPolyline);
+                    steps.add(stepView);
                 }
             }
             if (polyline.length() == 0) {
@@ -429,6 +483,7 @@ public class NavigationService {
             result.put("durationSeconds", parseIntSafe(transit.path("duration").asText("0")));
             result.put("cost", transit.path("cost").asText("")); // 票价（元），可能为空
             result.put("polyline", polyline.toString());
+            result.put("steps", steps);
             return result;
         } catch (Exception e) {
             log.warn("高德公交换乘异常：{}", e.getMessage());

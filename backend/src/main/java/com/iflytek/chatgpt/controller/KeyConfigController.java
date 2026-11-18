@@ -40,11 +40,13 @@ public class KeyConfigController {
     /** 允许在这里配置的键（白名单，防止被当成任意配置写入器） */
     private static final List<String> ALLOWED = Arrays.asList(
             "ai.base-url", "ai.model", "ai.api-key",
-            "geo.amap-key", "search.api-key", "map.js-key", "map.js-security-code");
+            "geo.amap-key", "geo.baidu-key", "geo.tencent-key",
+            "search.api-key", "map.js-key", "map.js-security-code");
 
     /** 需要打码展示的键 */
     private static final List<String> SECRETS = Arrays.asList(
-            "ai.api-key", "geo.amap-key", "search.api-key",
+            "ai.api-key", "geo.amap-key", "geo.baidu-key", "geo.tencent-key",
+            "search.api-key",
             "map.js-key", "map.js-security-code");
 
     @Value("${ai.base-url:}")
@@ -55,6 +57,10 @@ public class KeyConfigController {
     private String aiApiKey;
     @Value("${geo.amap-key:}")
     private String geoAmapKey;
+    @Value("${geo.baidu-key:}")
+    private String geoBaiduKey;
+    @Value("${geo.tencent-key:}")
+    private String geoTencentKey;
     @Value("${search.api-key:}")
     private String searchApiKey;
     @Value("${map.js-key:}")
@@ -149,6 +155,8 @@ public class KeyConfigController {
             case "ai.model": return nz(aiModel);
             case "ai.api-key": return nz(aiApiKey);
             case "geo.amap-key": return nz(geoAmapKey);
+            case "geo.baidu-key": return nz(geoBaiduKey);
+            case "geo.tencent-key": return nz(geoTencentKey);
             case "search.api-key": return nz(searchApiKey);
             case "map.js-key": return nz(mapJsKey);
             case "map.js-security-code": return nz(mapJsSecurityCode);

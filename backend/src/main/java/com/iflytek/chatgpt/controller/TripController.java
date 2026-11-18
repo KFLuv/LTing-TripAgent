@@ -111,6 +111,7 @@ public class TripController {
                                       @RequestParam(required = false) String content,
                                       @RequestParam(required = false) String status,
                                       @RequestParam(required = false) String changeNote,
+                                      @RequestParam(defaultValue = "-1") int expectedVersion,
                                       HttpSession session) {
         Map<String, Object> result = new LinkedHashMap<>();
         String username = ChatController.currentUser(session);
@@ -121,6 +122,9 @@ public class TripController {
         Map<String, Object> current = rawTrip(username, id);
         if (current == null) {
             return fail(result, "行程不存在");
+        }
+        if (versionConflict(current, expectedVersion)) {
+            return conflict(result, current);
         }
 
         String newTitle = title == null || title.trim().isEmpty()
@@ -155,8 +159,8 @@ public class TripController {
         }
 
         List<Map<String, Object>> trips = new ArrayList<>();
-        String sql = "select id, title, status, create_time, update_time from trip"
-                + " where username = ? order by id desc";
+        String sql = "select id, title, status, version, create_time, update_time from trip"
+                + " where username = ? and (plan_data is null or plan_step >= 3) order by id desc";
 
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -261,14 +265,22 @@ public class TripController {
                                         @RequestParam(required = false) String nodeTime,
                                         @RequestParam(required = false) String status,
                                         @RequestParam(required = false) Double cost,
+                                        @RequestParam(required = false) String photo,
+                                        @RequestParam(required = false) Double lat,
+                                        @RequestParam(required = false) Double lng,
+                                        @RequestParam(defaultValue = "-1") int expectedVersion,
                                         HttpSession session) {
         Map<String, Object> result = new LinkedHashMap<>();
         String username = ChatController.currentUser(session);
         if (username == null) {
             return fail(result, "请先登录后再使用行程库");
         }
-        if (rawTrip(username, tripId) == null) {
+        Map<String, Object> parent = rawTrip(username, tripId);
+        if (parent == null) {
             return fail(result, "行程不存在");
+        }
+        if (versionConflict(parent, expectedVersion)) {
+            return conflict(result, parent);
         }
         String type = nodeType == null || !NODE_TYPES.contains(nodeType.trim()) ? "note" : nodeType.trim();
         String nodeTitle = title == null || title.trim().isEmpty() ? "未命名节点" : trim(title, 120);
@@ -276,13 +288,26 @@ public class TripController {
         if (id > 0) {
             MySQLUtil.executeUpdate(
                     "update trip_node set node_type = ?, title = ?, detail = ?, node_time = ?,"
-                            + " status = ?, cost = ? where id = ? and username = ?",
-                    type, nodeTitle, detail, nodeTime, status, cost, id, username);
+                            + " status = ?, cost = ?, photo = ?, lat = ?, lng = ? where id = ? and username = ?",
+                    type, nodeTitle, detail, nodeTime, status, cost, photo, lat, lng, id, username);
         } else {
+            int sortOrder = 1;
+            try (Connection conn = MySQLUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(
+                         "select coalesce(max(sort_order), 0) + 1 from trip_node where trip_id = ? and username = ?")) {
+                ps.setInt(1, tripId);
+                ps.setString(2, username);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) sortOrder = rs.getInt(1);
+                }
+            } catch (SQLException e) {
+                log.warn("计算节点排序失败：{}", e.getMessage());
+            }
             MySQLUtil.executeUpdate(
                     "insert into trip_node(trip_id, username, node_type, title, detail, node_time,"
-                            + " status, cost, create_time) values(?, ?, ?, ?, ?, ?, ?, ?, now())",
-                    tripId, username, type, nodeTitle, detail, nodeTime, status, cost);
+                            + " status, cost, photo, lat, lng, sort_order, create_time)"
+                            + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())",
+                    tripId, username, type, nodeTitle, detail, nodeTime, status, cost, photo, lat, lng, sortOrder);
         }
         result.put("status", "success");
         result.put("message", "节点已保存");
@@ -311,18 +336,91 @@ public class TripController {
      */
     @PostMapping(value = "/trips/node/delete", produces = "application/json;charset=UTF-8")
     public Map<String, Object> deleteNode(@RequestParam(defaultValue = "0") int id,
+                                          @RequestParam(defaultValue = "-1") int expectedVersion,
                                           HttpSession session) {
         Map<String, Object> result = new LinkedHashMap<>();
         String username = ChatController.currentUser(session);
         if (username == null) {
             return fail(result, "请先登录后再使用行程库");
         }
+        int tripId = 0;
+        try (Connection conn = MySQLUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "select trip_id from trip_node where id = ? and username = ?")) {
+            ps.setInt(1, id);
+            ps.setString(2, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) tripId = rs.getInt("trip_id");
+            }
+        } catch (SQLException e) {
+            return fail(result, "节点读取失败");
+        }
+        Map<String, Object> parent = rawTrip(username, tripId);
+        if (parent == null) return fail(result, "行程不存在");
+        if (versionConflict(parent, expectedVersion)) return conflict(result, parent);
         int rows = MySQLUtil.executeUpdate("delete from trip_node where id = ? and username = ?", id, username);
         if (rows <= 0) {
             return fail(result, "节点不存在");
         }
         result.put("status", "success");
         result.put("message", "节点已删除");
+        return result;
+    }
+
+    @PostMapping(value = "/trips/node/reorder", produces = "application/json;charset=UTF-8")
+    public Map<String, Object> reorderNodes(@RequestParam String ids,
+                                            @RequestParam(defaultValue = "-1") int expectedVersion,
+                                            HttpSession session) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        String username = ChatController.currentUser(session);
+        if (username == null) return fail(result, "请先登录后再使用行程库");
+        String[] parts = ids == null ? new String[0] : ids.split(",");
+        if (parts.length == 0) return fail(result, "节点顺序为空");
+        int tripId = 0;
+        try {
+            tripId = Integer.parseInt(parts[0].trim());
+            try (Connection conn = MySQLUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(
+                         "select trip_id from trip_node where id = ? and username = ?")) {
+                ps.setInt(1, tripId);
+                ps.setString(2, username);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) tripId = rs.getInt("trip_id");
+                    else return fail(result, "节点不存在");
+                }
+            }
+        } catch (Exception e) {
+            return fail(result, "节点参数无效");
+        }
+        Map<String, Object> parent = rawTrip(username, tripId);
+        if (parent == null) return fail(result, "行程不存在");
+        if (versionConflict(parent, expectedVersion)) return conflict(result, parent);
+        try (Connection conn = MySQLUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "update trip_node set sort_order = ? where id = ? and trip_id = ? and username = ?")) {
+            conn.setAutoCommit(false);
+            try {
+                for (int i = 0; i < parts.length; i++) {
+                    ps.setInt(1, i + 1);
+                    ps.setInt(2, Integer.parseInt(parts[i].trim()));
+                    ps.setInt(3, tripId);
+                    ps.setString(4, username);
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            log.warn("节点排序失败：{}", e.getMessage());
+            return fail(result, "节点排序失败");
+        }
+        result.put("status", "success");
+        result.put("message", "顺序已更新");
         return result;
     }
 
@@ -372,6 +470,7 @@ public class TripController {
      */
     @PostMapping(value = "/trips/version/rollback", produces = "application/json;charset=UTF-8")
     public Map<String, Object> rollback(@RequestParam(defaultValue = "0") int versionId,
+                                        @RequestParam(defaultValue = "-1") int expectedVersion,
                                         HttpSession session) {
         Map<String, Object> result = new LinkedHashMap<>();
         String username = ChatController.currentUser(session);
@@ -380,7 +479,9 @@ public class TripController {
         }
 
         Map<String, Object> version = null;
-        String sql = "select id, trip_id, version_no, title, content, nodes_json from trip_version where id = ? and username = ?";
+        String sql = "select id, trip_id, version_no, title, content, nodes_json, candidates_json,"
+                + " plan_data, plan_revision"
+                + " from trip_version where id = ? and username = ?";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, versionId);
@@ -393,6 +494,9 @@ public class TripController {
                     version.put("title", rs.getString("title"));
                     version.put("content", rs.getString("content"));
                     version.put("nodesJson", rs.getString("nodes_json"));
+                    version.put("candidatesJson", rs.getString("candidates_json"));
+                    version.put("planData", rs.getString("plan_data"));
+                    version.put("planRevision", rs.getInt("plan_revision"));
                 }
             }
         } catch (SQLException e) {
@@ -405,23 +509,88 @@ public class TripController {
 
         int tripId = (int) version.get("tripId");
         int sourceNo = (int) version.get("versionNo");
+        Map<String, Object> parent = rawTrip(username, tripId);
+        if (parent == null) return fail(result, "行程不存在");
+        if (versionConflict(parent, expectedVersion)) return conflict(result, parent);
 
         // 1) 回退前先备份当前状态，避免"回退把最新内容弄丢"
         snapshot(tripId, username, "回退前自动备份");
         // 2) 应用目标版本内容
-        MySQLUtil.executeUpdate(
-                "update trip set title = ?, content = ?, update_time = now() where id = ? and username = ?",
-                version.get("title"), version.get("content"), tripId, username);
+        String targetPlanData = (String) version.get("planData");
+        boolean planRestored = targetPlanData != null && !targetPlanData.trim().isEmpty();
+        if (planRestored) {
+            MySQLUtil.executeUpdate(
+                    "update trip set title = ?, content = ?, plan_data = ?,"
+                            + " plan_revision = plan_revision + 1, update_time = now()"
+                            + " where id = ? and username = ?",
+                    version.get("title"), version.get("content"), targetPlanData, tripId, username);
+        } else {
+            MySQLUtil.executeUpdate(
+                    "update trip set title = ?, content = ?, update_time = now() where id = ? and username = ?",
+                    version.get("title"), version.get("content"), tripId, username);
+        }
         boolean nodesRestored = restoreTripNodes(username, tripId, (String) version.get("nodesJson"));
+        boolean candidatesRestored = restoreTripCandidates(
+                username, tripId, (String) version.get("candidatesJson"));
         // 3) 记一版，注明回退来源
         int no = snapshot(tripId, username, "回退到版本 v" + sourceNo);
 
         result.put("status", "success");
         result.put("versionNo", no);
+        result.put("planRestored", planRestored);
+        result.put("candidatesRestored", candidatesRestored);
         result.put("message", "已回退到 v" + sourceNo
-                + (nodesRestored ? "（正文与节点已恢复，回退前已自动备份）"
-                                 : "（正文已恢复；该旧版本没有节点快照）"));
+                + (planRestored ? "（正文、节点与规划草稿已恢复" : "（正文已恢复")
+                + (nodesRestored ? "，回退前已自动备份）" : "；该旧版本没有节点快照）"));
         return result;
+    }
+
+    @PostMapping(value = "/trips/version/diff", produces = "application/json;charset=UTF-8")
+    public Map<String, Object> versionDiff(@RequestParam(defaultValue = "0") int fromVersionId,
+                                           @RequestParam(defaultValue = "0") int toVersionId,
+                                           HttpSession session) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        String username = ChatController.currentUser(session);
+        if (username == null) return fail(result, "请先登录后再使用行程库");
+        Map<String, Object> before = loadVersion(username, fromVersionId);
+        Map<String, Object> after = loadVersion(username, toVersionId);
+        if (before == null || after == null) return fail(result, "版本不存在");
+        if (!String.valueOf(before.get("tripId")).equals(String.valueOf(after.get("tripId")))) {
+            return fail(result, "只能比较同一行程的版本");
+        }
+        try {
+            JsonNode beforeNodes = JSON.readTree(String.valueOf(before.get("nodesJson")));
+            JsonNode afterNodes = JSON.readTree(String.valueOf(after.get("nodesJson")));
+            Map<String, String> oldByKey = nodeMap(beforeNodes);
+            Map<String, String> newByKey = nodeMap(afterNodes);
+            int added = 0, removed = 0, changed = 0;
+            for (String key : newByKey.keySet()) {
+                if (!oldByKey.containsKey(key)) added++;
+                else if (!oldByKey.get(key).equals(newByKey.get(key))) changed++;
+            }
+            for (String key : oldByKey.keySet()) if (!newByKey.containsKey(key)) removed++;
+            List<String> parts = new ArrayList<>();
+            if (added > 0) parts.add("新增 " + added + " 个节点");
+            if (removed > 0) parts.add("删除 " + removed + " 个节点");
+            if (changed > 0) parts.add("修改 " + changed + " 个节点");
+            if (!String.valueOf(before.get("content")).equals(String.valueOf(after.get("content")))) {
+                parts.add("行程正文有更新");
+            }
+            if (!String.valueOf(before.get("planData")).equals(String.valueOf(after.get("planData")))) {
+                parts.add("规划草稿有更新");
+            }
+            result.put("status", "success");
+            result.put("fromVersion", before.get("versionNo"));
+            result.put("toVersion", after.get("versionNo"));
+            result.put("added", added);
+            result.put("removed", removed);
+            result.put("changed", changed);
+            result.put("summary", parts.isEmpty() ? "两个版本内容一致" : String.join("，", parts));
+            return result;
+        } catch (Exception e) {
+            log.warn("版本差异计算失败：{}", e.getMessage());
+            return fail(result, "版本差异计算失败");
+        }
     }
 
     // ==================== 内部工具方法 ====================
@@ -447,17 +616,23 @@ public class TripController {
             log.warn("计算版本号失败：{}", e.getMessage());
         }
         MySQLUtil.executeUpdate(
-                "insert into trip_version(trip_id, username, version_no, title, content, nodes_json, change_note, create_time)"
-                        + " values(?, ?, ?, ?, ?, ?, ?, now())",
+                "insert into trip_version(trip_id, username, version_no, title, content, nodes_json,"
+                        + " candidates_json, plan_data, plan_revision, change_note, create_time)"
+                        + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())",
                 tripId, username, nextNo, trip.get("title"), trip.get("content"),
-                tripNodesJson(username, tripId), trim(changeNote, 255));
+                tripNodesJson(username, tripId), tripCandidatesJson(username, tripId),
+                trip.get("planData"), trip.get("planRevision"),
+                trim(changeNote, 255));
+        MySQLUtil.executeUpdate(
+                "update trip set version = ?, update_time = now() where id = ? and username = ?",
+                nextNo, tripId, username);
         return nextNo;
     }
 
     private String tripNodesJson(String username, int tripId) {
         List<Map<String, Object>> nodes = new ArrayList<>();
-        String sql = "select node_type, title, detail, node_time, status, cost from trip_node"
-                + " where trip_id = ? and username = ? order by id";
+        String sql = "select node_type, title, detail, node_time, status, cost, photo, lat, lng, sort_order"
+                + " from trip_node where trip_id = ? and username = ? order by sort_order, id";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, tripId);
@@ -471,12 +646,47 @@ public class TripController {
                     node.put("nodeTime", rs.getString("node_time"));
                     node.put("status", rs.getString("status"));
                     node.put("cost", rs.getBigDecimal("cost"));
+                    node.put("photo", rs.getString("photo"));
+                    node.put("lat", rs.getObject("lat"));
+                    node.put("lng", rs.getObject("lng"));
+                    node.put("sortOrder", rs.getInt("sort_order"));
                     nodes.add(node);
                 }
             }
             return JSON.writeValueAsString(nodes);
         } catch (Exception e) {
             throw new RuntimeException("生成行程节点快照失败：" + e.getMessage(), e);
+        }
+    }
+
+    private String tripCandidatesJson(String username, int tripId) {
+        List<Map<String, Object>> candidates = new ArrayList<>();
+        String sql = "select poi_id, name, type, city, address, lat, lng, duration_min, cost, evidence, photo"
+                + " from trip_candidate where trip_id = ? and username = ? order by id";
+        try (Connection conn = MySQLUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, tripId);
+            ps.setString(2, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("poiId", rs.getString("poi_id"));
+                    item.put("name", rs.getString("name"));
+                    item.put("type", rs.getString("type"));
+                    item.put("city", rs.getString("city"));
+                    item.put("address", rs.getString("address"));
+                    item.put("lat", rs.getObject("lat"));
+                    item.put("lng", rs.getObject("lng"));
+                    item.put("durationMin", rs.getInt("duration_min"));
+                    item.put("cost", rs.getString("cost"));
+                    item.put("evidence", rs.getString("evidence"));
+                    item.put("photo", rs.getString("photo"));
+                    candidates.add(item);
+                }
+            }
+            return JSON.writeValueAsString(candidates);
+        } catch (Exception e) {
+            throw new RuntimeException("生成候选池快照失败：" + e.getMessage(), e);
         }
     }
 
@@ -499,8 +709,8 @@ public class TripController {
                         del.executeUpdate();
                     }
                     try (PreparedStatement ins = conn.prepareStatement(
-                            "insert into trip_node(trip_id, username, node_type, title, detail, node_time, status, cost, create_time)"
-                                    + " values(?, ?, ?, ?, ?, ?, ?, ?, now())")) {
+                            "insert into trip_node(trip_id, username, node_type, title, detail, node_time, status, cost, photo, lat, lng, sort_order, create_time)"
+                                    + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())")) {
                         for (JsonNode node : nodes) {
                             ins.setInt(1, tripId);
                             ins.setString(2, username);
@@ -514,6 +724,12 @@ public class TripController {
                             } else {
                                 ins.setBigDecimal(8, null);
                             }
+                            ins.setString(9, node.path("photo").asText(null));
+                            if (node.path("lat").isNumber()) ins.setDouble(10, node.path("lat").asDouble());
+                            else ins.setNull(10, java.sql.Types.DOUBLE);
+                            if (node.path("lng").isNumber()) ins.setDouble(11, node.path("lng").asDouble());
+                            else ins.setNull(11, java.sql.Types.DOUBLE);
+                            ins.setInt(12, node.path("sortOrder").asInt(0));
                             ins.addBatch();
                         }
                         ins.executeBatch();
@@ -532,9 +748,62 @@ public class TripController {
         }
     }
 
+    private boolean restoreTripCandidates(String username, int tripId, String candidatesJson) {
+        if (candidatesJson == null || candidatesJson.trim().isEmpty()) return false;
+        try {
+            JsonNode candidates = JSON.readTree(candidatesJson);
+            if (!candidates.isArray()) return false;
+            try (Connection conn = MySQLUtil.getConnection()) {
+                conn.setAutoCommit(false);
+                try {
+                    try (PreparedStatement del = conn.prepareStatement(
+                            "delete from trip_candidate where trip_id = ? and username = ?")) {
+                        del.setInt(1, tripId);
+                        del.setString(2, username);
+                        del.executeUpdate();
+                    }
+                    try (PreparedStatement ins = conn.prepareStatement(
+                            "insert into trip_candidate(username, trip_id, poi_id, name, type, city,"
+                                    + " address, lat, lng, duration_min, cost, evidence, photo, create_time)"
+                                    + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())")) {
+                        for (JsonNode item : candidates) {
+                            ins.setString(1, username);
+                            ins.setInt(2, tripId);
+                            ins.setString(3, item.path("poiId").asText(null));
+                            ins.setString(4, item.path("name").asText(""));
+                            ins.setString(5, item.path("type").asText(null));
+                            ins.setString(6, item.path("city").asText(null));
+                            ins.setString(7, item.path("address").asText(null));
+                            if (item.path("lat").isNumber()) ins.setDouble(8, item.path("lat").asDouble());
+                            else ins.setNull(8, java.sql.Types.DOUBLE);
+                            if (item.path("lng").isNumber()) ins.setDouble(9, item.path("lng").asDouble());
+                            else ins.setNull(9, java.sql.Types.DOUBLE);
+                            ins.setInt(10, item.path("durationMin").asInt(0));
+                            ins.setString(11, item.path("cost").asText(null));
+                            ins.setString(12, item.path("evidence").asText(null));
+                            ins.setString(13, item.path("photo").asText(null));
+                            ins.addBatch();
+                        }
+                        ins.executeBatch();
+                    }
+                    conn.commit();
+                    return true;
+                } catch (Exception e) {
+                    conn.rollback();
+                    throw e;
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("恢复候选池失败：" + e.getMessage(), e);
+        }
+    }
+
     private List<Map<String, Object>> listVersions(String username, int tripId) {
         List<Map<String, Object>> list = new ArrayList<>();
-        String sql = "select id, version_no, title, change_note, create_time from trip_version"
+        String sql = "select id, version_no, title, change_note, create_time, plan_data, plan_revision"
+                + " from trip_version"
                 + " where trip_id = ? and username = ? order by version_no desc";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -548,6 +817,9 @@ public class TripController {
                     m.put("title", rs.getString("title"));
                     m.put("changeNote", rs.getString("change_note"));
                     m.put("createTime", formatTime(rs.getTimestamp("create_time")));
+                    String planData = rs.getString("plan_data");
+                    m.put("hasPlanData", planData != null && !planData.trim().isEmpty());
+                    m.put("planRevision", rs.getInt("plan_revision"));
                     list.add(m);
                 }
             }
@@ -560,9 +832,9 @@ public class TripController {
     private List<Map<String, Object>> listNodes(String username, int tripId, String nodeType) {
         List<Map<String, Object>> list = new ArrayList<>();
         boolean filter = nodeType != null && !nodeType.trim().isEmpty();
-        String sql = "select id, node_type, title, detail, node_time, status, cost, create_time"
+        String sql = "select id, node_type, title, detail, node_time, status, cost, photo, lat, lng, sort_order, create_time"
                 + " from trip_node where trip_id = ? and username = ?"
-                + (filter ? " and node_type = ?" : "") + " order by id";
+                + (filter ? " and node_type = ?" : "") + " order by sort_order, id";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, tripId);
@@ -580,6 +852,10 @@ public class TripController {
                     m.put("nodeTime", rs.getString("node_time"));
                     m.put("status", rs.getString("status"));
                     m.put("cost", rs.getBigDecimal("cost"));
+                    m.put("photo", rs.getString("photo"));
+                    m.put("lat", rs.getObject("lat"));
+                    m.put("lng", rs.getObject("lng"));
+                    m.put("sortOrder", rs.getInt("sort_order"));
                     list.add(m);
                 }
             }
@@ -590,7 +866,8 @@ public class TripController {
     }
 
     private Map<String, Object> rawTrip(String username, int id) {
-        String sql = "select id, title, content, status, create_time, update_time from trip"
+        String sql = "select id, title, content, status, version, plan_data, plan_revision,"
+                + " create_time, update_time from trip"
                 + " where id = ? and username = ?";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -603,6 +880,9 @@ public class TripController {
                     m.put("title", rs.getString("title"));
                     m.put("content", rs.getString("content"));
                     m.put("status", rs.getString("status"));
+                    m.put("version", rs.getInt("version"));
+                    m.put("planData", rs.getString("plan_data"));
+                    m.put("planRevision", rs.getInt("plan_revision"));
                     m.put("createTime", formatTime(rs.getTimestamp("create_time")));
                     m.put("updateTime", formatTime(rs.getTimestamp("update_time")));
                     return m;
@@ -619,6 +899,7 @@ public class TripController {
         m.put("id", rs.getInt("id"));
         m.put("title", rs.getString("title"));
         m.put("status", rs.getString("status"));
+        m.put("version", rs.getInt("version"));
         m.put("createTime", formatTime(rs.getTimestamp("create_time")));
         m.put("updateTime", formatTime(rs.getTimestamp("update_time")));
         return m;
@@ -635,6 +916,57 @@ public class TripController {
     private String normalizeStatus(String status) {
         String s = status == null ? "" : status.trim();
         return TRIP_STATUS.contains(s) ? s : "规划中";
+    }
+
+    private boolean versionConflict(Map<String, Object> trip, int expectedVersion) {
+        if (expectedVersion < 0) return false;
+        int currentVersion = ((Number) trip.getOrDefault("version", 0)).intValue();
+        return expectedVersion != currentVersion;
+    }
+
+    private Map<String, Object> conflict(Map<String, Object> out, Map<String, Object> current) {
+        out.put("status", "conflict");
+        out.put("version", current.get("version"));
+        out.put("message", "行程已在其他页面更新，请刷新后再修改");
+        return out;
+    }
+
+    private Map<String, Object> loadVersion(String username, int versionId) {
+        String sql = "select id, trip_id, version_no, title, content, nodes_json, candidates_json,"
+                + " plan_data, plan_revision"
+                + " from trip_version where id = ? and username = ?";
+        try (Connection conn = MySQLUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, versionId);
+            ps.setString(2, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id", rs.getInt("id"));
+                m.put("tripId", rs.getInt("trip_id"));
+                m.put("versionNo", rs.getInt("version_no"));
+                m.put("title", rs.getString("title"));
+                m.put("content", rs.getString("content"));
+                String nodes = rs.getString("nodes_json");
+                m.put("nodesJson", nodes == null || nodes.trim().isEmpty() ? "[]" : nodes);
+                m.put("candidatesJson", rs.getString("candidates_json"));
+                m.put("planData", rs.getString("plan_data"));
+                m.put("planRevision", rs.getInt("plan_revision"));
+                return m;
+            }
+        } catch (SQLException e) {
+            return null;
+        }
+    }
+
+    private Map<String, String> nodeMap(JsonNode nodes) throws Exception {
+        Map<String, String> map = new LinkedHashMap<>();
+        if (nodes == null || !nodes.isArray()) return map;
+        for (JsonNode n : nodes) {
+            String key = n.path("title").asText("") + "|" + n.path("nodeTime").asText("");
+            map.put(key, JSON.writeValueAsString(n));
+        }
+        return map;
     }
 
     private String trim(String value, int max) {

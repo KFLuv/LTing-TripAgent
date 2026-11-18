@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.iflytek.chatgpt.agent.tool.TravelTools;
+import com.iflytek.chatgpt.controller.PlanOpsController;
 import com.iflytek.chatgpt.service.AiChatService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,7 +117,16 @@ public class TravelAgentService {
                     + "「行程库」——新建用 trip(action=save)；修改已有行程必须先用 trip(action=get) 读取现状，再调用 trip(action=update)，"
                     + "不要每改一次就新建行程。用 trip(action=status) 变更状态，用 tripNodes(action=list/save) 管理节点"
                     + "（订单 order、预约 booking、风险 risk、备注 note、备选路线 route），用 tripVersions(action=list/rollback) 查看并回退版本快照；"
+                    + "若行程已有 plan_data，trip(action=update) 和 tripVersions(action=rollback) 会被服务端拒绝，必须改走 planOps 预览。"
                     + "用户说「出发了/玩完了/结束了/撤销/回退上一个版本」时必须落到这些工具。"
+                    + "当前「出行工作台」未保存草稿里的节点增删改，必须走 planOps：先 action=context 读取 contextId、planRevision，"
+                    + "以及 nodes 数组中的稳定 nodeKey / day / slot，再 action=preview 提交结构化操作。"
+                    + "不得改用 tripNodes 或 trip(get) 猜测草稿节点。你绝对不能声称已经应用；最终 Apply 只能由用户在界面确认 token 后执行。"
+                    + "planOps 可用 MOVE_NODE / REMOVE_NODE / REPLACE_NODE / REORDER_NODE / LOCK_NODE / TOGGLE_NODE_CLOSURE /"
+                    + " ADD_NODE / ADD_CANDIDATE / REMOVE_CANDIDATE / UPDATE_CONSTRAINT / UPDATE_BUDGET /"
+                    + " UPDATE_STAY / UPDATE_PLAN_META / UPDATE_TRANSPORT / UPDATE_BUDGET_PLAN /"
+                    + " UPDATE_ROUTE_TIMES / REBUILD_ITINERARY，以及 ROLLBACK_PLAN_VERSION"
+                    + "（必须提供目标 targetVersionId）。"
                     + "「旅途轨迹日志」——用户报告打卡、喜欢或避雷某处、花了多少时间时，用 travelLog(action=checkin)；"
                     + "用户说「生成游记/总结这次旅行」或行程标记「已结束」时，用 travelLog(action=travelog)。"
                     + "「偏好档案」——涉及画像时先 preferences(action=list)，也可用 preferences(action=templates/activate) 切换模板。"
@@ -180,6 +190,7 @@ public class TravelAgentService {
     private final TravelTools travelTools;
     private final WebSearchService webSearchService;
     private final NavigationService navigationService;
+    private final PlanOpsController planOpsController;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -196,10 +207,14 @@ public class TravelAgentService {
         public final String answer;
         /** 写操作摘要，每项形如 {"tool":"savePreference","summary":"记住偏好：饮食忌口=不吃辣"} */
         public final List<Map<String, String>> actions;
+        /** 等待用户在界面确认的 PlanOps 预览；AI 本身不能 Apply。 */
+        public final List<Map<String, Object>> pendingOperations;
 
-        public AgentResult(String answer, List<Map<String, String>> actions) {
+        public AgentResult(String answer, List<Map<String, String>> actions,
+                           List<Map<String, Object>> pendingOperations) {
             this.answer = answer;
             this.actions = actions;
+            this.pendingOperations = pendingOperations;
         }
     }
 
@@ -214,11 +229,13 @@ public class TravelAgentService {
             "savePackingTemplate", "saveDocument", "moment", "profile");
 
     public TravelAgentService(AiChatService aiChatService, TravelTools travelTools,
-                              WebSearchService webSearchService, NavigationService navigationService) {
+                              WebSearchService webSearchService, NavigationService navigationService,
+                              PlanOpsController planOpsController) {
         this.aiChatService = aiChatService;
         this.travelTools = travelTools;
         this.webSearchService = webSearchService;
         this.navigationService = navigationService;
+        this.planOpsController = planOpsController;
     }
 
     /**
@@ -258,9 +275,10 @@ public class TravelAgentService {
         messages.add(textMessage("user", userInput));
 
         List<Map<String, String>> actions = new ArrayList<>();
-        String answer = runLoop(username, messages, lat, lng, actions);
+        List<Map<String, Object>> pendingOperations = new ArrayList<>();
+        String answer = runLoop(username, messages, lat, lng, actions, pendingOperations);
         remember(history, userInput, answer);
-        return new AgentResult(answer, actions);
+        return new AgentResult(answer, actions, pendingOperations);
     }
 
     /**
@@ -316,12 +334,13 @@ public class TravelAgentService {
                         + "6) 禁止用 || 之类的符号拼表格，一律用「分类 · 名称 · 距离 · 地址」的单行列表；不要反问行程规划问题。"));
 
         // 到达播报是系统被动触发，不面向动作卡片，actions 传 null 丢弃即可
-        return runLoop(username, messages, lat, lng, null);
+        return runLoop(username, messages, lat, lng, null, null);
     }
 
     /** Agent 循环主体：想 → 调工具 → 看结果 → 再想，直到模型给出最终答案 */
     private String runLoop(String username, List<JsonNode> messages, Double lat, Double lng,
-                           List<Map<String, String>> actions) {
+                           List<Map<String, String>> actions,
+                           List<Map<String, Object>> pendingOperations) {
         String toolsJson = toolsJson();
         // navigateTo 生成的链接是唯一权威来源，记下来；回答返回前用它覆盖模型自己写的链接
         Map<String, String> navUris = new LinkedHashMap<>();
@@ -360,6 +379,17 @@ public class TravelAgentService {
 
                 // ★ 这里才是"真正干活"，结果作为 role=tool 塞回，模型下一轮才能看到
                 String result = dispatch(username, toolName, arguments, lat, lng);
+
+                if (pendingOperations != null && "planOps".equals(toolName)) {
+                    JsonNode planPreview = parse(result);
+                    if ("success".equals(planPreview.path("status").asText(""))
+                            && !planPreview.path("approvalToken").asText("").isEmpty()) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> operationPreview =
+                                objectMapper.convertValue(planPreview, Map.class);
+                        pendingOperations.add(operationPreview);
+                    }
+                }
 
                 // 写操作摘要：把领域入口解包回底层写工具，保持评测和前端动作卡口径一致。
                 String writeTool = canonicalWriteTool(toolName, arguments);
@@ -531,13 +561,55 @@ public class TravelAgentService {
                         "按城市、景点或分类搜索目的地景点。",
                         schema("keyword", "string", "搜索关键词")),
                 new AgentTool("trip",
-                        "行程主入口。action=list 列出；get 读取；save 新建；update 更新已有正文；status 修改状态。",
+                        "行程主入口。action=list 列出；get 读取；save 新建；update 更新普通行程正文；status 修改状态。含 plan_data 的行程必须走 planOps。",
                         schemaAllOptional(
                                 "action", "string", "list/get/save/update/status",
                                 "tripId", "integer", "行程ID，get/update/status 时使用",
                                 "title", "string", "save/update 时使用",
                                 "content", "string", "save/update 时使用",
                                 "status", "string", "规划中/进行中/已结束")),
+                new AgentTool("planOps",
+                        "出行工作台草稿的结构化操作。action=context 获取上下文和带 nodeKey 的草稿 nodes；action=preview 只生成变更预览，不写库。"
+                                + "用户必须在界面确认后才能应用。支持节点增删改、候选、人数/偏好、预算、住宿和版本回退。",
+                        schemaAllOptional(
+                                "action", "string", "context/preview",
+                                "tripId", "integer", "当前规划草稿ID",
+                                "contextId", "string", "action=preview 时使用 context 返回的ID",
+                                "operationType", "string", "MOVE_NODE/REMOVE_NODE/REPLACE_NODE/REORDER_NODE/LOCK_NODE/TOGGLE_NODE_CLOSURE/ADD_NODE/ADD_CANDIDATE/REMOVE_CANDIDATE/UPDATE_CONSTRAINT/UPDATE_BUDGET/UPDATE_STAY/UPDATE_PLAN_META/UPDATE_TRANSPORT/UPDATE_BUDGET_PLAN/UPDATE_ROUTE_TIMES/REBUILD_ITINERARY/ROLLBACK_PLAN_VERSION",
+                                "expectedRevision", "integer", "当前 planRevision；可省略，服务端取上下文版本",
+                                "targetVersionId", "integer", "ROLLBACK_PLAN_VERSION 的目标版本ID",
+                                "nodeKey", "string", "节点稳定键：name|address|lat|lng",
+                                "candidate", "string", "ADD_CANDIDATE / REMOVE_CANDIDATE 的完整候选 JSON",
+                                "node", "string", "ADD_NODE 的完整节点 JSON",
+                                "itinerary", "string", "REBUILD_ITINERARY 的完整日程 JSON",
+                                "variant", "string", "REBUILD_ITINERARY 的方案名",
+                                "travelMode", "string", "UPDATE_ROUTE_TIMES 的 driving/walking/bicycling/transit",
+                                "targetDay", "integer", "MOVE_NODE 目标天，从 0 开始",
+                                "targetSlot", "string", "morning/afternoon/evening",
+                                "direction", "integer", "REORDER_NODE：-1 上移，1 下移",
+                                "locked", "boolean", "LOCK_NODE 目标状态",
+                                "closed", "boolean", "TOGGLE_NODE_CLOSURE 目标状态",
+                                "replacement", "string", "REPLACE_NODE 的完整替换点位 JSON 字符串",
+                                "people", "string", "UPDATE_CONSTRAINT 的同行人数",
+                                "pace", "string", "UPDATE_CONSTRAINT 的 relaxed/balanced/compact",
+                                "quickPrefs", "string", "UPDATE_CONSTRAINT 的本次偏好 JSON 数组",
+                                "budget", "string", "UPDATE_BUDGET 的预算文本",
+                                "stay", "string", "UPDATE_STAY 的住宿区域 JSON；空字符串表示清除",
+                                "hotelName", "string", "UPDATE_STAY 时手填的酒店名",
+                                "destination", "string", "UPDATE_PLAN_META 的目标城市",
+                                "destinationLabel", "string", "UPDATE_PLAN_META 的展示名称",
+                                "start", "string", "UPDATE_PLAN_META 的出发日期 yyyy-MM-dd",
+                                "end", "string", "UPDATE_PLAN_META 的返程日期 yyyy-MM-dd",
+                                "days", "integer", "UPDATE_PLAN_META 的天数",
+                                "origin", "string", "UPDATE_PLAN_META 的出发地",
+                                "title", "string", "UPDATE_PLAN_META 的行程标题",
+                                "resetPlan", "boolean", "目的地变化时是否清空候选和正式行程",
+                                "transport", "string", "UPDATE_TRANSPORT 的完整 JSON",
+                                "budgetPlan", "string", "UPDATE_BUDGET_PLAN 的完整 JSON",
+                                "selectedDay", "integer", "生成 context 时的当前天，从 0 开始",
+                                "selectedSlot", "string", "生成 context 时当前时段",
+                                "selectedNodeKey", "string", "生成 context 时当前节点键",
+                                "reason", "string", "变更原因")),
                 new AgentTool("tripNodes",
                         "行程节点入口。action=list 读取；save 新增订单、预约、风险、备注、时间线或备选路线。",
                         schemaAllOptional(
@@ -550,7 +622,7 @@ public class TravelAgentService {
                                 "status", "string", "节点状态",
                                 "cost", "number", "金额")),
                 new AgentTool("tripVersions",
-                        "行程版本入口。action=list 查看历史；rollback 回退到 versionId。",
+                        "行程版本入口。action=list 查看历史；rollback 仅用于普通行程，含 plan_data 的规划必须走 planOps。",
                         schemaAllOptional(
                                 "action", "string", "list/rollback",
                                 "tripId", "integer", "list 时使用",
@@ -841,6 +913,59 @@ public class TravelAgentService {
             switch (toolName) {
                 case "searchDestination":
                     return toJson(travelTools.searchDestination(args.path("keyword").asText("")));
+                case "planOps":
+                    String planAction = args.path("action").asText("").trim().toLowerCase();
+                    if ("context".equals(planAction)) {
+                        return toJson(planOpsController.contextForUser(
+                                username, args.path("tripId").asInt(0), "plan",
+                                args.path("selectedDay").asInt(0),
+                                args.path("selectedSlot").asText(""),
+                                args.path("selectedNodeKey").asText(""),
+                                ""));
+                    }
+                    if ("preview".equals(planAction)) {
+                        String contextId = args.path("contextId").asText("").trim();
+                        String operationType = args.path("operationType").asText("").trim().toUpperCase();
+                        if (contextId.isEmpty() || operationType.isEmpty()) {
+                            return errorJson("planOps preview 缺少 contextId 或 operationType");
+                        }
+                        ObjectNode operation = objectMapper.createObjectNode();
+                        operation.put("type", operationType);
+                        copyIfPresent(args, operation, "expectedRevision");
+                        copyIfPresent(args, operation, "targetVersionId");
+                        copyIfPresent(args, operation, "nodeKey");
+                        copyIfPresent(args, operation, "targetDay");
+                        copyIfPresent(args, operation, "targetSlot");
+                        copyIfPresent(args, operation, "direction");
+                        copyIfPresent(args, operation, "locked");
+                        copyIfPresent(args, operation, "closed");
+                        copyIfPresent(args, operation, "people");
+                        copyIfPresent(args, operation, "pace");
+                        copyIfPresent(args, operation, "budget");
+                        copyIfPresent(args, operation, "hotelName");
+                        copyIfPresent(args, operation, "destination");
+                        copyIfPresent(args, operation, "destinationLabel");
+                        copyIfPresent(args, operation, "start");
+                        copyIfPresent(args, operation, "end");
+                        copyIfPresent(args, operation, "days");
+                        copyIfPresent(args, operation, "origin");
+                        copyIfPresent(args, operation, "title");
+                        copyIfPresent(args, operation, "resetPlan");
+                        copyIfPresent(args, operation, "reason");
+                        copyJsonIfPresent(args, operation, "replacement");
+                        copyJsonIfPresent(args, operation, "candidate");
+                        copyJsonIfPresent(args, operation, "node");
+                        copyJsonIfPresent(args, operation, "stay");
+                        copyJsonIfPresent(args, operation, "quickPrefs");
+                        copyJsonIfPresent(args, operation, "transport");
+                        copyJsonIfPresent(args, operation, "budgetPlan");
+                        copyJsonIfPresent(args, operation, "itinerary");
+                        copyIfPresent(args, operation, "variant");
+                        copyIfPresent(args, operation, "travelMode");
+                        return toJson(planOpsController.previewForUser(
+                                username, contextId, operation.toString(), "ai"));
+                    }
+                    return errorJson("planOps 只允许 context 或 preview；Apply 必须由用户界面确认");
                 case "listTrips":
                     return toJson(travelTools.listTrips(username));
                 case "getTripDetail":
@@ -1112,6 +1237,28 @@ public class TravelAgentService {
     private String arg(JsonNode args, String field) {
         String v = args.path(field).asText("").trim();
         return v.isEmpty() ? "（未填）" : v;
+    }
+
+    private void copyIfPresent(JsonNode source, ObjectNode target, String field) {
+        JsonNode value = source.get(field);
+        if (value != null && !value.isNull()) {
+            target.set(field, value.deepCopy());
+        }
+    }
+
+    private void copyJsonIfPresent(JsonNode source, ObjectNode target, String field) throws Exception {
+        JsonNode value = source.get(field);
+        if (value == null || value.isNull()) return;
+        if (value.isTextual()) {
+            String text = value.asText("").trim();
+            if (text.isEmpty()) {
+                if ("stay".equals(field)) target.putNull(field);
+                return;
+            }
+            target.set(field, objectMapper.readTree(text));
+        } else {
+            target.set(field, value.deepCopy());
+        }
     }
 
     /** 取参数值，字段没传返回 null（用于"只覆盖传入字段"的更新） */

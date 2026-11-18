@@ -1,11 +1,73 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script src="assets/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>行程本 · AI旅游助手</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/icons.css">
     <link rel="stylesheet" href="assets/app.css">
+    <style>
+        .trip-photo-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;margin-top:14px}
+        .trip-photo-strip figure{position:relative;margin:0;overflow:hidden;border-radius:12px;background:#eef2f7;aspect-ratio:4/3}
+        .trip-photo-strip img{width:100%;height:100%;object-fit:cover}
+        .trip-photo-strip figcaption{position:absolute;left:0;right:0;bottom:0;padding:18px 9px 8px;color:#fff;font-size:11.5px;background:linear-gradient(transparent,rgba(0,0,0,.7))}
+        .node-thumb{width:58px;height:58px;border-radius:11px;object-fit:cover;flex:none;background:#eef2f7;border:1px solid var(--line)}
+        .node-thumb.placeholder{display:grid;place-items:center;color:var(--brand);font-size:19px;background:linear-gradient(145deg,#eef4fb,#f8fbff)}
+        .node-thumb.stay{color:#c56f00;background:linear-gradient(145deg,#fff5e8,#fffaf2)}
+        html.theme-dark .trip-photo-strip figure,html.theme-dark .node-thumb{background:#111827;border-color:var(--line)}
+        html.theme-dark .node-thumb.placeholder{background:linear-gradient(145deg,#17233a,#111827)}
+        html.theme-dark .node-thumb.stay{background:linear-gradient(145deg,#2a2118,#1d1a16);color:#fbbf24}
+        html.theme-dark #node-editor-mask>div{background:var(--panel)!important;color:var(--ink)}
+        .today-band{padding:0;overflow:hidden}
+        .today-top{display:flex;align-items:flex-start;gap:14px;padding:20px 22px 16px}
+        .today-top-icon{width:42px;height:42px;flex:none;display:grid;place-items:center;border-radius:12px;background:var(--brand-soft);color:var(--brand);font-size:17px}
+        .today-top-main{flex:1;min-width:0}
+        .today-title{font-size:17px;font-weight:680;line-height:1.35}
+        .today-meta{font-size:12.5px;color:var(--muted);margin-top:3px}
+        .today-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+        .today-focus{margin:0 22px;padding:14px 16px;border-radius:12px;background:linear-gradient(135deg,#eef6ff,#f8fbff);display:flex;align-items:center;gap:14px;border:1px solid rgba(0,113,227,.1)}
+        .today-focus-label{font-size:11px;color:var(--brand);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+        .today-focus-name{font-size:15px;font-weight:650;line-height:1.4}
+        .today-focus-time{font-size:12px;color:var(--ink-2);margin-top:2px}
+        .today-budget{display:flex;gap:8px;flex-wrap:wrap;margin:12px 22px 0}
+        .today-pill{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;background:var(--surface-muted);font-size:12px;color:var(--ink-2)}
+        .today-pill strong{color:var(--ink);font-weight:650}
+        .today-pill.warn{background:rgba(255,59,48,.08);color:var(--danger)}
+        .today-stops{padding:12px 22px 18px}
+        .today-stop{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);min-width:0}
+        .today-stop:first-child{border-top:0}
+        .today-stop-time{width:88px;flex:none;font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+        .today-stop-main{flex:1;min-width:0}
+        .today-stop-name{font-size:13.5px;font-weight:620;overflow-wrap:anywhere}
+        .today-stop-address{font-size:11.8px;color:var(--muted);overflow-wrap:anywhere}
+        .today-state{flex:none;padding:3px 8px;border-radius:999px;font-size:11px;background:var(--surface-muted);color:var(--muted)}
+        .today-state.current{background:rgba(0,113,227,.1);color:var(--brand)}
+        .today-state.upcoming{background:rgba(52,199,89,.1);color:#1b8d3a}
+        .today-actions{display:flex;gap:5px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+        .today-actions .btn{padding:5px 9px}
+        .today-prefs{margin:0 22px 20px;padding:14px 16px;border:1px solid rgba(255,149,0,.24);border-radius:12px;background:rgba(255,149,0,.05)}
+        .today-pref-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px dashed var(--line)}
+        .today-pref-row:first-of-type{border-top:0}
+        .today-pref-main{flex:1;min-width:0}
+        .today-empty{padding:8px 22px 20px;color:var(--muted);font-size:12.5px}
+        .today-offline-note{font-size:11.5px;color:var(--accent);margin-left:2px}
+        #today-checkin-mask{position:fixed;inset:0;z-index:2300;background:rgba(15,23,42,.24);display:flex;align-items:center;justify-content:center;padding:20px}
+        #today-checkin-mask>div{width:min(480px,96vw);background:var(--panel);border-radius:16px;padding:20px;box-shadow:0 24px 70px rgba(15,23,42,.25)}
+        html.theme-dark .today-focus{background:linear-gradient(135deg,#13233a,#172033);border-color:rgba(96,165,250,.18)}
+        @media(max-width:700px){
+            .today-top{align-items:center;padding:16px 16px 12px;flex-wrap:wrap}
+            .today-tools{width:100%;justify-content:flex-start;padding-left:56px}
+            .today-focus{margin:0 16px;align-items:flex-start}
+            .today-budget{margin:10px 16px 0}
+            .today-stops{padding:10px 16px 16px}
+            .today-stop{flex-wrap:wrap}
+            .today-stop-time{width:72px}
+            .today-actions{width:100%;padding-left:82px;justify-content:flex-start}
+            .today-prefs{margin:0 16px 16px}
+            .today-pref-row{align-items:flex-start;flex-wrap:wrap}
+        }
+    </style>
 </head>
 <body>
 <div class="shell">
@@ -17,6 +79,21 @@
                     <div class="page-title">行程本</div>
                     <div class="page-sub">行程的时间线、版本与预算都在这里，绑定到具体行程</div>
                 </div>
+            </div>
+
+            <div class="band today-band" id="today-mode">
+                <div class="today-top">
+                    <div class="today-top-icon"><i class="fas fa-location-crosshairs"></i></div>
+                    <div class="today-top-main">
+                        <div class="today-title">今天的行程</div>
+                        <div class="today-meta" id="today-meta">正在读取…</div>
+                    </div>
+                    <div class="today-tools">
+                        <button class="btn ghost small" id="today-refresh"><i class="fas fa-rotate"></i> 刷新</button>
+                        <button class="btn ghost small" id="today-offline"><i class="fas fa-download"></i> 离线卡</button>
+                    </div>
+                </div>
+                <div id="today-body"><div class="today-empty">正在整理今天的时间线…</div></div>
             </div>
 
             <div class="band">
@@ -64,6 +141,9 @@
 
         let visibility = 'public';
         let current = null;              // 当前展开的行程
+        let todayData = null;            // 当前 Today Mode 快照
+        const TODAY_CACHE = 'ltingTodayLastV1';
+        const TODAY_CACHE_PREFIX = 'ltingTodayTripV1:';
         const msg = document.getElementById('msg');
 
         document.querySelectorAll('#vis button').forEach(btn => {
@@ -77,6 +157,307 @@
         const catSelect = () => '<select id="bcat">'
             + [['transport', '交通'], ['lodging', '住宿'], ['food', '餐饮'], ['ticket', '门票'], ['other', '其他']]
                 .map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('') + '</select>';
+
+        function todayStateLabel(state) {
+            return state === 'current' ? '进行中' : (state === 'upcoming' ? '接下来' : '已过');
+        }
+
+        function phaseLabel(phase) {
+            return phase === 'before' ? '出行前预览' : (phase === 'after' ? '行程已结束' : '今天在路上');
+        }
+
+        function readTodayCache(tripId) {
+            try {
+                const specific = tripId > 0
+                    ? localStorage.getItem(TODAY_CACHE_PREFIX + tripId) : null;
+                const cached = JSON.parse(specific || localStorage.getItem(TODAY_CACHE) || 'null');
+                return cached && cached.today && cached.today.status === 'success' ? cached : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function cacheToday(data, offline) {
+            try {
+                const payload = JSON.stringify({
+                    today: data,
+                    offline: offline || null,
+                    cachedAt: new Date().toISOString()
+                });
+                localStorage.setItem(TODAY_CACHE, payload);
+                if (data.tripId) localStorage.setItem(TODAY_CACHE_PREFIX + data.tripId, payload);
+            } catch (e) { /* 离线缓存失败不影响在线使用 */ }
+        }
+
+        async function loadToday(tripId) {
+            const body = document.getElementById('today-body');
+            body.innerHTML = '<div class="today-empty">正在整理今天的时间线…</div>';
+            try {
+                const data = await Shell.api('plan/today/get', {tripId: tripId || 0});
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) || '今日行程读取失败');
+                }
+                todayData = data;
+                cacheToday(data, null);
+                renderToday(data, false);
+            } catch (e) {
+                const cached = readTodayCache(tripId);
+                if (cached) {
+                    todayData = cached.today;
+                    renderToday(cached.today, true, e.message || '当前网络不可用');
+                } else {
+                    document.getElementById('today-meta').textContent = '暂无可用的今日行程';
+                    body.innerHTML = '<div class="today-empty">' + Shell.esc(e.message || '今日行程读取失败') + '</div>';
+                }
+            }
+        }
+
+        function renderToday(data, offline, offlineReason) {
+            document.getElementById('today-meta').textContent = data.date
+                + ' · 第 ' + data.dayOfTrip + '/' + data.dayCount + ' 天 · '
+                + phaseLabel(data.phase) + (data.role === 'collaborator' ? ' · 协作行程' : '')
+                + (offline ? ' · 离线缓存' : '');
+            const stops = data.stops || [];
+            const focus = data.currentStop || data.nextStop || data.focusStop;
+            const budget = data.budget || {};
+            let html = '';
+            if (focus) {
+                html += '<div class="today-focus">'
+                    + '<div><div class="today-focus-label">' + (data.currentStop ? '现在' : '下一站') + '</div>'
+                    + '<div class="today-focus-name">' + Shell.esc(focus.name || '未命名地点') + '</div>'
+                    + '<div class="today-focus-time">' + Shell.esc(focus.estimatedStart || '')
+                    + '-' + Shell.esc(focus.estimatedEnd || '') + ' · '
+                    + Shell.esc(focus.slotLabel || '') + ' · 约 ' + (focus.durationMin || 90) + ' 分钟</div></div>'
+                    + '</div>';
+            } else {
+                html += '<div class="today-focus"><div><div class="today-focus-label">今日安排</div>'
+                    + '<div class="today-focus-name">今天还没有安排地点</div></div></div>';
+            }
+            html += '<div class="today-budget">'
+                + '<span class="today-pill"><i class="fas fa-wallet"></i> 已花 <strong>¥' + (budget.spent || 0) + '</strong></span>';
+            if (budget.configured) {
+                html += '<span class="today-pill' + (budget.overBudget ? ' warn' : '') + '">剩余 <strong>¥'
+                    + (budget.remaining == null ? '-' : budget.remaining) + '</strong></span>'
+                    + '<span class="today-pill">预算 <strong>¥' + (budget.allocated || 0) + '</strong></span>';
+            } else {
+                html += '<span class="today-pill">预算未设置</span>';
+            }
+            html += (offline ? '<span class="today-offline-note">' + Shell.esc(offlineReason || '离线数据') + '</span>' : '')
+                + '</div>';
+            html += '<div class="today-stops">';
+            if (!stops.length) {
+                html += '<div class="today-empty" style="padding:8px 0">今天没有具体安排。</div>';
+            } else {
+                stops.forEach(function (stop, index) {
+                    html += '<div class="today-stop">'
+                        + '<div class="today-stop-time">' + Shell.esc(stop.estimatedStart || '')
+                        + '<br>' + Shell.esc(stop.estimatedEnd || '') + '</div>'
+                        + '<div class="today-stop-main"><div class="today-stop-name">'
+                        + Shell.esc(stop.name || '未命名地点') + '</div>'
+                        + (stop.address ? '<div class="today-stop-address">' + Shell.esc(stop.address) + '</div>' : '')
+                        + '<div class="today-stop-address">' + Shell.esc(stop.slotLabel || '')
+                        + ' · 停留 ' + (stop.durationMin || 90) + ' 分钟'
+                        + (stop.routeMinutes ? ' · 路程 ' + stop.routeMinutes + ' 分钟' : '')
+                        + (stop.checkedIn ? ' · 已打卡' : '') + '</div></div>'
+                        + '<span class="today-state ' + Shell.esc(stop.state || '') + '">'
+                        + todayStateLabel(stop.state) + '</span>'
+                        + '<div class="today-actions">'
+                        + '<button class="btn ghost small" data-today-up="' + index + '"'
+                        + ((!offline && stop.canMoveUp) ? '' : ' disabled') + '><i class="fas fa-arrow-up"></i></button>'
+                        + '<button class="btn ghost small" data-today-down="' + index + '"'
+                        + ((!offline && stop.canMoveDown) ? '' : ' disabled') + '><i class="fas fa-arrow-down"></i></button>'
+                        + '<button class="btn ghost small" data-today-checkin="' + index + '"'
+                        + (offline ? ' disabled' : '') + '>'
+                        + '<i class="fas fa-location-dot"></i> ' + (stop.checkedIn ? '再记一次' : '打卡') + '</button>'
+                        + '</div></div>';
+                });
+            }
+            html += '</div>';
+            const pref = data.preferenceProposals || {};
+            if (pref.eligible && (pref.proposals || []).length) {
+                html += '<div class="today-prefs"><div class="band-title" style="font-size:13.5px;margin-bottom:6px">'
+                    + '<i class="fas fa-wand-magic-sparkles"></i> 行程后的偏好建议'
+                    + '<span class="spacer"></span><span class="hint">不会自动修改画像</span></div>';
+                (pref.proposals || []).forEach(function (proposal, index) {
+                    html += '<div class="today-pref-row"><div class="today-pref-main">'
+                        + '<div><b>' + Shell.esc(proposal.tag || '') + '：</b>'
+                        + Shell.esc(proposal.value || '') + '</div>'
+                        + '<div class="hint">' + Shell.esc(proposal.evidence || '') + '</div></div>'
+                        + '<button class="btn small ghost" data-today-pref="' + index + '">'
+                        + '<i class="fas fa-check"></i> 确认加入</button></div>';
+                });
+                html += '</div>';
+            }
+            document.getElementById('today-body').innerHTML = html;
+            document.querySelectorAll('[data-today-up], [data-today-down]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    if (button.disabled) return;
+                    const index = parseInt(button.getAttribute('data-today-up') != null
+                        ? button.getAttribute('data-today-up')
+                        : button.getAttribute('data-today-down'), 10);
+                    const direction = button.hasAttribute('data-today-up') ? -1 : 1;
+                    reorderToday(index, direction);
+                });
+            });
+            document.querySelectorAll('[data-today-checkin]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    openTodayCheckin(parseInt(button.getAttribute('data-today-checkin'), 10));
+                });
+            });
+            document.querySelectorAll('[data-today-pref]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const proposal = (data.preferenceProposals.proposals || [])[
+                        parseInt(button.getAttribute('data-today-pref'), 10)];
+                    if (proposal) applyTodayPreference(proposal, button);
+                });
+            });
+        }
+
+        async function reorderToday(index, direction) {
+            if (!todayData || !todayData.stops || !todayData.stops[index]) return;
+            const stop = todayData.stops[index];
+            const contextResult = await Shell.api('plan/context/get', {
+                tripId: todayData.tripId,
+                page: 'today',
+                selectedDay: todayData.dayIndex,
+                selectedSlot: stop.slot,
+                selectedNodeKey: stop.nodeKey
+            }).catch(() => null);
+            if (!contextResult || contextResult.status !== 'success') {
+                alert((contextResult && contextResult.message) || '无法创建排序上下文');
+                return;
+            }
+            const context = contextResult.context;
+            const operation = JSON.stringify({
+                type: 'REORDER_NODE',
+                expectedRevision: context.planRevision,
+                nodeKey: stop.nodeKey,
+                direction: direction,
+                reason: 'Today Mode 临时调整顺序'
+            });
+            const preview = await Shell.api('plan/ops/preview', {
+                contextId: context.contextId,
+                operation: operation,
+                source: 'click'
+            }).catch(() => null);
+            if (!preview || preview.status !== 'success') {
+                alert((preview && preview.message) || '排序预览失败');
+                return;
+            }
+            if (!confirm('调整「' + stop.name + '」的顺序？确认后会生成可回退的规划版本。')) return;
+            const applied = await Shell.api('plan/ops/apply', {
+                operationId: preview.operationId,
+                approvalToken: preview.approvalToken,
+                expectedRevision: preview.expectedRevision
+            }).catch(() => null);
+            if (!applied || applied.status !== 'success') {
+                alert((applied && applied.message) || '排序应用失败');
+                return;
+            }
+            await loadToday(todayData.tripId);
+            if (current && current.id === todayData.tripId) open(current.id);
+        }
+
+        function openTodayCheckin(index) {
+            if (!todayData || !todayData.stops || !todayData.stops[index]) return;
+            const stop = todayData.stops[index];
+            const old = document.getElementById('today-checkin-mask');
+            if (old) old.remove();
+            const mask = document.createElement('div');
+            mask.id = 'today-checkin-mask';
+            mask.innerHTML = '<div><div class="band-title"><i class="fas fa-location-dot"></i> 打卡 · '
+                + Shell.esc(stop.name) + '</div>'
+                + '<div class="field"><label>感受</label><select id="today-rating">'
+                + '<option value="like">喜欢</option><option value="neutral" selected>一般</option>'
+                + '<option value="avoid">避雷</option></select></div>'
+                + '<div class="field"><label>实际停留（分钟）</label>'
+                + '<input type="number" id="today-duration" value="' + (stop.durationMin || 90) + '"></div>'
+                + '<div class="field"><label>随手记</label><textarea id="today-note" placeholder="现场感受、排队情况…"></textarea></div>'
+                + '<div class="actions" style="justify-content:flex-end"><button class="btn ghost" id="today-ci-cancel">取消</button>'
+                + '<button class="btn" id="today-ci-save"><i class="fas fa-check"></i> 记录打卡</button>'
+                + '<span class="hint" id="today-ci-msg"></span></div></div>';
+            document.body.appendChild(mask);
+            document.getElementById('today-ci-cancel').addEventListener('click', function () { mask.remove(); });
+            mask.addEventListener('click', function (event) { if (event.target === mask) mask.remove(); });
+            document.getElementById('today-ci-save').addEventListener('click', async function () {
+                this.disabled = true;
+                const result = await Shell.api('plan/today/checkin', {
+                    tripId: todayData.tripId,
+                    nodeKey: stop.nodeKey,
+                    rating: document.getElementById('today-rating').value,
+                    durationMin: document.getElementById('today-duration').value,
+                    note: document.getElementById('today-note').value.trim(),
+                    visibility: 'private'
+                }).catch(() => null);
+                if (!result || result.status !== 'success') {
+                    this.disabled = false;
+                    document.getElementById('today-ci-msg').className = 'hint error';
+                    document.getElementById('today-ci-msg').textContent = (result && result.message) || '打卡失败';
+                    return;
+                }
+                mask.remove();
+                await loadToday(todayData.tripId);
+            });
+        }
+
+        async function applyTodayPreference(proposal, button) {
+            if (!todayData) return;
+            if (!confirm('把「' + proposal.tag + '：' + proposal.value + '」加入长期偏好？')) return;
+            button.disabled = true;
+            const result = await Shell.api('plan/today/preference/apply', {
+                tripId: todayData.tripId,
+                tag: proposal.tag,
+                value: proposal.value,
+                evidence: proposal.evidence,
+                confirmed: true
+            }).catch(() => null);
+            if (!result || result.status !== 'success') {
+                button.disabled = false;
+                alert((result && result.message) || '偏好保存失败');
+                return;
+            }
+            await loadToday(todayData.tripId);
+        }
+
+        async function downloadTodayOffline() {
+            if (!todayData) {
+                alert('今日行程尚未加载');
+                return;
+            }
+            const button = document.getElementById('today-offline');
+            button.disabled = true;
+            try {
+                const result = await Shell.api('plan/today/offline-card', {
+                    tripId: todayData.tripId,
+                    date: todayData.date
+                }).catch(() => null);
+                if (!result || result.status !== 'success') {
+                    throw new Error((result && result.message) || '离线卡生成失败');
+                }
+                cacheToday(todayData, result);
+                const blob = new Blob([result.html || result.text || ''], {type: 'text/html;charset=utf-8'});
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'LTing-' + todayData.date + '-离线行程卡.html';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(function () { URL.revokeObjectURL(url); }, 1200);
+            } catch (e) {
+                alert(e.message || '离线卡生成失败');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        document.getElementById('today-refresh').addEventListener('click', function () {
+            loadToday(todayData ? todayData.tripId : 0);
+        });
+        document.getElementById('today-offline').addEventListener('click', downloadTodayOffline);
+        window.addEventListener('online', function () {
+            if (!todayData) loadToday(0);
+        });
 
         async function loadList() {
             const data = await Shell.api('trips/list').catch(() => null);
@@ -106,25 +487,62 @@
             if (!data || data.status !== 'success') return;
             current = data.trip;
             const t = current;
+            if (!todayData || todayData.tripId !== t.id) loadToday(t.id);
+            if (Shell.setAiContext) {
+                Shell.setAiContext({
+                    page: '行程本',
+                    tripId: t.id,
+                    tripTitle: t.title,
+                    version: (t.versions && t.versions[0] && t.versions[0].versionNo) || '',
+                    label: t.title + ' · v' + ((t.versions && t.versions[0] && t.versions[0].versionNo) || '1')
+                });
+            }
             const host = document.getElementById('detail');
+            const groups = groupNodesByDay(t.nodes || []);
+            const photos = (t.nodes || []).filter(n => n.photo).slice(0, 10);
+            syncTripMap(t.nodes, t.title);
             host.innerHTML = ''
                 + '<div class="band"><div class="band-title"><i class="fas fa-book-open"></i> ' + Shell.esc(t.title)
-                + '<span class="spacer"></span><span class="hint">' + Shell.esc(t.createTime || '') + '</span></div>'
-                + '<div class="card-body">' + Shell.esc(t.content || '') + '</div></div>'
-                + '<div class="band"><div class="band-title"><i class="fas fa-timeline"></i> 时间线</div>'
-                + ((t.nodes && t.nodes.length)
-                    ? t.nodes.map(n => '<div class="meal-row"><span class="tag plain">' + Shell.esc(n.nodeType || '') + '</span>'
-                        + '<span style="flex:1;min-width:0">' + Shell.esc(n.title || '') + '</span>'
-                        + '<span class="hint">' + Shell.esc(n.nodeTime || '') + '</span></div>').join('')
+                + '<span class="spacer"></span><span class="hint">' + Shell.esc(t.createTime || '') + '</span>'
+                + '<button class="btn ghost small" id="trip-map-all"><i class="fas fa-map"></i> 整趟地图</button></div>'
+                + '<div class="card-body">' + Shell.esc(t.content || '') + '</div>'
+                + (photos.length ? '<div class="trip-photo-strip">' + photos.map(n =>
+                    '<figure><img src="' + Shell.esc(n.photo) + '" alt="' + Shell.esc(n.title || '') + '">'
+                    + '<figcaption>' + Shell.esc(n.title || '') + '</figcaption></figure>').join('') + '</div>' : '')
+                + '</div>'
+                + '<div class="band"><div class="band-title"><i class="fas fa-timeline"></i> 时间线'
+                + '<span class="spacer"></span><button class="btn ghost small" id="trip-node-add">'
+                + '<i class="fas fa-plus"></i> 添加安排</button></div>'
+                + (groups.length
+                    ? groups.map((g, gi) => '<div style="margin-top:' + (gi ? '14px' : '0') + '">'
+                        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">'
+                        + '<b style="font-size:13px">' + Shell.esc(g.label) + '</b>'
+                        + '<span class="hint">' + g.nodes.length + ' 个安排</span>'
+                        + '<span style="flex:1"></span><button class="btn ghost small" data-day-map="' + gi + '">'
+                        + '<i class="fas fa-map"></i> 当天地图</button></div>'
+                        + g.nodes.map((n, ni) => '<div class="meal-row">' + nodeThumb(n)
+                            + '<span class="tag plain">' + Shell.esc(n.nodeTime || n.nodeType || '') + '</span>'
+                            + '<span style="flex:1;min-width:0"><b style="font-size:12.5px">' + Shell.esc(n.title || '') + '</b>'
+                            + (n.detail ? '<div class="hint" style="white-space:pre-wrap">' + Shell.esc(n.detail) + '</div>' : '')
+                            + '</span><span class="hint">' + Shell.esc(n.status || '') + '</span>'
+                            + '<button class="btn ghost small" data-node-up="' + n.id + '"' + (ni === 0 ? ' disabled' : '') + '>↑</button>'
+                            + '<button class="btn ghost small" data-node-down="' + n.id + '"'
+                            + (ni === g.nodes.length - 1 ? ' disabled' : '') + '>↓</button>'
+                            + '<button class="btn ghost small" data-edit-node="' + n.id + '">编辑</button>'
+                            + '<button class="btn ghost small" data-delete-node="' + n.id + '">删除</button></div>').join('')
+                        + '</div>').join('')
                     : '<div class="hint">还没有节点，让 AI 管家改行程时会写进来。</div>')
                 + '</div>'
                 + '<div class="band"><div class="band-title"><i class="fas fa-clock-rotate-left"></i> 版本历史</div>'
                 + ((t.versions && t.versions.length)
-                    ? t.versions.map(v => '<div class="meal-row"><span class="tag plain">v' + v.versionNo + '</span>'
+                    ? t.versions.map((v, vi) => '<div class="meal-row"><span class="tag plain">v' + v.versionNo + '</span>'
                         + '<span style="flex:1;min-width:0">' + Shell.esc(v.changeNote || '') + '</span>'
                         + '<span class="hint">' + Shell.esc(v.createTime || '') + '</span>'
+                        + (vi + 1 < t.versions.length ? '<button class="btn small ghost" data-diff-from="'
+                            + t.versions[vi + 1].id + '" data-diff-to="' + v.id + '">对比上一版</button>' : '')
                         + '<button class="btn small ghost" data-rb="' + v.id + '">回退</button></div>').join('')
                     : '<div class="hint">暂无版本。</div>')
+                + '<div id="version-diff" class="hint" style="margin-top:9px"></div>'
                 + '</div>'
                 + '<div class="band"><div class="band-title"><i class="fas fa-wallet"></i> 预算（绑定本行程）</div>'
                 + '<div id="budget-sum" class="hint"></div>'
@@ -140,15 +558,190 @@
                 + '<input type="number" id="bth" placeholder="如 5000" style="width:120px">'
                 + '<button class="btn small ghost" id="bset"><i class="fas fa-check"></i> 保存阈值</button></div>'
                 + '</div>';
+            host.querySelector('#trip-map-all').addEventListener('click', () => {
+                if (Shell.map) Shell.map.showAll();
+            });
+            host.querySelectorAll('[data-day-map]').forEach(b => b.addEventListener('click', () => {
+                const g = groups[parseInt(b.getAttribute('data-day-map'), 10)];
+                if (Shell.map) Shell.map.focus(g.nodes, g.label);
+            }));
+            host.querySelector('#trip-node-add').addEventListener('click', () => showNodeEditor(null));
+            host.querySelectorAll('[data-edit-node]').forEach(b => b.addEventListener('click', () => {
+                const node = (t.nodes || []).find(n => String(n.id) === b.getAttribute('data-edit-node'));
+                if (node) showNodeEditor(node);
+            }));
+            host.querySelectorAll('[data-node-up], [data-node-down]').forEach(b => b.addEventListener('click', async () => {
+                if (b.disabled) return;
+                const nodeId = parseInt(b.getAttribute('data-node-up') || b.getAttribute('data-node-down'), 10);
+                const direction = b.hasAttribute('data-node-up') ? -1 : 1;
+                const order = (t.nodes || []).map(n => n.id);
+                const from = order.indexOf(nodeId);
+                const to = from + direction;
+                if (from < 0 || to < 0 || to >= order.length) return;
+                const tmp = order[from];
+                order[from] = order[to];
+                order[to] = tmp;
+                const r = await Shell.api('trips/node/reorder', {
+                    ids: order.join(','), expectedVersion: current.version
+                }).catch(() => null);
+                if (r && r.status === 'success') {
+                    await Shell.api('trips/version/save', {tripId: id, changeNote: '调整行程节点顺序'});
+                    open(id);
+                } else {
+                    alert((r && r.message) || '排序失败');
+                }
+            }));
+            host.querySelectorAll('[data-delete-node]').forEach(b => b.addEventListener('click', async () => {
+                if (!confirm('删除这个行程安排？删除前会先保留一个版本。')) return;
+                await Shell.api('trips/version/save', {tripId: id, changeNote: '删除节点前自动备份'}).catch(() => null);
+                const r = await Shell.api('trips/node/delete', {
+                    id: b.getAttribute('data-delete-node'), expectedVersion: current.version
+                }).catch(() => null);
+                if (r && r.status === 'success') {
+                    await Shell.api('trips/version/save', {tripId: id, changeNote: '删除行程节点'}).catch(() => null);
+                    open(id);
+                } else {
+                    alert((r && r.message) || '删除失败');
+                }
+            }));
             host.querySelectorAll('[data-rb]').forEach(b => b.addEventListener('click', async () => {
                 if (!confirm('回退到这个版本？当前内容会先自动备份。')) return;
-                const r = await Shell.api('trips/version/rollback', {versionId: b.getAttribute('data-rb')}).catch(() => null);
+                const r = await Shell.api('trips/version/rollback', {
+                    versionId: b.getAttribute('data-rb'), expectedVersion: current.version
+                }).catch(() => null);
                 alert((r && r.message) || '回退失败');
                 open(id);
+            }));
+            host.querySelectorAll('[data-diff-from]').forEach(b => b.addEventListener('click', async () => {
+                const from = b.getAttribute('data-diff-from');
+                const to = b.getAttribute('data-diff-to');
+                const r = await Shell.api('trips/version/diff', {
+                    fromVersionId: from, toVersionId: to
+                }).catch(() => null);
+                const target = document.getElementById('version-diff');
+                target.className = r && r.status === 'success' ? 'hint ok' : 'hint error';
+                target.textContent = r && r.status === 'success'
+                    ? 'v' + r.fromVersion + ' → v' + r.toVersion + '：' + r.summary
+                    : ((r && r.message) || '版本对比失败');
             }));
             host.querySelector('#badd').addEventListener('click', addBudget);
             host.querySelector('#bset').addEventListener('click', setThreshold);
             loadBudget();
+        }
+
+        function nodeThumb(n) {
+            if (n.photo) return '<img class="node-thumb" src="' + Shell.esc(n.photo) + '" alt="">';
+            const stay = /住宿/.test(n.title || '');
+            return '<div class="node-thumb placeholder' + (stay ? ' stay' : '') + '">'
+                + '<i class="fas ' + (stay ? 'fa-bed' : 'fa-location-dot') + '"></i></div>';
+        }
+
+        function showNodeEditor(node) {
+            if (!current) return;
+            const old = document.getElementById('node-editor-mask');
+            if (old) old.remove();
+            const n = node || {};
+            const mask = document.createElement('div');
+            mask.id = 'node-editor-mask';
+            mask.style.cssText = 'position:fixed;inset:0;z-index:2200;background:rgba(15,23,42,.22);'
+                + 'display:flex;align-items:center;justify-content:center;padding:20px';
+            mask.innerHTML = '<div style="width:min(560px,96vw);max-height:88vh;overflow:auto;background:#fff;'
+                + 'border-radius:20px;padding:20px;box-shadow:0 24px 70px rgba(15,23,42,.25)">'
+                + '<div class="band-title" style="margin-bottom:12px"><i class="fas fa-pen-to-square"></i> '
+                + (node ? '编辑行程安排' : '添加行程安排') + '</div>'
+                + '<div class="field"><label>标题</label><input id="ne-title" value="' + Shell.esc(n.title || '') + '"></div>'
+                + '<div class="field"><label>日期与时段</label><input id="ne-time" value="'
+                + Shell.esc(n.nodeTime || '') + '" placeholder="例如 2026-11-08 下午"></div>'
+                + '<div class="field"><label>类型</label><select id="ne-type">'
+                + [['timeline','行程'],['order','订单'],['booking','预约'],['risk','风险'],['note','备注'],['route','备选路线']]
+                    .map(x => '<option value="' + x[0] + '"' + ((n.nodeType || 'timeline') === x[0] ? ' selected' : '')
+                        + '>' + x[1] + '</option>').join('') + '</select></div>'
+                + '<div class="field"><label>详情</label><textarea id="ne-detail">' + Shell.esc(n.detail || '') + '</textarea></div>'
+                + '<div class="field"><label>状态</label><input id="ne-status" value="' + Shell.esc(n.status || '待确认') + '"></div>'
+                + '<div class="actions" style="justify-content:flex-end">'
+                + '<button class="btn ghost" id="ne-cancel">取消</button><button class="btn" id="ne-save">保存并生成版本</button>'
+                + '<span class="hint" id="ne-msg"></span></div></div>';
+            document.body.appendChild(mask);
+            document.getElementById('ne-cancel').addEventListener('click', () => mask.remove());
+            mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+            document.getElementById('ne-save').addEventListener('click', async function () {
+                const title = document.getElementById('ne-title').value.trim();
+                const time = document.getElementById('ne-time').value.trim();
+                if (!title) {
+                    document.getElementById('ne-msg').textContent = '标题不能为空';
+                    return;
+                }
+                this.disabled = true;
+                const r = await Shell.api('trips/node/save', {
+                    id: n.id || 0, tripId: current.id, nodeType: document.getElementById('ne-type').value,
+                    title: title, nodeTime: time, detail: document.getElementById('ne-detail').value.trim(),
+                    status: document.getElementById('ne-status').value.trim(),
+                    photo: n.photo || '', lat: n.lat, lng: n.lng, expectedVersion: current.version
+                }).catch(() => null);
+                if (!r || r.status !== 'success') {
+                    this.disabled = false;
+                    document.getElementById('ne-msg').textContent = (r && r.message) || '保存失败';
+                    return;
+                }
+                await Shell.api('trips/version/save', {
+                    tripId: current.id, changeNote: node ? '编辑行程节点' : '新增行程节点'
+                }).catch(() => null);
+                mask.remove();
+                open(current.id);
+            });
+        }
+
+        function groupNodesByDay(nodes) {
+            const groups = [];
+            const byKey = {};
+            (nodes || []).forEach(n => {
+                const dayMatch = String(n.title || '').match(/^第\s*(\d+)\s*天/);
+                const dateMatch = String(n.nodeTime || '').match(/^(\d{4}-\d{2}-\d{2})/);
+                const key = dateMatch ? dateMatch[1] : (dayMatch ? 'day-' + dayMatch[1] : 'other');
+                let g = byKey[key];
+                if (!g) {
+                    g = {
+                        key: key,
+                        label: dateMatch ? dateMatch[1] : (dayMatch ? '第 ' + dayMatch[1] + ' 天' : '其它节点'),
+                        nodes: []
+                    };
+                    byKey[key] = g;
+                    groups.push(g);
+                }
+                g.nodes.push(n);
+            });
+            const slotRank = (text) => {
+                if (String(text || '').includes('上午')) return 0;
+                if (String(text || '').includes('下午')) return 1;
+                if (String(text || '').includes('晚上')) return 2;
+                return 3;
+            };
+            groups.forEach(g => {
+                g.nodes.sort((a, b) => {
+                    const ta = String(a.nodeTime || '');
+                    const tb = String(b.nodeTime || '');
+                    return ta.slice(0, 10).localeCompare(tb.slice(0, 10))
+                        || slotRank(ta) - slotRank(tb)
+                        || String(a.title || '').localeCompare(String(b.title || ''), 'zh-CN');
+                });
+            });
+            groups.sort((a, b) => {
+                const ka = /^\d{4}-\d{2}-\d{2}$/.test(a.key) ? a.key : '9999';
+                const kb = /^\d{4}-\d{2}-\d{2}$/.test(b.key) ? b.key : '9999';
+                return ka.localeCompare(kb)
+                    || String(a.label || '').localeCompare(String(b.label || ''), 'zh-CN');
+            });
+            return groups;
+        }
+
+        function syncTripMap(nodes, title) {
+            if (!Shell.map) return;
+            Shell.map.replace((nodes || []).filter(n => n.lat && n.lng).map(n => ({
+                name: n.title || '行程节点',
+                lat: n.lat,
+                lng: n.lng,
+                layer: /住宿/.test(n.title || '') ? 'stay' : 'chosen'
+            })), '当前行程地图 · ' + (title || ''));
         }
 
         async function loadBudget() {
@@ -259,6 +852,27 @@
 
         loadList();
         loadPacking();
+        if (!parseInt(Shell.qs('id'), 10)) loadToday(0);
+        if (Shell.map && Shell.map.onOpen) {
+            Shell.map.onOpen(async () => {
+                if (!current) {
+                    Shell.map.replace([], '当前行程地图');
+                    return;
+                }
+                const latest = await Shell.api('trips/get', {id: current.id}).catch(() => null);
+                if (latest && latest.status === 'success') {
+                    current = latest.trip;
+                    syncTripMap(current.nodes, current.title);
+                }
+            });
+        }
+        window.addEventListener('lting:data-changed', function () {
+            if (current) open(current.id);
+        });
+        const initialId = parseInt(Shell.qs('id'), 10);
+        if (initialId > 0) {
+            setTimeout(() => open(initialId), 250);
+        }
     })();
 </script>
 </body>

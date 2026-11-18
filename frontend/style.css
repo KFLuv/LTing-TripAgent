@@ -11,6 +11,7 @@
     --text-muted: #9db4cc;
     --border: #d9e7f4;
     --danger: #ff6b6b;
+    color-scheme: light;
 }
 
 * {
@@ -395,4 +396,83 @@ button.guest-btn:hover:not(:disabled) {
 
 .link-row a {
     color: var(--brand);
+}
+
+html.theme-dark {
+    color-scheme: dark;
+    --brand: #3b82f6;
+    --brand-light: #60a5fa;
+    --text: #e8edf7;
+    --text-sub: #b7c1d6;
+    --text-muted: #8b96ad;
+    --border: #26304a;
+    --danger: #ef4444;
+}
+
+html.theme-dark body {
+    background: #0f1420;
+    color: var(--text);
+}
+
+html.theme-dark .form-container {
+    background: #171e2e;
+    border: 1px solid #26304a;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, .42);
+}
+
+html.theme-dark h2,
+html.theme-dark .form-group label {
+    color: var(--text);
+}
+
+html.theme-dark .form-subtitle,
+html.theme-dark .link-row {
+    color: var(--text-muted);
+}
+
+html.theme-dark input[type="text"],
+html.theme-dark input[type="password"],
+html.theme-dark input[type="email"] {
+    color: var(--text);
+    background: #0d1322;
+    border-color: #26304a;
+}
+
+html.theme-dark input[type="text"]:focus,
+html.theme-dark input[type="password"]:focus,
+html.theme-dark input[type="email"]:focus {
+    background: #111827;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .18);
+}
+
+html.theme-dark button.guest-btn {
+    color: #93c5fd;
+    background: rgba(59, 130, 246, .12);
+    border-color: rgba(96, 165, 250, .3);
+}
+
+.theme-floating {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    width: auto;
+    z-index: 100;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 13px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 999px !important;
+    color: var(--text-sub) !important;
+    background: #fff !important;
+    box-shadow: 0 8px 24px rgba(44, 62, 80, .12) !important;
+    font-size: 12px !important;
+    letter-spacing: 0 !important;
+}
+
+html.theme-dark .theme-floating {
+    color: #b7c1d6 !important;
+    background: #171e2e !important;
+    border-color: #26304a !important;
 }

@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script src="assets/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>商户详情 · AI旅游助手</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/icons.css">
     <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
@@ -121,8 +122,9 @@
                 + '<i class="fas fa-comment-dots"></i> 去大众点评看详情</button></div>'
                 + '<div class="hint" style="margin-top:6px" id="dp-hint"></div>'
                 + '</div></div>';
-            document.getElementById('nav-btn').addEventListener('click', () =>
-                Shell.openEmbedded(Shell.mapEmbedUrl(poi), '地图 · ' + (poi.name || ''), Shell.navUrl(poi)));
+            document.getElementById('nav-btn').addEventListener('click', function () {
+                location.href = Shell.navigationUrl(poi, 'driving');
+            });
             // 点评也用内嵌面板打开：桌面端是独立的 webview，不受对方 X-Frame-Options 限制
             document.getElementById('dp-btn').addEventListener('click', () => {
                 const dp = Shell.dianpingUrl(poi);

@@ -14,7 +14,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * AI 对话服务：调用 OpenAI 兼容的 chat/completions 接口
@@ -52,6 +54,31 @@ public class AiChatService {
      */
     public boolean isConfigured() {
         return !isBlank(baseUrl) && !isBlank(apiKey) && !isBlank(model);
+    }
+
+    public Map<String, Object> healthSnapshot() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        boolean configured = isConfigured();
+        out.put("key", "model");
+        out.put("label", "大模型");
+        out.put("configured", configured);
+        out.put("status", configured ? "configured" : "missing_key");
+        out.put("model", isBlank(model) ? "" : model.trim());
+        out.put("provider", providerHost());
+        out.put("message", configured
+                ? "OpenAI 兼容模型配置完整"
+                : "ai.base-url / ai.api-key / ai.model 未配置完整，Agent 会降级");
+        return out;
+    }
+
+    private String providerHost() {
+        if (isBlank(baseUrl)) return "";
+        try {
+            String host = URI.create(baseUrl.trim()).getHost();
+            return host == null ? "" : host;
+        } catch (Exception e) {
+            return "invalid-url";
+        }
     }
 
     /**

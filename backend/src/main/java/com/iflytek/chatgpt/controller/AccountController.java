@@ -38,12 +38,13 @@ public class AccountController {
             "trip", "trip_node", "trip_version", "travel_log", "travelog", "moment",
             "poi_review", "poi_menu", "chat_session", "chat_message",
             "toolbox_document", "packing_template", "budget_entry",
+            "trip_collaborator", "trip_vote", "trip_activity",
             // 灵感收藏模块已删除，这两张表只在老库里可能还留着，注销时顺手清
             "favorite_folder", "favorite_item"
     };
 
     /** 注销时要按 owner 清的 */
-    private static final String[] OWNER_TABLES = {"trip_companion", "friendship"};
+    private static final String[] OWNER_TABLES = {"trip_companion", "friendship", "trip_collaborator"};
 
     @PostMapping(value = "/account/unbind-email", produces = "application/json;charset=UTF-8")
     public Map<String, Object> unbindEmail(@RequestParam(required = false) String password,

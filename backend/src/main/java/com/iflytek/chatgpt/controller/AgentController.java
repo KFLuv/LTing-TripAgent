@@ -82,12 +82,14 @@ public class AgentController {
     @PostMapping(value = "/agent/route", produces = "application/json;charset=UTF-8")
     public Map<String, Object> route(@RequestParam double fromLat, @RequestParam double fromLng,
                                      @RequestParam double toLat, @RequestParam double toLng,
-                                     @RequestParam(required = false) String mode) {
+                                     @RequestParam(required = false) String mode,
+                                     @RequestParam(defaultValue = "wgs") String coordinate) {
+        boolean fromIsGcj = "gcj".equalsIgnoreCase(coordinate == null ? "" : coordinate.trim());
         if ("transit".equalsIgnoreCase(mode == null ? "" : mode.trim())) {
             String city = reverseGeocoder.resolveCity(fromLat, fromLng);
-            return navigationService.planTransit(fromLat, fromLng, toLat, toLng, city);
+            return navigationService.planTransit(fromLat, fromLng, toLat, toLng, city, fromIsGcj);
         }
-        return navigationService.planRoute(fromLat, fromLng, toLat, toLng, mode);
+        return navigationService.planRoute(fromLat, fromLng, toLat, toLng, mode, fromIsGcj);
     }
 
     /**
@@ -205,6 +207,8 @@ public class AgentController {
 
             Map<String, Object> reply = chatReply(r.answer, r.actions);
             reply.put("sessionId", sid);
+            reply.put("pendingOperations", r.pendingOperations == null
+                    ? java.util.Collections.emptyList() : r.pendingOperations);
             return reply;
         } catch (Exception e) {
             log.error("智能管家处理失败", e);
@@ -217,6 +221,7 @@ public class AgentController {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("answer", answer == null ? "" : answer);
         out.put("actions", actions == null ? java.util.Collections.emptyList() : actions);
+        out.put("pendingOperations", java.util.Collections.emptyList());
         return out;
     }
 

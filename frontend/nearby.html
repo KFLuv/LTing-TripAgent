@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script src="assets/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>附近吃喝玩乐 · AI旅游助手</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/icons.css">
     <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
@@ -63,6 +64,9 @@
         const msg = document.getElementById('msg');
         const listEl = document.getElementById('list');
         let radius = 5000;
+        let allPois = [];
+        let visiblePois = [];
+        let visibleLimit = 30;
 
         document.querySelectorAll('#radius button').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -78,12 +82,20 @@
         }
 
         function render(pois) {
+            allPois = pois || [];
+            visibleLimit = 30;
+            renderVisible();
+        }
+
+        function renderVisible() {
+            const pois = allPois;
             document.getElementById('count').textContent = pois.length ? pois.length + ' 家' : '';
             if (!pois.length) {
                 listEl.innerHTML = '<div class="hint">这个范围内没查到商户，换个关键词或放大范围再试。</div>';
                 return;
             }
-            listEl.innerHTML = pois.map((p, i) => {
+            visiblePois = pois.slice(0, visibleLimit);
+            listEl.innerHTML = visiblePois.map((p, i) => {
                 const rating = (p.ourRating != null) ? p.ourRating : p.sourceRating;
                 const cover = (p.photos && p.photos.length) ? p.photos[0] : Shell.DEFAULT_AVATAR;
                 return '<div class="card">'
@@ -114,24 +126,32 @@
                     + '</div>'
                     + '<div id="rv-' + Shell.esc(p.poiId) + '"></div>'
                     + '</div>';
-            }).join('');
+            }).join('')
+                + (visiblePois.length < pois.length
+                    ? '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:12px">'
+                        + '<button class="btn ghost small" id="nearby-more">继续显示（剩余 '
+                        + (pois.length - visiblePois.length) + ' 家）</button></div>' : '');
 
             listEl.querySelectorAll('[data-reviews]').forEach(btn => {
                 btn.addEventListener('click', () => loadReviews(btn.getAttribute('data-reviews')));
             });
             listEl.querySelectorAll('[data-nav]').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    const p = pois[parseInt(btn.getAttribute('data-nav'), 10)];
-                    // 内嵌用高德 PC 地图（与对话页一致），要真导航再点面板里的「在浏览器打开」
-                    Shell.openEmbedded(Shell.mapEmbedUrl(p), '地图 · ' + (p.name || ''), Shell.navUrl(p));
+                    const p = visiblePois[parseInt(btn.getAttribute('data-nav'), 10)];
+                    location.href = Shell.navigationUrl(p, 'driving');
                 });
             });
             listEl.querySelectorAll('[data-dp]').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    const p = pois[parseInt(btn.getAttribute('data-dp'), 10)];
+                    const p = visiblePois[parseInt(btn.getAttribute('data-dp'), 10)];
                     const dp = Shell.dianpingUrl(p);
                     Shell.openEmbedded(dp.url, '大众点评 · ' + (p.name || ''), 'https://www.dianping.com/');
                 });
+            });
+            const more = document.getElementById('nearby-more');
+            if (more) more.addEventListener('click', function () {
+                visibleLimit += 30;
+                renderVisible();
             });
         }
 

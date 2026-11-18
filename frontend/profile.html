@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script src="assets/theme.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>个人资料 · AI旅游助手</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/icons.css">
     <link rel="stylesheet" href="assets/app.css">
 </head>
 <body>
@@ -154,6 +155,89 @@
                 this.disabled = false;
             }
         });
+
+        async function loadCompanions() {
+            const host = document.getElementById('comp-list');
+            const data = await Shell.api('companion/list').catch(() => null);
+            const items = (data && data.companions) || [];
+            host.innerHTML = items.length ? items.map(item =>
+                '<div class="meal-row"><div style="flex:1;min-width:0"><b>'
+                + Shell.esc(item.name || '') + '</b><div class="hint">'
+                + Shell.esc(item.preferences || '未填写偏好')
+                + (item.vote ? ' · ' + Shell.esc(item.vote) : '') + '</div></div>'
+                + '<button class="btn small ghost" data-comp-del="' + item.id + '">'
+                + '<i class="fas fa-trash"></i></button></div>').join('')
+                : '<div class="hint">还没有登记同行人。</div>';
+            host.querySelectorAll('[data-comp-del]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    await Shell.api('companion/delete', {id: button.dataset.compDel}).catch(() => null);
+                    loadCompanions();
+                });
+            });
+        }
+
+        async function loadDocs() {
+            const host = document.getElementById('doc-list');
+            const data = await Shell.api('toolbox/document/list').catch(() => null);
+            const items = (data && data.documents) || [];
+            host.innerHTML = items.length ? items.map(item =>
+                '<div class="meal-row"><span class="tag plain">' + Shell.esc(item.docType || '资料')
+                + '</span><div style="flex:1;min-width:0"><b>' + Shell.esc(item.title || '')
+                + '</b><div class="hint">' + Shell.esc(item.docNo || '未填写号码')
+                + (item.expireTime ? ' · 到期 ' + Shell.esc(item.expireTime) : '') + '</div></div>'
+                + '<button class="btn small ghost" data-doc-del="' + item.id + '">'
+                + '<i class="fas fa-trash"></i></button></div>').join('')
+                : '<div class="hint">还没有归档证件或订单。</div>';
+            host.querySelectorAll('[data-doc-del]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    await Shell.api('toolbox/document/delete', {id: button.dataset.docDel}).catch(() => null);
+                    loadDocs();
+                });
+            });
+        }
+
+        document.getElementById('comp-add').addEventListener('click', async function () {
+            const name = document.getElementById('comp-name').value.trim();
+            const preferences = document.getElementById('comp-pref').value.trim();
+            const tip = document.getElementById('comp-msg');
+            if (!name) {
+                tip.className = 'hint error';
+                tip.textContent = '先填写同行人称呼';
+                return;
+            }
+            const result = await Shell.api('companion/save', {name, preferences}).catch(() => null);
+            tip.className = (result && result.status === 'success') ? 'hint ok' : 'hint error';
+            tip.textContent = (result && result.message) || '同行人保存失败';
+            if (result && result.status === 'success') {
+                document.getElementById('comp-name').value = '';
+                document.getElementById('comp-pref').value = '';
+                loadCompanions();
+            }
+        });
+
+        document.getElementById('doc-add').addEventListener('click', async function () {
+            const docType = document.getElementById('doc-type').value.trim();
+            const title = document.getElementById('doc-title').value.trim();
+            const docNo = document.getElementById('doc-no').value.trim();
+            const tip = document.getElementById('doc-msg');
+            if (!title) {
+                tip.className = 'hint error';
+                tip.textContent = '先填写资料名称';
+                return;
+            }
+            const result = await Shell.api('toolbox/document/save', {
+                docType: docType || '资料', title, docNo
+            }).catch(() => null);
+            tip.className = (result && result.status === 'success') ? 'hint ok' : 'hint error';
+            tip.textContent = (result && result.message) || '资料归档失败';
+            if (result && result.status === 'success') {
+                document.getElementById('doc-type').value = '';
+                document.getElementById('doc-title').value = '';
+                document.getElementById('doc-no').value = '';
+                loadDocs();
+            }
+        });
+
         loadCompanions();
         loadDocs();
     })();

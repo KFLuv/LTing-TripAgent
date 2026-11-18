@@ -1,0 +1,2328 @@
+{
+  "baseUrl": "http://127.0.0.1:8079/chat",
+  "generatedAt": "2026-11-17T04:03:04+0800",
+  "available": {
+    "available": true,
+    "loggedIn": true,
+    "configured": true
+  },
+  "status": "passed",
+  "cases": [
+    {
+      "id": "MOVE_NODE",
+      "expectedType": "MOVE_NODE",
+      "observedTypes": [
+        "MOVE_NODE"
+      ],
+      "passed": true,
+      "elapsedMs": 3760.62,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=MOVE_NODE,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：把前面的回归公园移动到第2天下午。必须原样传入这些结构化参数：{\"targetDay\": 1, \"targetSlot\": \"afternoon\"}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成预览：回归公园从第1天上午移到第2天下午（op_64ab1a6eda4a48aea71bc1e19a802c65，待你在界面确认后才生效）；校验提示第1天上午因去程 12:30 才能开始游玩而存在交通冲突，另有 1 条 L2 风险需确认。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_64ab1a6eda4a48aea71bc1e19a802c65",
+        "contextId": "ctx_2df752487c254caab27198627890f9e5",
+        "type": "MOVE_NODE",
+        "source": "ai",
+        "riskLevel": "L2",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "MOVE_NODE",
+          "node": "回归公园",
+          "fromDay": 1,
+          "fromSlot": "morning",
+          "toDay": 2,
+          "toSlot": "afternoon"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 3.9,
+              "estimatedBudget": 320.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 3.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_b9d2ff5cedd448b89be471d7f6e4e453",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "REMOVE_NODE",
+      "expectedType": "REMOVE_NODE",
+      "observedTypes": [
+        "REMOVE_NODE"
+      ],
+      "passed": true,
+      "elapsedMs": 3240.44,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归餐厅|回归路2号|24.11|118.11) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=REMOVE_NODE,expectedRevision=...,nodeKey=回归餐厅|回归路2号|24.11|118.11)。用户操作：把回归餐厅从正式行程移除。必须原样传入这些结构化参数：{}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成移除「回归餐厅」的预览（contextId ctx_b048bd0e08054baea6d24a9bc9907ee5，需你在界面确认 approvalToken apr_ff088823cfef439bbd855c2019c79cb5 后才会生效，我未执行 Apply）；校验提示：第1天因去程 12:30 才能开始游玩，上午节点本身不可行。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_3e373b1437084192b622718accd87f8f",
+        "contextId": "ctx_b048bd0e08054baea6d24a9bc9907ee5",
+        "type": "REMOVE_NODE",
+        "source": "ai",
+        "riskLevel": "L2",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "REMOVE_NODE",
+          "node": "回归餐厅",
+          "day": 1,
+          "slot": "morning"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 120,
+          "totalDistanceKm": 0.0,
+          "estimatedBudget": 320.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 920.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 0.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 2080.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_ff088823cfef439bbd855c2019c79cb5",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "REPLACE_NODE",
+      "expectedType": "REPLACE_NODE",
+      "observedTypes": [
+        "REPLACE_NODE"
+      ],
+      "passed": true,
+      "elapsedMs": 4143.8,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归餐厅|回归路2号|24.11|118.11) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=REPLACE_NODE,expectedRevision=...,nodeKey=回归餐厅|回归路2号|24.11|118.11)。用户操作：把回归餐厅替换为替换茶馆。必须原样传入这些结构化参数：{\"replacement\": {\"name\": \"替换茶馆\", \"address\": \"回归路5号\", \"lat\": 24.14, \"lng\": 118.14, \"category\": \"美食\", \"durationMin\": 60, \"cost\": \"80\", \"openTime\": \"09:00-22:00\"}}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成预览：第 1 天上午的「回归餐厅」将替换为「替换茶馆」（回归路5号，美食，60 分钟，80 元，09:00-22:00）；本次操作 operationId=op_decaa7aa1d1a40c5a64cc00d0efd984f，尚未应用，需你在界面确认 approvalToken 后才生效。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_decaa7aa1d1a40c5a64cc00d0efd984f",
+        "contextId": "ctx_cc1e3a7d841a40aea4c71c8063ae5a39",
+        "type": "REPLACE_NODE",
+        "source": "ai",
+        "riskLevel": "L2",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "REPLACE_NODE",
+          "before": "回归餐厅",
+          "after": "替换茶馆",
+          "day": 1,
+          "slot": "morning"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "DISTANCE",
+              "day": 1,
+              "message": "第 1 天点位间直线距离约 8 km，实际通勤更长"
+            },
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 7.7,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 7.7,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_b042b3279bdb4b0e913c38487ff4516b",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "REORDER_NODE",
+      "expectedType": "REORDER_NODE",
+      "observedTypes": [
+        "REORDER_NODE"
+      ],
+      "passed": true,
+      "elapsedMs": 3802.24,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=REORDER_NODE,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：把回归公园在上午时段下移一位。必须原样传入这些结构化参数：{\"direction\": 1}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成把「回归公园」在第 1 天上午下移一位的预览（operationId op_8b03ac…，riskLevel L2，需你在界面确认 approvalToken 后才会生效，我没有 Apply）；校验提示存在 1 条冲突：去程约 12:30 才能开始游玩，上午节点不可行。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_8b03ac70912d426593ff0f5709267958",
+        "contextId": "ctx_9545d68415b94d6484762f58e6a3b8a2",
+        "type": "REORDER_NODE",
+        "source": "ai",
+        "riskLevel": "L2",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "REORDER_NODE",
+          "node": "回归公园",
+          "direction": "down"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_8420ffb35b694da097b43aa74c008df0",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "LOCK_NODE",
+      "expectedType": "LOCK_NODE",
+      "observedTypes": [
+        "LOCK_NODE"
+      ],
+      "passed": true,
+      "elapsedMs": 3387.51,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归餐厅|回归路2号|24.11|118.11) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=LOCK_NODE,expectedRevision=...,nodeKey=回归餐厅|回归路2号|24.11|118.11)。用户操作：锁定回归餐厅。必须原样传入这些结构化参数：{\"locked\": true}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成「锁定回归餐厅」的预览：operationId 为 op_a6c05b5d562b4e759d5cf095e154446c；该预览尚未写入或应用，需你在界面确认；另提示一处风险：去程约 12:30 才能开始游玩，第 1 天上午的节点在时间上不可行。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_a6c05b5d562b4e759d5cf095e154446c",
+        "contextId": "ctx_38ba25d7a34e488d9f8ba6388c23f596",
+        "type": "LOCK_NODE",
+        "source": "ai",
+        "riskLevel": "L1",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "LOCK_NODE",
+          "nodeKey": "回归餐厅|回归路2号|24.11|118.11"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_d2c97eecd4eb474186c6d3bee146e601",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "TOGGLE_NODE_CLOSURE",
+      "expectedType": "TOGGLE_NODE_CLOSURE",
+      "observedTypes": [
+        "TOGGLE_NODE_CLOSURE"
+      ],
+      "passed": true,
+      "elapsedMs": 3603.06,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归餐厅|回归路2号|24.11|118.11) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=TOGGLE_NODE_CLOSURE,expectedRevision=...,nodeKey=回归餐厅|回归路2号|24.11|118.11)。用户操作：把回归餐厅标记为临时闭馆。必须原样传入这些结构化参数：{\"closed\": true}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成预览：回归餐厅「回归餐厅|回归路2号|24.11|118.11」已标记为临时闭馆（diff 为 MARK_NODE_CLOSED，待审批，approvalToken 为 apr_5b18d1839ca84e339d540193a7ef1c3c），未 Apply；校验还提示第 1 天上午节点在去程 12:30 到达时间限制下不可行，需你确认。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_113da52f9166483085f427a7aed6e2a5",
+        "contextId": "ctx_4a8f9fe215c246bfb994b4cb8d00b88e",
+        "type": "TOGGLE_NODE_CLOSURE",
+        "source": "ai",
+        "riskLevel": "L1",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "MARK_NODE_CLOSED",
+          "nodeKey": "回归餐厅|回归路2号|24.11|118.11"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_5b18d1839ca84e339d540193a7ef1c3c",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "ADD_NODE",
+      "expectedType": "ADD_NODE",
+      "observedTypes": [
+        "ADD_NODE"
+      ],
+      "passed": true,
+      "elapsedMs": 3636.24,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=1,selectedSlot=morning,selectedNodeKey=回归博物馆|回归路3号|24.12|118.12) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=ADD_NODE,expectedRevision=...,nodeKey=回归博物馆|回归路3号|24.12|118.12)。用户操作：把新增观景台加入第2天上午。必须原样传入这些结构化参数：{\"node\": {\"name\": \"新增观景台\", \"address\": \"回归路6号\", \"lat\": 24.15, \"lng\": 118.15, \"category\": \"景点\", \"durationMin\": 60, \"cost\": \"80\", \"openTime\": \"09:00-22:00\"}, \"targetDay\": 1, \"targetSlot\": \"morning\"}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成预览（operationId op_4c47…，把「新增观景台」加入第 2 天上午），但尚未应用，需你在界面确认 token 后才会生效；校验提示两处冲突：第 1 天上午因去程 12:30 才能开始而不可行，门票分项预计 ¥480 超 ¥400 上限。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_4c471a028cc94d8da356c87acbb8dbd2",
+        "contextId": "ctx_339ea3e0ff57430aa696d2e72f93e6dc",
+        "type": "ADD_NODE",
+        "source": "ai",
+        "riskLevel": "L2",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "ADD_NODE",
+          "node": "新增观景台",
+          "day": 2,
+          "slot": "morning"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            },
+            {
+              "type": "BUDGET_CATEGORY",
+              "day": 0,
+              "message": "门票预计 ¥480.0，超过分项 ¥400.0"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 5.8,
+              "estimatedBudget": 320.0
+            }
+          ],
+          "totalMinutes": 240,
+          "totalDistanceKm": 7.7,
+          "estimatedBudget": 640.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1240.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 480.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1760.0,
+            "conflicts": [
+              {
+                "type": "BUDGET_CATEGORY",
+                "day": 0,
+                "message": "门票预计 ¥480.0，超过分项 ¥400.0"
+              }
+            ],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "新增观景台",
+                "category": "ticket",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_d0c1eab98de248a7b8d349445efcf094",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "ADD_CANDIDATE",
+      "expectedType": "ADD_CANDIDATE",
+      "observedTypes": [
+        "ADD_CANDIDATE"
+      ],
+      "passed": true,
+      "elapsedMs": 3603.79,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=ADD_CANDIDATE,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：把新增观景台加入候选池。必须原样传入这些结构化参数：{\"candidate\": {\"name\": \"新增观景台\", \"address\": \"回归路6号\", \"lat\": 24.15, \"lng\": 118.15, \"category\": \"景点\", \"durationMin\": 60, \"cost\": \"80\", \"openTime\": \"09:00-22:00\"}}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成预览：操作 op_f564018cee144d23b086fa7f4f28097e，类型为 ADD_CANDIDATE，把「新增观景台（回归路6号）」加入候选池，基于 revision 1，未重复，风险等级为 L1，并生成了审批 token（apr_44ba084006304074930053f57e44cda7）。未执行 Apply，需你在界面确认后才能生效。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_f564018cee144d23b086fa7f4f28097e",
+        "contextId": "ctx_8e6d74484413492685c3cb648d2bc328",
+        "type": "ADD_CANDIDATE",
+        "source": "ai",
+        "riskLevel": "L1",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "ADD_CANDIDATE",
+          "candidate": "新增观景台",
+          "nodeKey": "新增观景台|回归路6号|24.15|118.15",
+          "duplicate": false
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "新增观景台",
+                "category": "ticket",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_44ba084006304074930053f57e44cda7",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "REMOVE_CANDIDATE",
+      "expectedType": "REMOVE_CANDIDATE",
+      "observedTypes": [
+        "REMOVE_CANDIDATE"
+      ],
+      "passed": true,
+      "elapsedMs": 3419.37,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=候选咖啡|回归路4号|24.13|118.13) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=REMOVE_CANDIDATE,expectedRevision=...,nodeKey=候选咖啡|回归路4号|24.13|118.13)。用户操作：把候选咖啡从候选池移除。必须原样传入这些结构化参数：{}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成「候选咖啡」从候选池移除的预览（操作 op_4f07989fb4cc469cb0fa691da414663e，基于 revision 1，待你确认，未 Apply）；另有一个校验提示待你在 Apply 前留意：第1天去程约 12:30 才能开始游玩，上午节点不可行。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_4f07989fb4cc469cb0fa691da414663e",
+        "contextId": "ctx_c3ee17d0c3a74a9ea35f85f92b3e37bb",
+        "type": "REMOVE_CANDIDATE",
+        "source": "ai",
+        "riskLevel": "L2",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "REMOVE_CANDIDATE",
+          "nodeKey": "候选咖啡|回归路4号|24.13|118.13",
+          "removed": 1
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_f1f7096b4e3d400bbfcac7092f83529c",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "UPDATE_CONSTRAINT",
+      "expectedType": "UPDATE_CONSTRAINT",
+      "observedTypes": [
+        "UPDATE_CONSTRAINT"
+      ],
+      "passed": true,
+      "elapsedMs": 3499.7,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=UPDATE_CONSTRAINT,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：把同行人数改成3人，节奏改成relaxed，本次偏好设为室内优先。必须原样传入这些结构化参数：{\"people\": \"3 人\", \"pace\": \"relaxed\", \"quickPrefs\": [\"室内优先\"]}。完成后只用一句话说明已生成预览。",
+      "answer": "已按原样参数生成预览（3 人 / relaxed / 室内优先，对比原 2 人 / balanced / 少走路），尚未 Apply，需你在界面确认；提示 3 处冲突待留意：回归公园属户外与「室内优先」不一致、去程 12:30 才开始使首日上午节点不可行、门票预计 ¥480 超分项 ¥400。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_11676de64c1a4ce8a1c167c0595b6666",
+        "contextId": "ctx_2a4f4bdfed2b4710b1affc06558f6c8b",
+        "type": "UPDATE_CONSTRAINT",
+        "source": "ai",
+        "riskLevel": "L1",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "UPDATE_CONSTRAINT",
+          "before": {
+            "people": "2 人",
+            "pace": "balanced",
+            "quickPrefs": [
+              "少走路"
+            ]
+          },
+          "after": {
+            "people": "3 人",
+            "pace": "relaxed",
+            "quickPrefs": [
+              "室内优先"
+            ]
+          }
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "PREFERENCE",
+              "day": 1,
+              "message": "回归公园 是户外点位，与“室内优先”不一致"
+            },
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            },
+            {
+              "type": "BUDGET_CATEGORY",
+              "day": 0,
+              "message": "门票预计 ¥480.0，超过分项 ¥400.0"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 480.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 240.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 720.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1320.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 240.0,
+              "ticket": 480.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1680.0,
+            "conflicts": [
+              {
+                "type": "BUDGET_CATEGORY",
+                "day": 0,
+                "message": "门票预计 ¥480.0，超过分项 ¥400.0"
+              }
+            ],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_6340c8cf1fa546d9adaa0e7d8ba302f8",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "UPDATE_BUDGET",
+      "expectedType": "UPDATE_BUDGET",
+      "observedTypes": [
+        "UPDATE_BUDGET"
+      ],
+      "passed": true,
+      "elapsedMs": 3672.16,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=UPDATE_BUDGET,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：把总预算改成5000元。必须原样传入这些结构化参数：{\"budget\": \"5000\"}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成预算由 3000 元改为 5000 元的预览和审批 token，仅生成预览、尚未应用，请你到界面确认后再 Apply；另预览校验提示第 1 天去程约 12:30 才能开始游玩，上午节点不可行。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_1a370beff93549b0a6164ebc5174e50a",
+        "contextId": "ctx_bd8d90c5733f4ea68ed28815cff29d9e",
+        "type": "UPDATE_BUDGET",
+        "source": "ai",
+        "riskLevel": "L1",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "UPDATE_BUDGET",
+          "before": "3000",
+          "after": "5000"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 5000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_4eb60641cb3444bca8e70c77c6490665",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "UPDATE_STAY",
+      "expectedType": "UPDATE_STAY",
+      "observedTypes": [
+        "UPDATE_STAY"
+      ],
+      "passed": true,
+      "elapsedMs": 3564.67,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=UPDATE_STAY,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：住宿区域改成湖里区，酒店名改成湖里测试酒店。必须原样传入这些结构化参数：{\"stay\": {\"name\": \"湖里区\", \"lat\": 24.5, \"lng\": 118.1}, \"hotelName\": \"湖里测试酒店\"}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成住宿变更预览：思明区 → 湖里区、酒店改为湖里测试酒店，等待你在界面确认后才 Apply；预览另提示第 1 天上午节点与去程 12:30 抵达存在时间冲突。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_816ca7956a0b40e58f449e244f4d1db0",
+        "contextId": "ctx_d2557157cadf40758c677dd22800edef",
+        "type": "UPDATE_STAY",
+        "source": "ai",
+        "riskLevel": "L1",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "UPDATE_STAY",
+          "before": "思明区",
+          "after": "湖里区"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_9083d38c2fff47359d4ea1afbd0be92d",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "UPDATE_PLAN_META",
+      "expectedType": "UPDATE_PLAN_META",
+      "observedTypes": [
+        "UPDATE_PLAN_META"
+      ],
+      "passed": true,
+      "elapsedMs": 3715.68,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=UPDATE_PLAN_META,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：把出发地改成深圳，标题改成厦门回归测试，保留现有行程。必须原样传入这些结构化参数：{\"origin\": \"深圳\", \"title\": \"厦门回归测试\", \"resetPlan\": false}。完成后只用一句话说明已生成预览。",
+      "answer": "已按结构化参数生成 UPDATE_PLAN_META 预览，操作 ID 为 op_39eac643827444878965ca97065eb0c8。预览显示出发地从「广州」改为「深圳」；这次操作风险等级为 L3，需要你在界面确认，我没有 Apply。预览还提示去程约 12:30 才能开始游玩，第 1 天上午的节点不可行。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_39eac643827444878965ca97065eb0c8",
+        "contextId": "ctx_87cbc6d9edfc4831ba0c113485550668",
+        "type": "UPDATE_PLAN_META",
+        "source": "ai",
+        "riskLevel": "L3",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "UPDATE_PLAN_META",
+          "before": {
+            "origin": "广州"
+          },
+          "after": {
+            "origin": "深圳"
+          }
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_9261a950e1fd4e368badfb3486da2333",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "UPDATE_TRANSPORT",
+      "expectedType": "UPDATE_TRANSPORT",
+      "observedTypes": [
+        "UPDATE_TRANSPORT"
+      ],
+      "passed": true,
+      "elapsedMs": 3467.67,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=UPDATE_TRANSPORT,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：更新城际交通：去程高铁10:00到14:00，返程高铁18:00到22:00。必须原样传入这些结构化参数：{\"transport\": {\"outbound\": {\"mode\": \"高铁\", \"departAt\": \"10:00\", \"arriveAt\": \"14:00\", \"station\": \"厦门北站\", \"toStayMinutes\": 30, \"cost\": 320}, \"inbound\": {\"mode\": \"高铁\", \"departAt\": \"18:00\", \"arriveAt\": \"22:00\", \"station\": \"厦门北站\", \"fromStayMinutes\": 30, \"cost\": 320}}}。完成后只用一句话说明已生成预览。",
+      "answer": "已使用 planOps 生成城际交通更新预览；该预览尚未应用，需要你确认 operationId op_b3152f5bd4854f1fb7d908bbdb7e5f4b，并且校验已提示两项冲突：去程在 14:30 后才能开始游玩，导致上午节点不可行；交通费 ¥640 超过分项 ¥600。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_b3152f5bd4854f1fb7d908bbdb7e5f4b",
+        "contextId": "ctx_4c2a6539fbe14b87b69a0e3936c59b1e",
+        "type": "UPDATE_TRANSPORT",
+        "source": "ai",
+        "riskLevel": "L1",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "UPDATE_TRANSPORT",
+          "outbound": "高铁 10:00-14:00 厦门北站",
+          "inbound": "高铁 18:00-22:00 厦门北站"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 14:30 才能开始游玩，上午节点不可行"
+            },
+            {
+              "type": "BUDGET_CATEGORY",
+              "day": 0,
+              "message": "交通预计 ¥640.0，超过分项 ¥600.0"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "14:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 14:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1120.0,
+            "estimated": {
+              "transport": 640.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1880.0,
+            "conflicts": [
+              {
+                "type": "BUDGET_CATEGORY",
+                "day": 0,
+                "message": "交通预计 ¥640.0，超过分项 ¥600.0"
+              }
+            ],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_413cbb1fcfe24df580681a37c22bf011",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "UPDATE_BUDGET_PLAN",
+      "expectedType": "UPDATE_BUDGET_PLAN",
+      "observedTypes": [
+        "UPDATE_BUDGET_PLAN"
+      ],
+      "passed": true,
+      "elapsedMs": 3312.04,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=UPDATE_BUDGET_PLAN,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：把预算分项改为总预算4000，交通800，住宿1000，餐饮900，门票600，市内700。必须原样传入这些结构化参数：{\"budgetPlan\": {\"total\": 4000, \"categories\": {\"transport\": 800, \"lodging\": 1000, \"food\": 900, \"ticket\": 600, \"local\": 700}}}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成预算分项变更预览，operationId 为 op_50ebec70000d4661a39462cd55c24d5d；该预览尚未应用，需由你在界面确认后 Apply。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_50ebec70000d4661a39462cd55c24d5d",
+        "contextId": "ctx_fee32e301c524d33b269866ddcade49e",
+        "type": "UPDATE_BUDGET_PLAN",
+        "source": "ai",
+        "riskLevel": "L1",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "UPDATE_BUDGET_PLAN",
+          "total": 4000.0,
+          "categories": {
+            "transport": 800,
+            "lodging": 1000,
+            "food": 900,
+            "ticket": 600,
+            "local": 700
+          }
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 4000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 800.0,
+              "lodging": 1000.0,
+              "food": 900.0,
+              "ticket": 600.0,
+              "local": 700.0
+            },
+            "remaining": 2920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_82cee379fd3d4cbabf90f9fe8694ba10",
+        "expiresAt": "2026-11-17 04:13"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "REBUILD_ITINERARY",
+      "expectedType": "REBUILD_ITINERARY",
+      "observedTypes": [
+        "REBUILD_ITINERARY"
+      ],
+      "passed": true,
+      "elapsedMs": 4465.31,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=REBUILD_ITINERARY,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：按给定数组完整重建行程骨架。必须原样传入这些结构化参数：{\"itinerary\": [{\"date\": \"2027-01-10\", \"morning\": [{\"name\": \"回归博物馆\", \"address\": \"回归路3号\", \"lat\": 24.12, \"lng\": 118.12, \"category\": \"景点\", \"durationMin\": 60, \"cost\": \"80\", \"openTime\": \"09:00-22:00\"}], \"afternoon\": [], \"evening\": []}, {\"date\": \"2027-01-11\", \"morning\": [{\"name\": \"回归公园\", \"address\": \"回归路1号\", \"lat\": 24.1, \"lng\": 118.1, \"category\": \"景点\", \"durationMin\": 60, \"cost\": \"80\", \"openTime\": \"09:00-22:00\"}], \"afternoon\": [], \"evening\": []}], \"variant\": \"model-regression\"}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成 REBUILD_ITINERARY 预览（operationId op_ff1bb8dc223f4c3699f644dbe1f0b388，riskLevel L3、需你在界面确认 approvalToken 后才会应用），且校验提示第 1 天去程约 12:30 才能开始游玩、上午节点不可行，未做任何 Apply。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_ff1bb8dc223f4c3699f644dbe1f0b388",
+        "contextId": "ctx_cdd5085978bc415784cd9e2d16afce9d",
+        "type": "REBUILD_ITINERARY",
+        "source": "ai",
+        "riskLevel": "L3",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "REBUILD_ITINERARY",
+          "days": 2,
+          "nodes": 2,
+          "variant": "model-regression"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 120,
+          "totalDistanceKm": 0.0,
+          "estimatedBudget": 320.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 920.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 0.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 2080.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_90f0efde5edf4f0bb507b1e235cd184c",
+        "expiresAt": "2026-11-17 04:14"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "UPDATE_ROUTE_TIMES",
+      "expectedType": "UPDATE_ROUTE_TIMES",
+      "observedTypes": [
+        "UPDATE_ROUTE_TIMES"
+      ],
+      "passed": true,
+      "elapsedMs": 4062.9,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=UPDATE_ROUTE_TIMES,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：把给定 itinerary 中带 routeSource 的逐段耗时写回正式行程。必须原样传入这些结构化参数：{\"itinerary\": [{\"date\": \"2027-01-10\", \"morning\": [{\"name\": \"回归公园\", \"address\": \"回归路1号\", \"lat\": 24.1, \"lng\": 118.1, \"category\": \"景点\", \"durationMin\": 60, \"cost\": \"80\", \"openTime\": \"09:00-22:00\", \"routeSource\": \"start\", \"routeMinutes\": 0}, {\"name\": \"回归餐厅\", \"address\": \"回归路2号\", \"lat\": 24.11, \"lng\": 118.11, \"category\": \"美食\", \"durationMin\": 60, \"cost\": \"80\", \"openTime\": \"09:00-22:00\", \"routeSource\": \"estimated\", \"routeMinutes\": 12}], \"afternoon\": [], \"evening\": []}, {\"date\": \"2027-01-11\", \"morning\": [{\"name\": \"回归博物馆\", \"address\": \"回归路3号\", \"lat\": 24.12, \"lng\": 118.12, \"category\": \"景点\", \"durationMin\": 60, \"cost\": \"80\", \"openTime\": \"09:00-22:00\", \"routeSource\": \"start\", \"routeMinutes\": 0}], \"afternoon\": [], \"evening\": []}], \"travelMode\": \"walking\"}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成更新路线的预览：本次有 1 段耗时改动，采用的出行方式为 walking，等待你在界面确认后应用。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_3f114fe4cece497d9d818ab1cb5a97b3",
+        "contextId": "ctx_8e2deed990c541b180f61e36e13aa193",
+        "type": "UPDATE_ROUTE_TIMES",
+        "source": "ai",
+        "riskLevel": "L2",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "UPDATE_ROUTE_TIMES",
+          "segments": 1,
+          "travelMode": "walking"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_2f9f20bb54a94160a58b7dea3cfd0770",
+        "expiresAt": "2026-11-17 04:14"
+      },
+      "diffMismatches": {}
+    },
+    {
+      "id": "ROLLBACK_PLAN_VERSION",
+      "expectedType": "ROLLBACK_PLAN_VERSION",
+      "observedTypes": [
+        "ROLLBACK_PLAN_VERSION"
+      ],
+      "passed": true,
+      "elapsedMs": 3551.06,
+      "prompt": "这是 PlanOps 工具回归测试。只允许使用 planOps 工具，不要调用任何其它修改工具，不要 Apply。先调用 planOps(action=context,tripId=3,selectedDay=0,selectedSlot=morning,selectedNodeKey=回归公园|回归路1号|24.1|118.1) 获取 contextId 和版本，再调用 planOps(action=preview,contextId=...,operationType=ROLLBACK_PLAN_VERSION,expectedRevision=...,nodeKey=回归公园|回归路1号|24.1|118.1)。用户操作：预览回退到指定的 plan_data 版本。必须原样传入这些结构化参数：{\"targetVersionId\": 6}。完成后只用一句话说明已生成预览。",
+      "answer": "已生成回退预览：目标版本 v2（ID 6），风险等级 L3，需你在界面确认 token 后才会生效（提示：校验有 1 条冲突，去程 12:30 才能开始游玩，第一天上午节点不可行）。",
+      "pendingOperation": {
+        "status": "success",
+        "operationId": "op_07ea16fcf2144bf7a00d54263bd866d9",
+        "contextId": "ctx_43fb161b3f5d4af0b11318f875e5fc54",
+        "type": "ROLLBACK_PLAN_VERSION",
+        "source": "ai",
+        "riskLevel": "L3",
+        "requiresApproval": true,
+        "expectedRevision": 1,
+        "diff": {
+          "action": "ROLLBACK_PLAN_VERSION",
+          "fromRevision": 1,
+          "toRevision": 1,
+          "targetVersionId": 6,
+          "targetVersionNo": 2,
+          "changeNote": "恢复到版本 v2"
+        },
+        "validation": {
+          "status": "success",
+          "ok": false,
+          "conflicts": [
+            {
+              "type": "TRANSPORT",
+              "day": 1,
+              "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+            }
+          ],
+          "days": [
+            {
+              "day": 1,
+              "date": "2027-01-10",
+              "count": 2,
+              "minutes": 120,
+              "distanceKm": 1.9,
+              "estimatedBudget": 320.0
+            },
+            {
+              "day": 2,
+              "date": "2027-01-11",
+              "count": 1,
+              "minutes": 60,
+              "distanceKm": 0.0,
+              "estimatedBudget": 160.0
+            }
+          ],
+          "totalMinutes": 180,
+          "totalDistanceKm": 1.9,
+          "estimatedBudget": 480.0,
+          "budgetLimit": 3000.0,
+          "missingPriceCount": 0,
+          "missingOpeningCount": 0,
+          "checks": {
+            "time": "已按每日分钟上限校验",
+            "distance": "已按点位直线距离估算，实际道路距离可能更长",
+            "openingHours": "有营业信息时展示，缺失时明确标记未校验",
+            "budget": "按 POI 人均字段估算，缺失价格不参与合计",
+            "preference": "已检查不吃辣和室内优先等可识别冲突"
+          },
+          "transport": {
+            "outboundReadyAt": "12:30",
+            "inboundCutoffAt": "17:30",
+            "conflicts": [
+              {
+                "type": "TRANSPORT",
+                "day": 1,
+                "message": "去程约 12:30 才能开始游玩，上午节点不可行"
+              }
+            ]
+          },
+          "budget": {
+            "totalAllocated": 3000.0,
+            "totalEstimated": 1080.0,
+            "estimated": {
+              "transport": 600.0,
+              "lodging": 0.0,
+              "food": 160.0,
+              "ticket": 320.0,
+              "local": 0.0
+            },
+            "allocated": {
+              "transport": 600.0,
+              "lodging": 900.0,
+              "food": 700.0,
+              "ticket": 400.0,
+              "local": 400.0
+            },
+            "remaining": 1920.0,
+            "conflicts": [],
+            "lowerCostCandidates": [
+              {
+                "name": "回归公园",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "回归餐厅",
+                "category": "food",
+                "cost": 80.0
+              },
+              {
+                "name": "回归博物馆",
+                "category": "ticket",
+                "cost": 80.0
+              },
+              {
+                "name": "候选咖啡",
+                "category": "food",
+                "cost": 80.0
+              }
+            ]
+          }
+        },
+        "approvalToken": "apr_42ab9a1e57c8462ba73d8d74bc7fafcc",
+        "expiresAt": "2026-11-17 04:14"
+      },
+      "diffMismatches": {}
+    }
+  ],
+  "tripId": 3,
+  "targetVersionId": 6,
+  "passed": 18,
+  "total": 18
+}

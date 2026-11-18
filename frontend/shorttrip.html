@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <script src="assets/theme.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>周边短途 · LTing</title>
+    <link rel="stylesheet" href="assets/icons.css">
+    <link rel="stylesheet" href="assets/app.css">
+    <style>
+        .main-inner{max-width:1280px}
+        .form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+        .form-grid label{display:block;margin-bottom:5px;font-size:12px;font-weight:600;color:var(--ink-2)}
+        .scheme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+        .scheme{padding:16px;border:1px solid var(--line);border-radius:16px;background:#fff;transition:.18s}
+        .scheme:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+        .scheme.on{border-color:var(--brand);box-shadow:0 0 0 3px rgba(0,113,227,.07)}
+        .scheme h3{font-size:15px;margin-bottom:4px}
+        .stop{display:flex;gap:9px;align-items:center;padding:9px 0;border-top:1px dashed var(--line)}
+        .stop:first-of-type{border-top:0}
+        .stop-num{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);font-size:11px;font-weight:650;flex:none}
+        .editor{margin-top:18px}
+        .edit-row{display:flex;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:11px;margin-top:7px}
+        .edit-row select{width:auto;min-width:88px;padding:5px 8px;font-size:11.5px}
+        @media(max-width:760px){.form-grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="shell">
+    <nav class="nav" id="nav"></nav>
+    <main class="main">
+        <div class="main-inner">
+            <div class="page-head">
+                <div><div class="page-title">周边短途</div><div class="page-sub">有几小时就玩几小时，生成能吃、逛、走起来的半日方案</div></div>
+                <a class="btn ghost small" href="workbench.html">回工作台</a>
+            </div>
+
+            <section id="setup">
+                <div class="band">
+                    <div class="band-title"><i class="fas fa-sliders"></i> 条件</div>
+                    <div class="form-grid">
+                        <div><label>可用时间</label><select id="duration">
+                            <option value="120">2 小时</option><option value="240" selected>4 小时</option>
+                            <option value="360">半天</option><option value="720">一天</option>
+                        </select></div>
+                        <div><label>交通方式</label><select id="transport">
+                            <option value="walk">步行</option><option value="bike">骑行</option>
+                            <option value="transit" selected>公交</option><option value="car">打车</option>
+                        </select></div>
+                        <div><label>主要目的</label><select id="purpose">
+                            <option value="mix" selected>吃逛玩组合</option><option value="food">以吃为主</option>
+                            <option value="play">以玩为主</option><option value="family">亲子</option><option value="date">约会</option>
+                        </select></div>
+                        <div><label>最远距离</label><select id="radius">
+                            <option value="3000">3 公里</option><option value="5000" selected>5 公里</option><option value="10000">10 公里</option>
+                        </select></div>
+                        <div><label>预算</label><input id="budget" placeholder="例如 300 元 / 人"></div>
+                        <div><label>关键字</label><input id="keyword" placeholder="咖啡 / 展览 / 火锅，可留空"></div>
+                    </div>
+                    <div class="actions" style="margin-top:14px">
+                        <button class="btn" id="generate"><i class="fas fa-location-crosshairs"></i> 用当前位置生成方案</button>
+                        <span class="hint" id="msg">会先请求定位；失败时仍可用手动坐标</span>
+                    </div>
+                    <details style="margin-top:10px">
+                        <summary class="hint" style="cursor:pointer">定位不可用？手动输入坐标</summary>
+                        <div class="field-row" style="margin-top:8px">
+                            <input id="manual-lat" placeholder="纬度，如 23.1291">
+                            <input id="manual-lng" placeholder="经度，如 113.2644">
+                            <button class="btn small ghost" id="use-manual">使用这个位置</button>
+                        </div>
+                    </details>
+                </div>
+            </section>
+
+            <section id="results" style="display:none">
+                <div class="band">
+                    <div class="band-title"><i class="fas fa-shapes"></i> 方案对比
+                        <span class="spacer"></span><span class="hint" id="result-note"></span></div>
+                    <div id="schemes" class="scheme-grid"></div>
+                </div>
+                <div class="band editor">
+                    <div class="band-title"><i class="fas fa-pen-to-square"></i> 选中方案
+                        <span class="spacer"></span><span class="hint" id="selected-summary"></span></div>
+                    <div id="editor"><div class="hint">先选一个方案</div></div>
+                    <div class="actions">
+                        <button class="btn ghost" id="back">重新选条件</button>
+                        <button class="btn ghost" id="map-btn"><i class="fas fa-map"></i> 地图查看</button>
+                        <button class="btn" id="save">保存为短途行程</button>
+                        <span class="hint" id="save-msg"></span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+    'use strict';
+    Shell.renderNav('workbench.html');
+    var CATEGORY = function (p) {
+        var s = String(p.type || '') + ' ' + String(p.name || '');
+        if (/餐饮|火锅|小吃|烧烤|面馆|餐厅|美食/.test(s)) return '吃';
+        if (/咖啡|茶饮|甜品/.test(s)) return '咖啡';
+        if (/商场|购物|广场|百货/.test(s)) return '逛';
+        if (/公园|景区|博物馆|展馆|电影|娱乐|KTV|桌游/.test(s)) return '玩';
+        return '其它';
+    };
+    var schemes = [];
+    var selected = null;
+    var coords = null;
+
+    function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+    function distance(a, b) {
+        if (!a || !b) return 0;
+        var r = 6371000, lat1 = num(a.lat) * Math.PI / 180, lat2 = num(b.lat) * Math.PI / 180;
+        var dLat = lat2 - lat1, dLng = (num(b.lng) - num(a.lng)) * Math.PI / 180;
+        var x = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+            + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return 2 * r * Math.asin(Math.sqrt(x));
+    }
+    function fmtDistance(m) { return m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m'; }
+    function rating(p) { return num(p.ourRating || p.sourceRating); }
+    function close(a, b, max) { return distance(a, b) <= max; }
+
+    function plan(name, description, stops, duration, transport) {
+        var distances = [];
+        for (var i = 1; i < stops.length; i++) distances.push(distance(stops[i - 1], stops[i]));
+        var totalDistance = distances.reduce(function (a, b) { return a + b; }, 0);
+        var estimatedBudget = stops.reduce(function (sum, p) { return sum + (Number(p.cost) || 0); }, 0);
+        return {
+            name: name, description: description, stops: stops,
+            duration: Math.min(duration, stops.reduce(function (n, p) { return n + (CATEGORY(p) === '吃' ? 75 : 90); }, 0)),
+            distance: totalDistance, transport: transport, estimatedBudget: estimatedBudget
+        };
+    }
+
+    function buildSchemes(pois, duration, transport, purpose) {
+        var available = pois.filter(function (p) { return p.lat && p.lng; });
+        var food = available.filter(function (p) { return CATEGORY(p) === '吃'; })
+            .sort(function (a, b) { return rating(b) - rating(a) || a.distance - b.distance; });
+        var play = available.filter(function (p) { return CATEGORY(p) === '玩'; })
+            .sort(function (a, b) { return rating(b) - rating(a) || a.distance - b.distance; });
+        var shop = available.filter(function (p) { return CATEGORY(p) === '逛'; })
+            .sort(function (a, b) { return rating(b) - rating(a) || a.distance - b.distance; });
+        var cafe = available.filter(function (p) { return CATEGORY(p) === '咖啡'; })
+            .sort(function (a, b) { return rating(b) - rating(a) || a.distance - b.distance; });
+        var out = [];
+
+        var a = [];
+        if (play[0]) a.push(play[0]);
+        if (food[0] && (!a.length || close(a[a.length - 1], food[0], 3000))) a.push(food[0]);
+        if (shop[0] && (!a.length || close(a[a.length - 1], shop[0], 3000))) a.push(shop[0]);
+        if (a.length) out.push(plan('核心点 + 吃逛', '先玩一个核心点，再就近吃饭和逛一圈', a, duration, transport));
+
+        var b = [];
+        if (food[0]) b.push(food[0]);
+        if (shop[0] && (!b.length || close(b[b.length - 1], shop[0], 2500))) b.push(shop[0]);
+        if (cafe[0] && (!b.length || close(b[b.length - 1], cafe[0], 2000))) b.push(cafe[0]);
+        if (b.length) out.push(plan('先吃再慢慢逛', '适合不想赶路，吃饭后用商场和咖啡收尾', b, duration, transport));
+
+        var c = available.slice().sort(function (x, y) {
+            return x.distance - y.distance || rating(y) - rating(x);
+        }).slice(0, duration <= 120 ? 2 : 3);
+        if (c.length) out.push(plan('离我最近的轻松组合', '优先减少通勤，适合临时出门', c, duration, transport));
+
+        if (purpose === 'food' && food.length) {
+            var f = food.slice(0, duration >= 240 ? 2 : 1);
+            out.unshift(plan('以吃为主', '围绕高评分餐饮安排，少穿插赶路', f, duration, transport));
+        } else if (purpose === 'play' && play.length) {
+            var p = play.slice(0, duration >= 360 ? 2 : 1);
+            if (cafe[0]) p.push(cafe[0]);
+            out.unshift(plan('以玩为主', '核心玩乐加一个就近休息点', p, duration, transport));
+        } else if (purpose === 'family') {
+            out.unshift(plan('亲子轻松组合', '少走路、留出休息和吃饭时间', c.slice(0, 2).concat(food.slice(0, 1)), duration, transport));
+        } else if (purpose === 'date') {
+            out.unshift(plan('约会慢节奏', '一个可逛点位加咖啡或甜品', shop.slice(0, 1).concat(cafe.slice(0, 1), food.slice(0, 1)), duration, transport));
+        }
+
+        var seen = {};
+        return out.filter(function (s) {
+            s.stops = s.stops.filter(function (p, i, arr) { return p && arr.indexOf(p) === i; });
+            if (!s.stops.length) return false;
+            var key = s.stops.map(function (p) { return p.poiId; }).join('|');
+            if (seen[key]) return false;
+            seen[key] = true;
+            return true;
+        }).slice(0, 3);
+    }
+
+    function renderSchemes() {
+        var host = document.getElementById('schemes');
+        host.innerHTML = schemes.map(function (s, i) {
+            return '<div class="scheme" data-scheme="' + i + '"><h3>' + Shell.esc(s.name) + '</h3>'
+                + '<div class="hint">' + Shell.esc(s.description) + '</div>'
+                + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:9px 0">'
+                + '<span class="tag plain">约 ' + Math.round(s.duration / 60 * 10) / 10 + ' 小时</span>'
+                + '<span class="tag plain">移动 ' + fmtDistance(s.distance) + '</span>'
+                + (s.estimatedBudget ? '<span class="tag plain">点位约 ¥' + s.estimatedBudget + '</span>' : '')
+                + '<span class="tag plain">' + Shell.esc(transportLabel(s.transport)) + '</span></div>'
+                + s.stops.map(function (p, pi) {
+                    return '<div class="stop"><span class="stop-num">' + (pi + 1) + '</span>'
+                        + '<div style="flex:1;min-width:0"><b style="font-size:12.5px">' + Shell.esc(p.name) + '</b>'
+                        + '<div class="hint">' + Shell.esc(CATEGORY(p)) + ' · ' + fmtDistance(p.distance || 0)
+                        + (rating(p) ? ' · ★' + rating(p) : '') + '</div>'
+                        + '<div class="hint">' + Shell.esc(p.address || '') + '</div></div></div>';
+                }).join('')
+                + '<div class="hint" style="margin-top:8px">备选：' + (
+                    availableAlternatives(s).slice(0, 2).map(x => Shell.esc(x.name)).join(' / ') || '增加搜索范围后补充'
+                ) + '</div>'
+                + '<button class="btn small" style="margin-top:10px" data-choose="' + i + '">用这个方案</button></div>';
+        }).join('') || '<div class="hint">没有生成可用方案，请扩大距离或换个关键字。</div>';
+        host.querySelectorAll('[data-choose]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                host.querySelectorAll('.scheme').forEach(function (x) { x.classList.remove('on'); });
+                b.closest('.scheme').classList.add('on');
+                selected = JSON.parse(JSON.stringify(schemes[parseInt(b.dataset.choose, 10)]));
+                recalcSelected();
+                if (Shell.setAiContext) {
+                    Shell.setAiContext({
+                        page: '周边短途',
+                        scheme: selected.name,
+                        stops: selected.stops.map(function (p) { return p.name; }).join(' / '),
+                        label: '短途方案 · ' + selected.name
+                    });
+                }
+                renderEditor();
+            });
+        });
+    }
+
+    function availableAlternatives(scheme) {
+        var selectedIds = scheme.stops.map(function (p) { return p.poiId; });
+        return (window.__shortTripCandidates || []).filter(function (p) {
+            return selectedIds.indexOf(p.poiId) < 0 && p.lat && p.lng;
+        }).sort(function (a, b) {
+            return (b.ourRating || b.sourceRating || 0) - (a.ourRating || a.sourceRating || 0)
+                || a.distance - b.distance;
+        }).slice(0, 4);
+    }
+
+    function transportLabel(v) {
+        return {walk: '步行', bike: '骑行', transit: '公交', car: '打车'}[v] || v;
+    }
+    function renderEditor() {
+        var host = document.getElementById('editor');
+        if (!selected) {
+            host.innerHTML = '<div class="hint">先选一个方案</div>';
+            return;
+        }
+        document.getElementById('selected-summary').textContent = selected.name + ' · '
+            + selected.stops.length + ' 个地点';
+        host.innerHTML = selected.stops.map(function (p, i) {
+            return '<div class="edit-row"><span class="stop-num">' + (i + 1) + '</span>'
+                + '<div style="flex:1;min-width:0"><b style="font-size:12.5px">' + Shell.esc(p.name) + '</b>'
+                + '<div class="hint">' + Shell.esc(p.address || '') + '</div></div>'
+                + '<button class="btn ghost small" data-up="' + i + '"' + (i === 0 ? ' disabled' : '') + '>上移</button>'
+                + '<button class="btn ghost small" data-down="' + i + '"' + (i === selected.stops.length - 1 ? ' disabled' : '') + '>下移</button>'
+                + '<button class="btn ghost small" data-alternative="' + i + '">换备选</button>'
+                + '<button class="btn ghost small" data-remove="' + i + '">移除</button></div>';
+        }).join('');
+        host.querySelectorAll('[data-up]').forEach(function (s) {
+            s.addEventListener('click', function () {
+                var i = parseInt(s.dataset.up, 10);
+                var t = selected.stops[i - 1]; selected.stops[i - 1] = selected.stops[i]; selected.stops[i] = t;
+                recalcSelected();
+                renderEditor();
+            });
+        });
+        host.querySelectorAll('[data-down]').forEach(function (s) {
+            s.addEventListener('click', function () {
+                var i = parseInt(s.dataset.down, 10);
+                var t = selected.stops[i + 1]; selected.stops[i + 1] = selected.stops[i]; selected.stops[i] = t;
+                recalcSelected();
+                renderEditor();
+            });
+        });
+        host.querySelectorAll('[data-remove]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                selected.stops.splice(parseInt(b.dataset.remove, 10), 1);
+                recalcSelected();
+                renderEditor();
+            });
+        });
+        host.querySelectorAll('[data-alternative]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var i = parseInt(b.dataset.alternative, 10);
+                var current = selected.stops[i];
+                var pool = availableAlternatives(selected).filter(function (p) {
+                    return CATEGORY(p) === CATEGORY(current);
+                });
+                if (!pool.length) {
+                    document.getElementById('save-msg').textContent = '没有同类备选，请扩大距离或换关键字';
+                    return;
+                }
+                selected.stops[i] = pool[0];
+                recalcSelected();
+                renderEditor();
+            });
+        });
+    }
+
+    function recalcSelected() {
+        if (!selected || !selected.stops.length) return;
+        var total = 0;
+        for (var i = 1; i < selected.stops.length; i++) total += distance(selected.stops[i - 1], selected.stops[i]);
+        selected.distance = total;
+        selected.estimatedBudget = selected.stops.reduce(function (sum, p) {
+            return sum + (Number(p.cost) || 0);
+        }, 0);
+        selected.duration = selected.stops.reduce(function (sum, p) {
+            return sum + (CATEGORY(p) === '吃' ? 75 : 90);
+        }, 0);
+        document.getElementById('selected-summary').textContent = selected.name + ' · '
+            + selected.stops.length + ' 个地点 · 移动 ' + fmtDistance(selected.distance)
+            + (selected.estimatedBudget ? ' · 约 ¥' + selected.estimatedBudget : '');
+    }
+
+    async function generate(lat, lng) {
+        coords = {lat: lat, lng: lng};
+        var msg = document.getElementById('msg');
+        msg.textContent = '正在查询附近商户并组合路线...';
+        var data = await Shell.api('nearby/search', {
+            lat: lat, lng: lng, radius: document.getElementById('radius').value,
+            keyword: document.getElementById('keyword').value.trim(), limit: 200
+        }).catch(function () { return null; });
+        if (!data || data.status !== 'success') {
+            msg.className = 'hint error';
+            msg.textContent = (data && data.message) || '附近商户查询失败';
+            return;
+        }
+        var duration = parseInt(document.getElementById('duration').value, 10);
+        var transport = document.getElementById('transport').value;
+        var purpose = document.getElementById('purpose').value;
+        window.__shortTripCandidates = data.pois || [];
+        schemes = buildSchemes(data.pois || [], duration, transport, purpose);
+        selected = null;
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('results').style.display = '';
+        document.getElementById('result-note').textContent = '查到 ' + (data.pois || []).length + ' 个附近点位';
+        document.getElementById('editor').innerHTML = '<div class="hint">先选一个方案</div>';
+        document.getElementById('save-msg').textContent = '';
+        renderSchemes();
+        document.querySelector('.main').scrollTop = 0;
+    }
+
+    async function locateAndGenerate() {
+        var msg = document.getElementById('msg');
+        msg.className = 'hint';
+        try {
+            var p = await Shell.locate();
+            await generate(p.lat, p.lng);
+        } catch (e) {
+            msg.className = 'hint error';
+            msg.textContent = e.message + '，请展开下面手动输入坐标';
+        }
+    }
+    document.getElementById('generate').addEventListener('click', locateAndGenerate);
+    document.getElementById('use-manual').addEventListener('click', function () {
+        var lat = parseFloat(document.getElementById('manual-lat').value);
+        var lng = parseFloat(document.getElementById('manual-lng').value);
+        if (isNaN(lat) || isNaN(lng)) {
+            document.getElementById('msg').textContent = '请填写有效的经纬度';
+            return;
+        }
+        generate(lat, lng);
+    });
+    document.getElementById('back').addEventListener('click', function () {
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('setup').style.display = '';
+    });
+    document.getElementById('map-btn').addEventListener('click', function () {
+        if (!selected) return;
+        Shell.map.focus(selected.stops, '短途方案 · ' + selected.name, selected.transport);
+    });
+    document.getElementById('save').addEventListener('click', async function () {
+        if (!selected || !selected.stops.length) {
+            document.getElementById('save-msg').textContent = '先选择并保留至少一个地点';
+            return;
+        }
+        var btn = this;
+        var msg = document.getElementById('save-msg');
+        btn.disabled = true;
+        msg.textContent = '保存中...';
+        var today = new Date();
+        var date = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0')
+            + '-' + String(today.getDate()).padStart(2, '0');
+        var lines = selected.stops.map(function (p, i) {
+            return (i + 1) + '. ' + p.name + '（' + CATEGORY(p) + '，'
+                + (p.address || '地址待确认') + '）';
+        });
+        var content = date + ' · ' + selected.name + '\n' + lines.join('\n')
+            + '\n\n预计 ' + Math.round(selected.duration / 60 * 10) / 10 + ' 小时'
+            + '，移动约 ' + fmtDistance(selected.distance);
+        try {
+            var saved = await Shell.api('trips/save', {
+                title: '周边短途 · ' + selected.name + ' · ' + date,
+                content: content, visibility: 'private'
+            });
+            if (!saved || saved.status !== 'success') throw new Error((saved && saved.message) || '保存失败');
+            for (var si = 0; si < selected.stops.length; si++) {
+                var p = selected.stops[si];
+                await Shell.api('trips/node/save', {
+                    tripId: saved.id, nodeType: 'timeline', title: (si + 1) + '. ' + p.name,
+                    detail: CATEGORY(p) + '\n' + (p.address || ''),
+                    nodeTime: date + ' ' + (si + 1) + ' 站', status: '待确认',
+                    photo: (p.photos && p.photos[0]) || '', lat: p.lat, lng: p.lng
+                });
+            }
+            await Shell.api('trips/version/save', {tripId: saved.id, changeNote: '保存周边短途方案'});
+            msg.innerHTML = '已保存。 <a href="trips.html">打开行程本</a>';
+        } catch (e) {
+            btn.disabled = false;
+            msg.textContent = '保存失败：' + (e.message || '请稍后重试');
+        }
+    });
+
+    (async function init() {
+        if (!await Shell.currentUser()) return;
+    })();
+})();
+</script>
+</body>
+</html>

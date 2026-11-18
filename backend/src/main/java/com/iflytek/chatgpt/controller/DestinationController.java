@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import util.MySQLUtil;
+import com.iflytek.chatgpt.agent.NavigationService;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -25,6 +26,12 @@ import java.util.Map;
 public class DestinationController {
 
     private static final Logger log = LoggerFactory.getLogger(DestinationController.class);
+
+    private final NavigationService navigationService;
+
+    public DestinationController(NavigationService navigationService) {
+        this.navigationService = navigationService;
+    }
 
     /**
      * 目的地列表；带 keyword 时按 名称 / 城市 / 分类 / 关键词 模糊搜索
@@ -67,6 +74,27 @@ public class DestinationController {
             error.put("status", "error");
             error.put("message", "目的地读取失败，请稍后重试");
             return error;
+        }
+
+        // 本地景点库没有这个城市时，用高德地理编码兜底：
+        // 这样「广州」「成都」这类本地库没收录的城市也能被选中，而不是"没有这个城市"。
+        if (spots.isEmpty() && !trimmed.isEmpty()) {
+            try {
+                Map<String, Object> geo = navigationService.geocodePlace(trimmed, "");
+                if (geo != null && Boolean.TRUE.equals(geo.get("ok"))) {
+                    Map<String, String> city = new LinkedHashMap<>();
+                    city.put("name", String.valueOf(geo.getOrDefault("name", trimmed)));
+                    city.put("city", trimmed);
+                    city.put("category", "城市");
+                    city.put("icon", "city");
+                    city.put("description", "高德定位："
+                            + geo.getOrDefault("name", "") + "（"
+                            + geo.getOrDefault("lat", "") + ", " + geo.getOrDefault("lng", "") + "）");
+                    spots.add(city);
+                }
+            } catch (Exception e) {
+                log.warn("高德兜底失败：{}", e.getMessage());
+            }
         }
 
         Map<String, Object> result = new LinkedHashMap<>();

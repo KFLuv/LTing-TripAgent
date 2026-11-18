@@ -15,6 +15,8 @@ public final class CoordConverter {
     private static final double A = 6378245.0;
     /** 偏心率平方 */
     private static final double EE = 0.00669342162296594323;
+    /** BD-09 偏移常量 */
+    private static final double X_PI = Math.PI * 3000.0 / 180.0;
 
     private CoordConverter() {
     }
@@ -39,6 +41,63 @@ public final class CoordConverter {
         dLat = (dLat * 180.0) / ((A * (1 - EE)) / (magic * sqrtMagic) * Math.PI);
         dLng = (dLng * 180.0) / (A / sqrtMagic * Math.cos(radLat) * Math.PI);
         return new double[]{lat + dLat, lng + dLng};
+    }
+
+    /**
+     * GCJ-02 转 WGS-84。
+     *
+     * <p>外部开放数据（OSM、Wikidata、标准 GeoJSON）使用 WGS-84，高德使用 GCJ-02。
+     * 以高德坐标作为查询中心前，需要先反算出 WGS-84，否则周边查询圆心本身就会偏移。
+     *
+     * @param lat GCJ-02 纬度
+     * @param lng GCJ-02 经度
+     * @return [纬度, 经度] 的 WGS-84 坐标
+     */
+    public static double[] gcj02ToWgs84(double lat, double lng) {
+        if (outOfChina(lat, lng)) {
+            return new double[]{lat, lng};
+        }
+        double wgsLat = lat;
+        double wgsLng = lng;
+        for (int i = 0; i < 6; i++) {
+            double[] gcj = wgs84ToGcj02(wgsLat, wgsLng);
+            wgsLat -= gcj[0] - lat;
+            wgsLng -= gcj[1] - lng;
+        }
+        return new double[]{wgsLat, wgsLng};
+    }
+
+    /**
+     * GCJ-02 转 BD-09。
+     *
+     * @param lat GCJ-02 纬度
+     * @param lng GCJ-02 经度
+     * @return [纬度, 经度] 的 BD-09 坐标
+     */
+    public static double[] gcj02ToBd09(double lat, double lng) {
+        double x = lng;
+        double y = lat;
+        double z = Math.sqrt(x * x + y * y) + 0.00002 * Math.sin(y * X_PI);
+        double theta = Math.atan2(y, x) + 0.000003 * Math.cos(x * X_PI);
+        return new double[]{
+                z * Math.sin(theta) + 0.006,
+                z * Math.cos(theta) + 0.0065
+        };
+    }
+
+    /**
+     * BD-09 转 GCJ-02。
+     *
+     * @param lat BD-09 纬度
+     * @param lng BD-09 经度
+     * @return [纬度, 经度] 的 GCJ-02 坐标
+     */
+    public static double[] bd09ToGcj02(double lat, double lng) {
+        double x = lng - 0.0065;
+        double y = lat - 0.006;
+        double z = Math.sqrt(x * x + y * y) - 0.00002 * Math.sin(y * X_PI);
+        double theta = Math.atan2(y, x) - 0.000003 * Math.cos(x * X_PI);
+        return new double[]{z * Math.sin(theta), z * Math.cos(theta)};
     }
 
     /**

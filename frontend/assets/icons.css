@@ -1,0 +1,85 @@
+/*
+ * Offline icon fallback.
+ * The app must not block rendering on an external icon CDN.
+ */
+.fas,
+.far,
+.fab,
+.fa-solid,
+.fa-regular,
+.fa-brands {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1em;
+    font-style: normal;
+    line-height: 1;
+}
+
+.fas::before,
+.far::before,
+.fab::before,
+.fa-solid::before,
+.fa-regular::before,
+.fa-brands::before {
+    content: "\2022";
+}
+
+.fa-arrow-up::before { content: "\2191"; }
+.fa-arrow-down::before { content: "\2193"; }
+.fa-arrow-left::before { content: "\2190"; }
+.fa-arrow-right::before { content: "\2192"; }
+.fa-angles-left::before { content: "\00AB"; }
+.fa-angles-right::before { content: "\00BB"; }
+.fa-angle-down::before { content: "\2304"; }
+.fa-plus::before { content: "+"; }
+.fa-xmark::before,
+.fa-times::before { content: "\00D7"; }
+.fa-check::before,
+.fa-circle-check::before { content: "\2713"; }
+.fa-trash::before { content: "\00D7"; }
+.fa-pen-to-square::before,
+.fa-edit::before { content: "\270E"; }
+.fa-arrows-rotate::before,
+.fa-rotate::before { content: "\21BB"; }
+.fa-clock-rotate-left::before { content: "\21B6"; }
+.fa-magnifying-glass::before,
+.fa-search::before { content: "\2315"; }
+.fa-location-dot::before,
+.fa-location-crosshairs::before { content: "\25CF"; }
+.fa-map::before,
+.fa-map-location-dot::before { content: "\25AD"; }
+.fa-compass::before,
+.fa-compass-drafting::before { content: "\25CE"; }
+.fa-route::before { content: "\219D"; }
+.fa-calendar-days::before,
+.fa-calendar-day::before { content: "\65E5"; }
+.fa-user-group::before,
+.fa-user-gear::before { content: "\4EBA"; }
+.fa-wallet::before { content: "\00A5"; }
+.fa-bed::before { content: "\5E8A"; }
+.fa-utensils::before { content: "\98DF"; }
+.fa-mug-hot::before { content: "\996E"; }
+.fa-camera-retro::before { content: "\666F"; }
+.fa-ticket::before { content: "\7968"; }
+.fa-bag-shopping::before,
+.fa-store::before { content: "\5E97"; }
+.fa-book::before,
+.fa-book-open::before { content: "\25A4"; }
+.fa-fire::before { content: "\25B2"; }
+.fa-id-badge::before { content: "\25A3"; }
+.fa-sliders::before { content: "\2261"; }
+.fa-gear::before { content: "\2699"; }
+.fa-plane-departure::before { content: "\2197"; }
+.fa-lock::before { content: "\9501"; }
+.fa-triangle-exclamation::before { content: "!"; font-weight: 700; }
+.fa-circle-info::before { content: "i"; font-weight: 700; }
+.fa-comments::before,
+.fa-comment-dots::before { content: "\2026"; }
+.fa-diamond-turn-right::before { content: "\21B7"; }
+.fa-list::before,
+.fa-list-check::before,
+.fa-timeline::before { content: "\2263"; }
+.fa-layer-group::before { content: "\25A4"; }
+.fa-box-open::before { content: "\25A1"; }
+.fa-spinner::before { content: "\25CC"; }

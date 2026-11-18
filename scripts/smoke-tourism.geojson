@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "名称": "文旅测试观景台",
+        "类别": "景点",
+        "城市": "大理",
+        "区县": "大理市",
+        "地址": "双廊测试路1号",
+        "简介": "地方文旅 GeoJSON 导入冒烟数据"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [100.1905, 25.9025]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "名称": "文旅测试餐厅",
+        "类别": "美食",
+        "城市": "大理",
+        "区县": "大理市",
+        "地址": "双廊测试路2号",
+        "简介": "地方文旅 GeoJSON 导入冒烟数据"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [100.1915, 25.9035]
+      }
+    }
+  ]
+}

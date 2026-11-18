@@ -161,6 +161,9 @@ public class TravelTools {
      * 修改前和修改后各留一版快照，保证 Agent 的修改可见、可回退。
      */
     public String updateTrip(String username, int tripId, String title, String content) {
+        if (hasPlanData(username, tripId)) {
+            return "该行程由出行工作台管理，正文修改不能绕过 PlanOps；请从规划页版本与操作入口处理";
+        }
         Map<String, Object> current = getTripDetail(username, tripId);
         if (current == null || current.containsKey("error")) {
             return "行程不存在或不属于当前用户，未更新";
@@ -455,11 +458,13 @@ public class TravelTools {
         String title = null;
         String content = null;
         String nodesJson = null;
+        String planData = null;
         int tripId = 0;
         int sourceNo = 0;
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "select trip_id, version_no, title, content, nodes_json from trip_version where id = ? and username = ?")) {
+                     "select trip_id, version_no, title, content, nodes_json, plan_data"
+                             + " from trip_version where id = ? and username = ?")) {
             ps.setInt(1, versionId);
             ps.setString(2, username);
             try (ResultSet rs = ps.executeQuery()) {
@@ -469,6 +474,7 @@ public class TravelTools {
                     title = rs.getString("title");
                     content = rs.getString("content");
                     nodesJson = rs.getString("nodes_json");
+                    planData = rs.getString("plan_data");
                 }
             }
         } catch (SQLException e) {
@@ -477,30 +483,46 @@ public class TravelTools {
         if (tripId == 0) {
             return "版本不存在或不属于当前用户";
         }
+        if (planData != null && !planData.trim().isEmpty()) {
+            return "该版本包含出行工作台草稿，必须通过 PlanOps 预览和用户确认后回退";
+        }
         snapshotTrip(username, tripId, "回退前自动备份");
-        MySQLUtil.executeUpdate(
-                "update trip set title = ?, content = ?, update_time = now() where id = ? and username = ?",
-                title, content, tripId, username);
+        boolean planRestored = planData != null && !planData.trim().isEmpty();
+        if (planRestored) {
+            MySQLUtil.executeUpdate(
+                    "update trip set title = ?, content = ?, plan_data = ?,"
+                            + " plan_revision = plan_revision + 1, update_time = now()"
+                            + " where id = ? and username = ?",
+                    title, content, planData, tripId, username);
+        } else {
+            MySQLUtil.executeUpdate(
+                    "update trip set title = ?, content = ?, update_time = now() where id = ? and username = ?",
+                    title, content, tripId, username);
+        }
         boolean nodesRestored = restoreTripNodes(username, tripId, nodesJson);
         snapshotTrip(username, tripId, "回退到版本 v" + sourceNo);
         return "已把行程#" + tripId + "回退到 v" + sourceNo
-                + (nodesRestored ? "（正文与节点已恢复，回退前已自动备份）"
-                                 : "（正文已恢复；该旧版本没有节点快照）");
+                + (planRestored ? "（正文、节点与规划草稿已恢复" : "（正文已恢复")
+                + (nodesRestored ? "，回退前已自动备份）" : "；该旧版本没有节点快照）");
     }
 
     /** 存一版快照（内部复用，逻辑与 TripController.snapshot 一致） */
     private void snapshotTrip(String username, int tripId, String changeNote) {
         String title = null;
         String content = null;
+        String planData = null;
+        int planRevision = 0;
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "select title, content from trip where id = ? and username = ?")) {
+                     "select title, content, plan_data, plan_revision from trip where id = ? and username = ?")) {
             ps.setInt(1, tripId);
             ps.setString(2, username);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     title = rs.getString("title");
                     content = rs.getString("content");
+                    planData = rs.getString("plan_data");
+                    planRevision = rs.getInt("plan_revision");
                 }
             }
         } catch (SQLException e) {
@@ -524,15 +546,17 @@ public class TravelTools {
             // 取不到就默认 1，不影响保存
         }
         MySQLUtil.executeUpdate(
-                "insert into trip_version(trip_id, username, version_no, title, content, nodes_json, change_note, create_time)"
-                        + " values(?, ?, ?, ?, ?, ?, ?, now())",
-                tripId, username, nextNo, title, content, tripNodesJson(username, tripId), changeNote);
+                "insert into trip_version(trip_id, username, version_no, title, content, nodes_json,"
+                        + " plan_data, plan_revision, change_note, create_time)"
+                        + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, now())",
+                tripId, username, nextNo, title, content, tripNodesJson(username, tripId),
+                planData, planRevision, changeNote);
     }
 
     private String tripNodesJson(String username, int tripId) {
         List<Map<String, Object>> nodes = new ArrayList<>();
-        String sql = "select node_type, title, detail, node_time, status, cost from trip_node"
-                + " where trip_id = ? and username = ? order by id";
+        String sql = "select node_type, title, detail, node_time, status, cost, photo, lat, lng, sort_order"
+                + " from trip_node where trip_id = ? and username = ? order by sort_order, id";
         try (Connection conn = MySQLUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, tripId);
@@ -546,6 +570,10 @@ public class TravelTools {
                     node.put("nodeTime", rs.getString("node_time"));
                     node.put("status", rs.getString("status"));
                     node.put("cost", rs.getBigDecimal("cost"));
+                    node.put("photo", rs.getString("photo"));
+                    node.put("lat", rs.getObject("lat"));
+                    node.put("lng", rs.getObject("lng"));
+                    node.put("sortOrder", rs.getInt("sort_order"));
                     nodes.add(node);
                 }
             }
@@ -574,8 +602,9 @@ public class TravelTools {
                         del.executeUpdate();
                     }
                     try (PreparedStatement ins = conn.prepareStatement(
-                            "insert into trip_node(trip_id, username, node_type, title, detail, node_time, status, cost, create_time)"
-                                    + " values(?, ?, ?, ?, ?, ?, ?, ?, now())")) {
+                            "insert into trip_node(trip_id, username, node_type, title, detail, node_time,"
+                                    + " status, cost, photo, lat, lng, sort_order, create_time)"
+                                    + " values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())")) {
                         for (JsonNode node : nodes) {
                             ins.setInt(1, tripId);
                             ins.setString(2, username);
@@ -589,6 +618,12 @@ public class TravelTools {
                             } else {
                                 ins.setBigDecimal(8, null);
                             }
+                            ins.setString(9, node.path("photo").asText(null));
+                            if (node.path("lat").isNumber()) ins.setDouble(10, node.path("lat").asDouble());
+                            else ins.setNull(10, java.sql.Types.DOUBLE);
+                            if (node.path("lng").isNumber()) ins.setDouble(11, node.path("lng").asDouble());
+                            else ins.setNull(11, java.sql.Types.DOUBLE);
+                            ins.setInt(12, node.path("sortOrder").asInt(0));
                             ins.addBatch();
                         }
                         ins.executeBatch();
@@ -980,6 +1015,21 @@ public class TravelTools {
             ps.setString(2, username);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
+            }
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    private boolean hasPlanData(String username, int tripId) {
+        try (Connection conn = MySQLUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "select plan_data from trip where id = ? and username = ?")) {
+            ps.setInt(1, tripId);
+            ps.setString(2, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getString("plan_data") != null
+                        && !rs.getString("plan_data").trim().isEmpty();
             }
         } catch (SQLException e) {
             return false;

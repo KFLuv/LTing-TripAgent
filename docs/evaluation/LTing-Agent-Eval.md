@@ -82,7 +82,51 @@ docs/evaluation/lting-eval-results.json
 
 自动结果只能判断写操作和基础文本条件，最终成功与否仍需按人工检查项复核。
 
-## 当前状态（2026-11-04）
+## PlanOps 全操作模型回归
+
+`scripts/eval_planops_model.py` 会在隔离 H2 服务上创建一份临时行程，用真实模型逐项生成 PlanOps Preview，覆盖：
+
+```text
+MOVE_NODE / REMOVE_NODE / REPLACE_NODE / REORDER_NODE / LOCK_NODE
+TOGGLE_NODE_CLOSURE / ADD_NODE / ADD_CANDIDATE / REMOVE_CANDIDATE
+UPDATE_CONSTRAINT / UPDATE_BUDGET / UPDATE_STAY / UPDATE_PLAN_META
+UPDATE_TRANSPORT / UPDATE_BUDGET_PLAN / REBUILD_ITINERARY
+UPDATE_ROUTE_TIMES / ROLLBACK_PLAN_VERSION
+```
+
+执行：
+
+```bash
+python scripts/eval_planops_model.py \
+  --base-url http://127.0.0.1:8078/chat \
+  --output docs/evaluation/lting-planops-model-20261117.json
+```
+
+脚本只生成 Preview，不 Apply，不修改种子行程；报告不记录 API Key。
+
+2026-11-17 真实模型结果：18/18 通过，原始回答、耗时和 Preview 类型见
+`docs/evaluation/lting-planops-model-20261117.json`。
+
+## 当前状态（2026-11-18 / 2.0.2）
+
+2.0.2 发布前验证：
+
+- `PlanOpsRollbackIntegrationTest`：16/16 通过。
+- 覆盖 Context / Preview / Apply、版本回退、候选、候选快照、Day Optimize、Today Mode、协作、数据源健康和 CSV/GeoJSON 导入。
+- 覆盖百度/腾讯缺 Key 自动跳过和 BD-09 ↔ GCJ-02 坐标转换。
+- 真实模型 PlanOps 回归：18/18 Preview 通过。
+- Headless Edge：自动合并地方文旅数据、筛选页无外部源按钮、候选从 0 加入 1 个。
+- `plan.html`、`settings.html` 内联 JavaScript 语法通过。
+- 密钥扫描通过。
+- Electron portable 2.0.2 打包完成，内置 JAR 与仓库 JAR 哈希一致。
+
+2.0.2 仍未验证：
+
+- 百度、腾讯真实商用 Key 下的字段、配额和错误码。
+- OSM / Wikidata / Wikivoyage 在当前网络下的稳定实时返回。
+- 多人长期真实用户研究和跨 Windows 版本兼容。
+
+## 1.x Agent 基线（2026-11-04）
 
 已使用真实 OpenAI 兼容模型和隔离 H2 数据库完成最终执行：
 
@@ -115,7 +159,7 @@ docs/evaluation/lting-eval-results.json
 9. 手工编译缺少 `-parameters` 导致 `@RequestParam` 参数名丢失；
 10. 领域入口 `trip(action=get)` 的 `tripId/id` 参数映射错误。
 
-### 当前边界
+### 1.x 基线边界
 
 - 导航链接一致性已按文案实体与工具目的地匹配修复，仍应持续扩充跨城市回归样本。
 - 版本快照现在保存 `nodes_json`，回退时正文与节点一起恢复。
