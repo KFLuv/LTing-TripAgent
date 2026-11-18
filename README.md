@@ -259,7 +259,7 @@ ai-travel-assistant/
 | **12 工具完整评测结果** | [docs/evaluation/lting-eval-complete-final-20261105.json](docs/evaluation/lting-eval-complete-final-20261105.json) |
 | **回退最终回归** | [docs/evaluation/lting-eval-rollback-final-20261104.json](docs/evaluation/lting-eval-rollback-final-20261104.json) |
 | **问题—修复—验证发版记录** | [docs/release-notes/2026-11-05-agent-eval-hardening.md](docs/release-notes/2026-11-05-agent-eval-hardening.md) |
-| **v1.1.9 → 2.0.2 完整发布说明** | [docs/release-notes/2026-11-18-v2.0.2.md](docs/release-notes/2026-11-18-v2.0.2.md) |
+| **v1.1.9 → 2.0.2 完整发布说明** | [docs/release-notes/v2.0.2.md](docs/release-notes/v2.0.2.md) |
 | **真人用户验收脚本** | [docs/testing/LTing-User-Acceptance-20261104.md](docs/testing/LTing-User-Acceptance-20261104.md) |
 | **本人 self-use 实机验收** | [docs/testing/LTing-Self-Use-Validation-20261105.md](docs/testing/LTing-Self-Use-Validation-20261105.md) |
 
